@@ -48,6 +48,9 @@ importers:
 
   packages/game-core:
     dependencies:
+      '@yjh/content':
+        specifier: workspace:*
+        version: link:../content
       '@yjh/shared':
         specifier: workspace:*
         version: link:../shared

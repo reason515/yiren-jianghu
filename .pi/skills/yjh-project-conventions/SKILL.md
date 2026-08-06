@@ -125,6 +125,17 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - **happy-dom 的 SVG 元素（g/rect）没有 `.click()`**——DOM 测试用 `dispatchEvent(new MouseEvent("click", { bubbles: true }))`（E9 MapSheet）；
 - happy-dom 的 SVG 测量 API（`getTotalLength()` 等）可能未实现，测试勿依赖；用节点/边数量断言代替。
 
+15. **mock db SQL 分支顺序敏感**：内存 mock 按 `text.includes(...)` 匹配，**具体的 SELECT（带全列）要放在通用分支（如 `FROM characters WHERE account_id`）之前**，否则字段被吞成 undefined（M2.5-character 踩过）。新增查询前先确认分支顺序。
+
+## 服务端域实现模式（M2.5，新增域照此扩展）
+
+- 每域一个 `services/api/src/<domain>Service.ts`：`create<Domain>Service(db)` 工厂返回方法集；业务错误用 `<Domain>Error` 类（`code` 进错误信封）。
+- `db.ts` 的 `Db` 接口（`query<T extends DbRow>`）注入；单测用内存 mock db（见常见坑 #15）。
+- 路由在 `app.ts` 中 **deps.db 存在时注册**（真实路由先注册，`registerApiStubs` 的 hasRoute 自动让位 stub）；错误统一 `envelope(reply, 400|401|404|409, err.code, err.message)`；需登录路由加 `preHandler: requireAuth(verifyToken)`，accountId 从 `authContexts.get(req)` 取。
+- 状态迁移写进 service（如 discard：active→discarded + discarded_at）；DB 约束（部分唯一索引等）作兜底而非主校验。
+- 跨包调用 game-core 规则（校验/结算）在 service 内引用，客户端不跑规则（服务端权威）。
+- 单测覆盖：成功路径、各错误分支、状态迁移；集成测试用 `createApp({ deps: { db } })` + `app.inject`。
+
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 
 | 任务类型                                         | 第一步必读 skill                                                                                |

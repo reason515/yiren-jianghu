@@ -45,7 +45,24 @@ pnpm format:check    # 格式门禁
 pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker）
 pnpm migrate / migrate:down / migrate:create / seed   # 数据库迁移（services/api）
 pnpm content:validate / content:preview / content:pack  # 内容包（见 yjh-content-pack）
+pnpm test:docs     # 协议一致性契约测试（docs/protocol.md ↔ 代码）
+pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev:infra，CI 服务容器）
 ```
+
+## E2E 与 CI/CD
+
+- **E2E**：`services/api/e2e/`（真实 PG+Redis，迁移→起服→就绪/鉴权/DB/Redis 往返）。本地先 `pnpm dev:infra` 再 `pnpm test:e2e`；CI `e2e` 作业用服务容器提供 pg/redis 后运行。玩法全链路场景在 B/F 阶段扩展进 `e2e/`。
+- **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
+- **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API 镜像推 GHCR → SSH 服务器 docker compose 更新。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`，见 `deploy/README.md`。
+- 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤。
+
+## 文档-代码-测试一致性机制（Q2）
+
+- **单一事实来源**：协议类型在 `@yjh/shared`（`PROTOCOL_VERSION`/`EVENT_TYPES`），内容 Schema 在 `@yjh/content`；禁止在别处复制定义。
+- **协议清单**：`docs/protocol.md` 是路由/事件的唯一人工维护入口；`services/api/src/protocol.contract.test.ts` 强制「清单路由 = 已注册路由、事件集合 = EVENT_TYPES、版本 = PROTOCOL_VERSION」，`pnpm test:docs` 不一致即失败。新增/修改 API 或事件必须同步三处：代码 / 测试 / `docs/protocol.md`（PR 模板「三件套」）。
+- **内容一致性**：内容包 fixtures 由 CI validate；Schema 改动必须同步校验器测试与 yjh-content-pack 文档。
+- **执行记录**：每完成计划任务更新 `docs/design-and-development-plan.md` 执行记录表。
+- 示例即测试：文档中的内容包示例应来自 fixtures（CI 校验通过的真实例子），防止文档写出 Schema 不支持的格式。
 
 ## 质量门禁（CI 同步执行）
 

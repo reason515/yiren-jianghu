@@ -54,9 +54,13 @@ pnpm format       # Prettier 格式化
 pnpm dev:infra    # 启动本地 PostgreSQL + Redis（需 Docker）
 pnpm migrate      # 执行数据库迁移（需 DATABASE_URL）
 pnpm seed         # 写入开发/封测数据
+pnpm test:docs    # 协议一致性契约测试（docs/protocol.md ↔ 代码，CI 门禁）
+pnpm test:e2e     # E2E 冒烟（需真实 PostgreSQL + Redis，见下）
 ```
 
 > 本地依赖数据库时需要 Docker（`docker compose up -d postgres redis`）；迁移工具链在 CI 中以 PostgreSQL 服务验证。
+> E2E：先 `pnpm dev:infra` 起 pg/redis，再 `pnpm test:e2e`；CI 的 `e2e` 作业自动提供服务容器。
+> 部署：`docker-compose.prod.yml` + `.github/workflows/deploy.yml`（GHCR 镜像 + SSH），激活见 `deploy/README.md`。
 
 ## 仓库约定
 

@@ -468,6 +468,7 @@
 | A6 内容包管线 | ✅ 完成 | — | zod Schema + 引用校验 + CLI（validate/preview/bundle）+ fixtures，18 用例 |
 | B1 领域模型 | ⬜ | | |
 | B2 协议 | ⬜ | | |
+| 工程机制：E2E 冒烟 + CD 脚手架 + 协议一致性 | ✅ 完成 | — | CI e2e 作业（真实 PG+Redis）；deploy 工作流 + Dockerfile + 生产 compose 脚手架（激活需 secrets）；docs/protocol.md ↔ 代码契约测试（test:docs） |
 | C1–C10 规则引擎 | ⬜ | | 按清单顺序推进 |
 | C1 数值参数表 | ✅ 完成 | — | game-core/params：经验/潜能/挂机递减/装载校验（复用 content Schema 单一来源），确定性单测 |
 | D1–D8 切片内容 | ⬜ | | |

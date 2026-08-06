@@ -37,6 +37,9 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Docs contract (protocol.md ↔ code)
+        run: pnpm test:docs
+
       - name: Lint
         run: pnpm lint
 
@@ -86,3 +89,50 @@ jobs:
         run: pnpm --filter @yjh/api migrate:down
         env:
           DATABASE_URL: postgres://yiren:test@localhost:5432/yiren_jianghu
+
+  e2e:
+    name: E2E smoke
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: yiren
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: yiren_jianghu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U yiren -d yiren_jianghu"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: E2E smoke
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgres://yiren:test@localhost:5432/yiren_jianghu
+          REDIS_URL: redis://localhost:6379

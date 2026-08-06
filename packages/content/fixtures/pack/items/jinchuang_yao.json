@@ -1,0 +1,10 @@
+{
+  "id": "jinchuang_yao",
+  "name": "金创药",
+  "kind": "drug",
+  "value": 50,
+  "weight": 1,
+  "stackable": true,
+  "description": "褐色的药粉，撒在伤口上凉丝丝的，止血极快。江湖人身上，总得备上两瓶。",
+  "usable": { "effect": "heal_qi", "amount": 50 }
+}

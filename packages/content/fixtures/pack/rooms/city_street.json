@@ -1,0 +1,14 @@
+{
+  "id": "city_street",
+  "area": "city",
+  "name": "主街",
+  "shortDesc": "青石板铺的街道，两旁店铺林立，人声渐稠。",
+  "longDesc": "青石板铺就的街道笔直向前，两旁的幌子在风里翻卷：东边是衙门，西边是客栈，再往北，隐约能看见一座山门的轮廓。货郎的叫卖声、锅铲与铁锅的碰响、马蹄踏过石板的脆响，混成一片——这就是城里的日子。",
+  "grid": [0, -1],
+  "exits": [
+    { "dir": "south", "roomId": "city_gate" },
+    { "dir": "north", "roomId": "city_sect_gate" },
+    { "dir": "east", "roomId": "city_yamen" },
+    { "dir": "west", "roomId": "city_inn" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "city_yamen",
+  "area": "city",
+  "name": "衙门",
+  "shortDesc": "八字墙前立着「肃静」牌，门廊下有人等候。",
+  "longDesc": "衙门的八字墙刷得雪白，照壁上写着「公正廉明」四字。门廊下站着几个等候的百姓，低声交头接耳。堂上隐约传来惊堂木的声响——沈捕头正坐在侧厅，面前的桌上摊着一叠告示。",
+  "grid": [1, -1],
+  "exits": [
+    { "dir": "west", "roomId": "city_street" },
+    { "dir": "north", "roomId": "city_pawn" }
+  ],
+  "npcIds": ["shen_buotou"]
+}

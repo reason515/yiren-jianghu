@@ -1,0 +1,13 @@
+{
+  "id": "city_pawn",
+  "area": "city",
+  "name": "济急当铺",
+  "shortDesc": "高柜台，铁栏杆，柜后只露出一双眼睛。",
+  "longDesc": "当铺的柜台砌得齐胸高，上面还竖着铁栏杆，柜后只露出一双精明的眼睛。柜台上方挂着一块匾，写着「济急」二字。掌柜的声音从栏杆后传来，不急不慢：「当什么？死当活当？」",
+  "grid": [1, -2],
+  "exits": [
+    { "dir": "south", "roomId": "city_yamen" },
+    { "dir": "east", "roomId": "city_outskirt" }
+  ],
+  "npcIds": ["pawn_owner"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "city_shop",
+  "area": "city",
+  "name": "回春药铺",
+  "shortDesc": "半人高的药柜占了整面墙，满屋子药香。",
+  "longDesc": "半人高的药柜占了整面墙，抽屉上贴着各色药名。药香浓得化不开，混着一点陈年木头的味道。掌柜在柜台后头碾药，见你进来，手上的活不停：「抓药还是买成药？」",
+  "grid": [-1, -2],
+  "exits": [{ "dir": "south", "roomId": "city_inn" }],
+  "npcIds": ["shop_owner"]
+}

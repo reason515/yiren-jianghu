@@ -106,6 +106,17 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 10. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
 11. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
 
+## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
+
+| 任务类型                                         | 第一步必读 skill                                                                                |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| 写/改内容包（房间/NPC/物品/任务/剧情/绝招/数值） | `yjh-content-pack`；含玩家文案时**同步** `yjh-wuxia-copywriting`；涉及地图时加 `yjh-map-design` |
+| 写/改任何玩家可见文案                            | `yjh-wuxia-copywriting`（本任务第一步）                                                         |
+| 设计/变更机制或数值决策                          | `yjh-design-docs`（决策登记）                                                                   |
+| 前端/界面/交互                                   | `yjh-mobile-ui`                                                                                 |
+| 区域地图/世界地图/场景方位图                     | `yjh-map-design`                                                                                |
+| 通用开发/测试/部署                               | 本 skill（`yjh-project-conventions`）                                                           |
+
 ## 下一步参考
 
 - 内容工作 → 读 `yjh-content-pack` skill。

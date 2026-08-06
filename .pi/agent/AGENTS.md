@@ -15,7 +15,8 @@
 
 **强制规则**：
 
-- 写玩家可见文案前，必须加载 `yjh-wuxia-copywriting`，不得凭印象直接编故事。
+- 涉及玩家文案的任务，**第一步必须 read `yjh-wuxia-copywriting`**（不得凭记忆/凭印象直接编故事）；每次触发重新加载，禁止用"已在上下文中"替代。
+- 内容任务（房间/NPC/物品/任务/剧情）启动前，先按 `yjh-project-conventions` 的"任务启动必读"表确认要加载哪些 skill。
 - 内容进入仓库前，必须登记 pkuxkx 权利状态（机制借鉴/需改写/需授权），见 `docs/pkuxkx-content-catalog.md`。
 - 提交前质量门禁必须全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；新增/修改 API 或事件时同步 `docs/protocol.md`（`pnpm test:docs`）。
 

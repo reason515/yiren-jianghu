@@ -1,0 +1,13 @@
+{
+  "id": "city_inn",
+  "area": "city",
+  "name": "悦来客栈",
+  "shortDesc": "两层木楼，檐角挂着一串褪色的红灯笼。",
+  "longDesc": "两层木楼，楼上窗子支开半扇，露出一张打盹的脸。楼下堂食的桌子擦得锃亮，墙角炉子上煨着热茶，壶嘴咕嘟咕嘟地冒着白汽。掌柜在柜台后头打算盘，头也不抬：「住店还是打尖？」",
+  "grid": [-1, -1],
+  "exits": [
+    { "dir": "east", "roomId": "city_street" },
+    { "dir": "north", "roomId": "city_shop" }
+  ],
+  "canSleep": true
+}

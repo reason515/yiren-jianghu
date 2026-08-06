@@ -1,0 +1,10 @@
+{
+  "id": "bandit",
+  "name": "劫道匪徒",
+  "kind": "battle",
+  "level": 6,
+  "skills": [{ "skillId": "basic_sword", "level": 15 }],
+  "aggressive": false,
+  "respawnSec": 60,
+  "drops": [{ "itemId": "jinchuang_yao", "chance": 0.3 }]
+}

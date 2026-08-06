@@ -1,0 +1,11 @@
+{
+  "id": "shop_owner",
+  "name": "药铺掌柜",
+  "kind": "vendor",
+  "level": 10,
+  "goods": [{ "itemId": "jinchuang_yao", "buy": 50, "sell": 20 }],
+  "dialogue": [
+    "金创药治刀剑伤最灵验。出门在外，备着总没错。",
+    "抓药还是买成药？本店价钱公道，童叟无欺。"
+  ]
+}

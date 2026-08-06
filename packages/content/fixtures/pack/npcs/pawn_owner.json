@@ -1,0 +1,11 @@
+{
+  "id": "pawn_owner",
+  "name": "当铺掌柜",
+  "kind": "vendor",
+  "level": 10,
+  "goods": [{ "itemId": "iron_sword", "buy": 8, "sell": 3 }],
+  "dialogue": [
+    "死当活当，当面看货，银货两讫。有什么要脱手的，尽管拿上来。",
+    "柜台高，规矩也高。看准了再当，别回头后悔。"
+  ]
+}

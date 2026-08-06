@@ -1,0 +1,10 @@
+{
+  "id": "q_bounty_bandit",
+  "name": "缉拿匪首",
+  "kind": "bounty",
+  "minExp": 50,
+  "briefing": "城东官道近来不太平，劫道的匪徒专挑落单的客商下手，衙门屡剿不清。沈捕头悬了赏格：拿下那贼首，衙门必有重谢——别让官道上的血白流。",
+  "phases": [{ "type": "kill", "targetId": "bandit", "count": 1 }],
+  "rewards": { "exp": 60, "potential": 15, "silver": 20 },
+  "repeatable": true
+}

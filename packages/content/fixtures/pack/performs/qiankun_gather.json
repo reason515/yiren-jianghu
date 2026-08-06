@@ -6,5 +6,5 @@
   "cooldownTurns": 5,
   "conditions": [{ "type": "self_qi_below_pct", "value": 60 }],
   "effect": { "type": "heal", "amount": 25, "target": "self" },
-  "description": "运转玄门内功，浊气下沉、真气归元，伤势为之平复。"
+  "description": "浊气下沉，清气上升。丹田一点暖意化作溪流，沿经脉游走；伤处像被温水浸过，紧绷的筋骨一寸寸松开，呼吸渐沉，气机复圆。"
 }

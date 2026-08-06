@@ -6,5 +6,5 @@
   "cooldownTurns": 3,
   "conditions": [{ "type": "self_neili_above_pct", "value": 30 }],
   "effect": { "type": "damage", "amount": 12, "target": "enemy" },
-  "description": "看似平凡的一剑，胜在快如疾风。"
+  "description": "剑未至，风先裂。没有花哨，只一记快得看不清的平斩——等风声落定，对手才觉出胸前一凉，低头时，衣襟已破。"
 }

@@ -6,5 +6,5 @@
   "cooldownTurns": 8,
   "conditions": [{ "type": "enemy_qi_below_pct", "value": 30 }],
   "effect": { "type": "damage", "amount": 30, "target": "enemy" },
-  "description": "觑准敌手破绽，一剑如追风逐电，专破强弩之末。"
+  "description": "觑准破绽，一往无前。这一剑没有后招，也不留余地——追风逐电，只为在敌人心神最松的一瞬递出致命一击。出剑之后，风才追上。"
 }

@@ -1,0 +1,36 @@
+import type { JSX } from "react";
+import { Sheet } from "./base/Sheet.js";
+import type { AfkReportData } from "../lib/afkTypes.js";
+
+/** 挂机战报（mobile-ui：离线叙事回声；收益数值 UI 展示，叙事文案由服务端按 wuxia 生成）。 */
+export interface AfkReportViewProps {
+  open: boolean;
+  report: AfkReportData | null;
+  onClose: () => void;
+}
+
+const STATUS_TEXT: Record<AfkReportData["status"], string> = {
+  completed: "行止已竟",
+  failed: "行止中断",
+  cancelled: "行止中止",
+};
+
+export function AfkReportView({ open, report, onClose }: AfkReportViewProps): JSX.Element | null {
+  return (
+    <Sheet open={open && !!report} title="行止回响" onClose={onClose}>
+      {report && (
+        <div className="afk-report" data-testid="afk-report">
+          <p className="afk-report-status">{STATUS_TEXT[report.status]}</p>
+          {report.reason && <p className="afk-report-reason">{report.reason}</p>}
+          <p className="afk-report-narrative">{report.narrative}</p>
+          <div className="afk-report-gains">
+            经验 +{report.gains.exp} · 潜能 +{report.gains.potential} · 银两 +{report.gains.silver}
+          </div>
+          <p className="afk-report-duration">
+            历时 {Math.round((report.durationMinutes / 60) * 10) / 10} 时辰。
+          </p>
+        </div>
+      )}
+    </Sheet>
+  );
+}

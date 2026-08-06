@@ -1,0 +1,90 @@
+/* 挂机 UI 样式（E7；全部 tokens） */
+
+.grind-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.grind-banner.active {
+  background: rgba(95, 143, 120, 0.14);
+  border: 1px solid var(--jade);
+  color: var(--jade-bright);
+}
+.grind-banner.stopped {
+  background: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  color: var(--paper-dim);
+}
+.grind-message {
+  line-height: 1.6;
+  flex: 1;
+}
+.grind-stop,
+.grind-dismiss {
+  min-height: var(--touch-min);
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper);
+  font-size: 13px;
+}
+.grind-stop {
+  color: var(--cinnabar);
+  border-color: rgba(181, 74, 58, 0.5);
+}
+
+.afk-lead {
+  color: var(--paper-dim);
+  line-height: 1.75;
+  margin: 0 0 12px;
+}
+.afk-mode-tag {
+  color: var(--gold);
+  font-size: 14px;
+}
+.afk-form,
+.afk-running {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.afk-status {
+  color: var(--jade-bright);
+  line-height: 1.7;
+  margin: 0;
+}
+.afk-report {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.afk-report-status {
+  color: var(--gold);
+  font-family: var(--font-display);
+  letter-spacing: 2px;
+  margin: 0;
+}
+.afk-report-reason {
+  color: var(--cinnabar);
+  font-size: 13px;
+  margin: 0;
+}
+.afk-report-narrative {
+  color: var(--paper);
+  line-height: 1.9;
+  margin: 0;
+}
+.afk-report-gains {
+  color: var(--jade-bright);
+  font-size: 14px;
+}
+.afk-report-duration {
+  color: var(--paper-faint);
+  font-size: 12px;
+  margin: 0;
+}

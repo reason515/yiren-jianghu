@@ -2,7 +2,8 @@
   "id": "village_square",
   "area": "newbie",
   "name": "村口广场",
-  "shortDesc": "青石铺就的村口广场，晒谷场上晾着金黄稻谷。",
+  "shortDesc": "晒谷场上稻香未散，青石被日头晒得发白。",
+  "longDesc": "四面矮墙围出村口这片空地，晒谷的竹席还卷在墙根。东南角一株老槐遮出半亩阴凉，树下坐着几个纳凉的老人，目光在你身上停了一停，又各自移开。往南是村中客栈，屋脊上炊烟正起。",
   "exits": [{ "dir": "south", "roomId": "village_inn" }],
   "npcIds": ["village_guard"]
 }

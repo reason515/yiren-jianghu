@@ -210,6 +210,8 @@ export const questSchema = z.object({
   name: z.string().min(1),
   kind: z.enum(["sect", "bounty", "main"]),
   minExp: z.number().int().nonnegative().default(0),
+  /** 任务简报（玩家可见文案，武侠风规范见 yjh-wuxia-copywriting）。 */
+  briefing: z.string().default(""),
   phases: z.array(questPhaseSchema).min(1),
   rewards: z.object({
     exp: z.number().int().nonnegative().default(0),

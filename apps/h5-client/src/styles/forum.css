@@ -1,0 +1,120 @@
+/* 论坛样式（E10；全部 tokens） */
+
+.forum {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.forum-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.forum-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper);
+  font-size: 15px;
+}
+.forum-section-count {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+.forum-back {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper-dim);
+  font-size: 13px;
+}
+.forum-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.forum-post-row {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.forum-post-title {
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--paper);
+  font-size: 15px;
+  min-height: var(--touch-min);
+}
+.forum-post-meta {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+.forum-post-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.forum-post-head {
+  font-family: var(--font-display);
+  color: var(--paper);
+  margin: 0;
+}
+.forum-post-body {
+  color: var(--paper-dim);
+  line-height: 1.85;
+  margin: 0;
+}
+.forum-comments {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.forum-comment {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+.forum-comment-body {
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 0;
+}
+.forum-comment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--paper-faint);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.forum-report-link {
+  background: none;
+  border: none;
+  color: var(--cinnabar);
+  font-size: 12px;
+  min-height: var(--touch-min);
+}
+.composer-count {
+  align-self: flex-end;
+  color: var(--paper-faint);
+  font-size: 11px;
+}
+.textarea {
+  padding: 10px 14px;
+  resize: none;
+  line-height: 1.7;
+}

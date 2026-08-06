@@ -1,0 +1,153 @@
+/* 战术模板编辑器样式（E6；全部 tokens，结构化表单、chips 选择） */
+
+.tactic-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tactic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tactic-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tactic-name {
+  flex: 1;
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper);
+  font-size: 15px;
+  text-align: left;
+  padding: 0 14px;
+}
+.tactic-name.on {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+.tactic-delete,
+.tactic-rule-ops button {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-soft);
+  color: var(--paper-dim);
+  font-size: 15px;
+}
+.tactic-add,
+.tactic-btn {
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px dashed var(--jade);
+  background: transparent;
+  color: var(--jade-bright);
+  font-size: 14px;
+}
+.tactic-detail {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tactic-rule {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tactic-rule-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tactic-rule-no {
+  color: var(--gold-muted);
+  font-size: 13px;
+}
+.tactic-rule-ops {
+  display: flex;
+  gap: 6px;
+}
+.tactic-cond {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tactic-cond-label {
+  color: var(--paper-dim);
+  font-size: 13px;
+  min-width: 84px;
+}
+.tactic-input {
+  min-height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper);
+  padding: 0 10px;
+  font-size: 14px;
+}
+.tactic-input.num {
+  width: 64px;
+}
+.tactic-input:focus {
+  outline: none;
+  border-color: var(--jade);
+}
+.tactic-cond-add,
+.tactic-action,
+.tactic-perform-list,
+.tactic-default {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.tactic-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper-dim);
+  font-size: 13px;
+}
+.tactic-chip.on {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+.tactic-warning {
+  color: var(--gold);
+  font-size: 12px;
+  margin: 0;
+}
+.tactic-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  margin: 0;
+}
+.tactic-default {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.tactic-default-label {
+  color: var(--paper-dim);
+  font-size: 13px;
+}
+.tactic-pvp {
+  color: var(--paper-dim);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-min);
+}

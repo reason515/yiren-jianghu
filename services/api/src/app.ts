@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import { authContexts, envelope, requireAuth, type TokenVerifier } from "./http.js";
 import { registerApiStubs } from "./routes.js";
 import { AuthError, createAuthService } from "./authService.js";
+import {
+  CharacterError,
+  createCharacterService,
+  type CreateCharacterInput,
+} from "./characterService.js";
 import type { Db } from "./db.js";
 
 /**
@@ -45,6 +50,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const verifyToken =
     opts.verifyToken ?? (db ? createAuthService({ db, inviteCodes }).verifyToken : undefined);
   const auth = db ? createAuthService({ db, inviteCodes }) : null;
+  const characters = db ? createCharacterService(db) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -116,6 +122,54 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         throw err;
       }
     });
+  }
+
+  // M2.5-character：创建/查看/放弃角色（单角色约束 + 30 天冻结语义）；deps.db 未注入时保留 501 stub
+  if (characters) {
+    app.get("/account", { preHandler: requireAuth(verifyToken) }, async (req) => {
+      return { accountId: authContexts.get(req)?.accountId };
+    });
+
+    app.post("/characters", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId;
+      const body = (req.body ?? {}) as Partial<CreateCharacterInput>;
+      try {
+        const { characterId } = await characters.createCharacter(accountId ?? "", {
+          name: body.name ?? "",
+          gender: body.gender === "female" ? "female" : "male",
+          attrs: {
+            str: Number(body.attrs?.str),
+            int: Number(body.attrs?.int),
+            con: Number(body.attrs?.con),
+            dex: Number(body.attrs?.dex),
+          },
+        });
+        return { characterId };
+      } catch (err) {
+        if (err instanceof CharacterError) {
+          return envelope(reply, 400, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.get("/characters/me", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const character = await characters.getCharacter(accountId);
+      if (!character) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return character;
+    });
+
+    app.post(
+      "/characters/discard",
+      { preHandler: requireAuth(verifyToken) },
+      async (req, reply) => {
+        const accountId = authContexts.get(req)?.accountId ?? "";
+        const done = await characters.discardCharacter(accountId);
+        if (!done) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+        return { ok: true };
+      },
+    );
   }
 
   // B2：按清单注册全量 API（已实现路由因 hasRoute 自动跳过）

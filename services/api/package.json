@@ -12,7 +12,8 @@
     }
   },
   "dependencies": {
-    "@yjh/shared": "workspace:*"
+    "@yjh/shared": "workspace:*",
+    "fastify": "^5.11.2"
   },
   "devDependencies": {
     "@types/pg": "^8.11.0",

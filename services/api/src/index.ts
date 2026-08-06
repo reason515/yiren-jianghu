@@ -1,14 +1,15 @@
-/**
- * API 服务（任务 A5 起实现）。
- * Fastify 应用工厂 createApp()，支持注入依赖便于测试。
- */
-import { PROTOCOL_VERSION } from "@yjh/shared";
+/** API 服务入口：bootstrap（配置读取 + 监听）。 */
+import { createApp } from "./app.js";
 
-export interface AppMeta {
-  name: "api";
-  protocolVersion: number;
-}
+export { createApp } from "./app.js";
+export { createAppMeta } from "./meta.js";
 
-export function createAppMeta(): AppMeta {
-  return { name: "api", protocolVersion: PROTOCOL_VERSION };
+const port = Number(process.env.API_PORT ?? 3000);
+const app = await createApp({ logger: true });
+
+try {
+  await app.listen({ port, host: "0.0.0.0" });
+} catch (err) {
+  app.log.error(err);
+  process.exit(1);
 }

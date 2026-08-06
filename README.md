@@ -9,6 +9,8 @@
 | 文档 | 说明 |
 |---|---|
 | [项目立项与技术决策](docs/project-charter.md) | 已确认的产品定位、技术架构、账号、战斗、挂机、PVP、论坛、测试与运维决策 |
+| [pkuxkx 内容筛选目录](docs/pkuxkx-content-catalog.md) | 从 pkuxkx 提取内容的唯一入口，含筛选标准与权利登记 |
+| [设计与开发计划](docs/design-and-development-plan.md) | 里程碑、按序任务清单与执行记录 |
 
 ## 核心原则
 
@@ -25,6 +27,31 @@
 - 数据与作业：PostgreSQL + Redis Worker
 - 内容：Git 管理的 JSON/YAML 内容包
 - 部署：Docker Compose
+
+## 仓库结构
+
+```text
+yiren-jianghu/
+├── apps/h5-client/       # H5 客户端（Taro + React，任务 E 阶段）
+├── services/api/         # API 服务（Fastify，任务 A5 起）
+├── services/worker/      # 后台作业 Worker（挂机结算，任务 C7 起）
+├── packages/shared/      # 协议版本与共享类型
+├── packages/game-core/   # 游戏核心规则引擎（纯 TS、确定性）
+├── packages/content/     # 内容包 Schema、校验与打包
+├── docs/                 # 项目文档
+└── package.json          # pnpm workspace 根
+```
+
+## 开发命令
+
+```bash
+pnpm install      # 安装依赖
+pnpm build        # 构建所有包（按拓扑顺序）
+pnpm typecheck    # 类型检查
+pnpm test         # 单元测试（vitest）
+pnpm lint         # ESLint
+pnpm format       # Prettier 格式化
+```
 
 ## 仓库约定
 

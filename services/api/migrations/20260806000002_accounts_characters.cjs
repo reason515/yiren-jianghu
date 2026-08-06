@@ -51,17 +51,30 @@ exports.up = async (pgm) => {
   });
   pgm.createIndex("characters", ["account_id"]);
 
-  pgm.createTable("character_skills", {
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
-    skill_id: { type: "text", notNull: true },
-    level: { type: "integer", notNull: true, default: 0 },
-    primaryKey: ["character_id", "skill_id"],
-  });
+  pgm.createTable(
+    "character_skills",
+    {
+      character_id: {
+        type: "uuid",
+        notNull: true,
+        references: "characters(id)",
+        onDelete: "CASCADE",
+      },
+      skill_id: { type: "text", notNull: true },
+      level: { type: "integer", notNull: true, default: 0 },
+    },
+    { primaryKey: ["character_id", "skill_id"] },
+  );
   pgm.addConstraint("character_skills", "ck_character_skills_level", { check: "level >= 0" });
 
   pgm.createTable("character_items", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
+    },
     item_def_id: { type: "text", notNull: true },
     quantity: { type: "integer", notNull: true, default: 1 },
     slot: { type: "text" },
@@ -73,7 +86,12 @@ exports.up = async (pgm) => {
 
   pgm.createTable("tactic_templates", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
+    },
     name: { type: "text", notNull: true },
     config: { type: "jsonb", notNull: true, default: pgm.func("'{}'::jsonb") },
     is_default_pvp: { type: "boolean", notNull: true, default: false },

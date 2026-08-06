@@ -34,13 +34,26 @@ exports.up = async (pgm) => {
   pgm.createIndex("pvp_matches", ["season_id"]);
   pgm.createIndex("pvp_matches", ["challenger_id", "created_at"]);
 
-  pgm.createTable("pvp_scores", {
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
-    season_id: { type: "uuid", notNull: true, references: "pvp_seasons(id)", onDelete: "CASCADE" },
-    score: { type: "integer", notNull: true, default: 0 },
-    updated_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
-    primaryKey: ["character_id", "season_id"],
-  });
+  pgm.createTable(
+    "pvp_scores",
+    {
+      character_id: {
+        type: "uuid",
+        notNull: true,
+        references: "characters(id)",
+        onDelete: "CASCADE",
+      },
+      season_id: {
+        type: "uuid",
+        notNull: true,
+        references: "pvp_seasons(id)",
+        onDelete: "CASCADE",
+      },
+      score: { type: "integer", notNull: true, default: 0 },
+      updated_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
+    },
+    { primaryKey: ["character_id", "season_id"] },
+  );
 
   pgm.createTable("leaderboard_snapshots", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },

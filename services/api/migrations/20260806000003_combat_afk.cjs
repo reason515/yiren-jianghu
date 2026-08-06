@@ -5,7 +5,12 @@
 exports.up = async (pgm) => {
   pgm.createTable("combat_sessions", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
+    },
     kind: { type: "text", notNull: true },
     status: { type: "text", notNull: true, default: "ongoing" },
     target_def_id: { type: "text" },
@@ -25,7 +30,12 @@ exports.up = async (pgm) => {
 
   pgm.createTable("combat_events", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
-    session_id: { type: "uuid", notNull: true, references: "combat_sessions(id)", onDelete: "CASCADE" },
+    session_id: {
+      type: "uuid",
+      notNull: true,
+      references: "combat_sessions(id)",
+      onDelete: "CASCADE",
+    },
     seq: { type: "integer", notNull: true },
     type: { type: "text", notNull: true },
     payload: { type: "jsonb", notNull: true, default: pgm.func("'{}'::jsonb") },
@@ -35,7 +45,12 @@ exports.up = async (pgm) => {
 
   pgm.createTable("afk_jobs", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
-    character_id: { type: "uuid", notNull: true, references: "characters(id)", onDelete: "CASCADE" },
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
+    },
     kind: { type: "text", notNull: true },
     status: { type: "text", notNull: true, default: "running" },
     phase: { type: "text", notNull: true, default: "init" },

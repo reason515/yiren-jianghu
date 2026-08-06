@@ -48,8 +48,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy via SSH
-        # 未配置 DEPLOY_HOST 时跳过（步骤级 if 支持 secrets 判断），避免每次 push 都失败
-        if: ${{ secrets.DEPLOY_HOST != '' }}
+        # secrets 不能直接用于 if 条件（GitHub 限制），先经 env 再判断；未配置 DEPLOY_HOST 时跳过
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        if: env.DEPLOY_HOST != ''
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}

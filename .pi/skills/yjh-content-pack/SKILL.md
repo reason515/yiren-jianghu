@@ -14,7 +14,7 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ```text
 <dir>/
 ├── manifest.json        # { version: "x.y.z", name, description }
-├── params.json          # 数值参数表（经验曲线/潜能/战斗基础/挂机/经济）
+├── params.json          # 数值参数表（经验曲线/潜能/战斗基础/状态 Vitals/挂机/经济）
 ├── rooms/*.json         # 房间：id/area/name/exits/doors/actions/npcIds/itemIds
 ├── npcs/*.json          # NPC：battle|vendor|apprentice_master|quest_giver|npc
 ├── items/*.json         # 物品：weapon|armor|drug|food|misc

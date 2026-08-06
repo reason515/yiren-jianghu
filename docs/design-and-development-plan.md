@@ -471,6 +471,7 @@
 | 工程机制：E2E 冒烟 + CD 脚手架 + 协议一致性 | ✅ 完成 | — | CI e2e 作业（真实 PG+Redis）；deploy 工作流 + Dockerfile + 生产 compose 脚手架（激活需 secrets）；docs/protocol.md ↔ 代码契约测试（test:docs） |
 | C1–C10 规则引擎 | ⬜ | | 按清单顺序推进 |
 | C1 数值参数表 | ✅ 完成 | — | game-core/params：经验/潜能/挂机递减/装载校验（复用 content Schema 单一来源），确定性单测 |
+| C2 Vitals 计算 | ✅ 完成 | — | game-core/vitals：动态上限（qi/jing/neili/jingli）+ eff 钳制 + 食物饮水；参数表 vitals 段（内容包驱动），属性矩阵单测 |
 | D1–D8 切片内容 | ⬜ | | |
 | E1–E13 客户端 | ⬜ | | |
 | F1–F4 联调测试 | ⬜ | | |

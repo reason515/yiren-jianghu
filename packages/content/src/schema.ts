@@ -24,6 +24,25 @@ export const paramsSchema = z.object({
     maxDurationHours: z.number().min(0.5).max(24),
     dailyDiminishRate: z.number().min(0).max(1),
   }),
+  /** 状态（Vitals）公式系数：C2 动态上限（首版无年龄阶段，采用成年人常数，参照 pkuxkx 31–60 段公式） */
+  vitals: z.object({
+    qiBase: z.number().int().nonnegative().default(100),
+    jingBase: z.number().int().nonnegative().default(100),
+    jingliBase: z.number().int().nonnegative().default(100),
+    qiPerCon: z.number().int().nonnegative().default(16),
+    qiPerStr: z.number().int().nonnegative().default(0),
+    jingPerInt: z.number().int().nonnegative().default(16),
+    forceQiPerLevel: z.number().int().nonnegative().default(2),
+    forceJingPerLevel: z.number().int().nonnegative().default(1),
+    neiliPerLevel: z.number().int().positive().default(10),
+    jingliPerLevel: z.number().int().nonnegative().default(3),
+    neiliToQiDiv: z.number().int().positive().default(4),
+    neiliToJingDiv: z.number().int().positive().default(12),
+    foodBase: z.number().int().positive().default(200),
+    foodPerCon: z.number().int().nonnegative().default(10),
+    waterBase: z.number().int().positive().default(200),
+    waterPerDex: z.number().int().nonnegative().default(10),
+  }),
   /** 经济：掉落基础与现金流出上限（防通胀） */
   economy: z.object({
     silverDropBase: z.number().nonnegative(),

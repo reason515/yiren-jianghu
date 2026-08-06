@@ -38,9 +38,11 @@ docker-compose.prod.yml      # 生产 compose（固定 project name: yiren-jiang
 ## 数据库迁移
 
 在 api 容器内执行（devDeps 已随镜像带入）：
+
 ```bash
 docker compose -f docker-compose.prod.yml exec api pnpm --filter @yjh/api migrate:up
 ```
+
 > 若容器内 `pnpm` 因网络无法从 registry 拉取，改用 node 直跑：
 > `docker compose -f docker-compose.prod.yml exec api node node_modules/node-pg-migrate/bin/node-pg-migrate up`
 > 生产迁移策略（独立迁移作业、向后兼容、回滚预案）在 G2 正式化。
@@ -52,6 +54,7 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @yjh/api migrat
 ```bash
 sudo mkdir -p /etc/docker && sudo vi /etc/docker/daemon.json
 ```
+
 ```json
 {
   "builder": { "gc": { "defaultKeepStorage": "20GB", "enabled": true } },
@@ -59,11 +62,13 @@ sudo mkdir -p /etc/docker && sudo vi /etc/docker/daemon.json
   "registry-mirrors": ["https://docker.m.daocloud.io", "https://docker.io"]
 }
 ```
+
 ```bash
 sudo systemctl daemon-reload && sudo systemctl restart docker
 docker info | grep -A3 "Registry Mirrors"   # 验证
 docker pull postgres:16-alpine              # 上线前预拉基础镜像
 ```
+
 > 镜像地址可用性会变化，用前先验证；镜像只加速不构成信任边界。
 
 ## 回滚
@@ -73,6 +78,7 @@ cd /opt/yiren-jianghu
 API_IMAGE=ghcr.io/reason515/yiren-jianghu/api:<上一可用版本> \
   docker compose -f docker-compose.prod.yml up -d api
 ```
+
 应用回滚**不自动回滚数据库**；Schema 变更需单独设计向后兼容迁移与回滚策略（G2）。
 
 ## 标准运维

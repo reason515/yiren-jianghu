@@ -95,13 +95,16 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 4. **node-pg-migrate**：`runner` 是**函数**不是类（`await runner({ dbClient, dir, direction, migrationsTable })`，`dir` 用绝对路径）；**SQL 迁移不支持独立 `.down.sql` 文件**（down 必须与 up 同文件用 `-- down migration` 注释段）——本项目统一用 JS/CJS 迁移（显式 `exports.up/down`）。**复合主键必须作为 createTable 第三参数 options 传入**（`{ primaryKey: [...] }`），放进列对象会被当成名为 `primaryKey` 的列、type 解析为 undefined → PG 报 `type "undefined" does not exist`（CI migrations 作业踩过）。
 5. **内容包 CLI 路径**：`packages/content/bin/yjh-content.mjs` 显式目录参数按**包根（packages/content）相对**解析，默认 fixtures/pack。
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
-7. **GitHub Actions**：
+7. **`index.ts` 的 `export *` 同名导出冲突**：game-core 各模块用 `export *` 汇总，若两个模块导出同名符号（如 growth 与 params 都有 `effectivePotential`）会报 "has already exported a member"。解决：后者只 `import` 使用、不 re-export（growth 的 effectivePotential 从 params 导入）。
+8. **game-core 规则模块地图（C1–C10 已落地，新增规则模块照此扩展并 export 到 index）**：
+   `params`（数值参数）→ `vitals`（动态上限）→ `combat`（战斗引擎+seeded RNG）→ `perform`（绝招）→ `growth`（成长）→ `tactic`（战术模板，zod）→ `afk`（挂机作业）→ `pvp`（快照/ELO/赛季）→ `economy`（账本/掉落/商店）→ `map`（房间图/导航）。game-core 带 zod 依赖（战术模板 Schema），仍是零 IO 纯函数包。
+9. **GitHub Actions**：
    - `secrets` **不能直接用于 `if` 条件**（工作流直接判无效、运行显示无 job 即失败）——先 `env: { X: ${{ secrets.X }} }` 再 `if: env.X != ''`；
    - 运行"无任何 job 直接失败" = 工作流 YAML/表达式解析错误；
    - Docker Hub/registry 返回 502 等瞬时故障（如拉 buildx 镜像）→ **直接 Re-run，不要改代码**；
    - 弃用告警（Node20 actions）可通过升级 action 大版本消除（checkout@v5、setup-node@v5）。
-8. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
-9. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
+10. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
+11. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
 
 ## 下一步参考
 

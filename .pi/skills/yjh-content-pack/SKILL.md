@@ -82,3 +82,6 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 2. CLI 显式路径按 packages/content 相对解析；绝对路径（`/` 开头或盘符）直接使用。
 3. 校验器只做结构与引用完整性，**不做**平衡性检查；数值合理性靠 `params.json` 集中调参。
 4. fixtures 有两套：`pack/`（有效）与 `broken-pack/`（故意坏引用，验证拒绝）。CI 的 content:validate 用默认 fixtures，别把 broken-pack 设为默认。
+5. **新增参数段（如 vitals/growth/pvp）必须 5 处同步**，漏一处 CI/单测必红：① `packages/content/src/schema.ts` 的 `paramsSchema` ② `fixtures/pack/params.json` ③ `fixtures/broken-pack/params.json` ④ `packages/game-core/src/params.ts` 的 `DEFAULT_PARAMS` ⑤ `packages/content/src/validate.test.ts` 的 basePack（C2/C5/C8 均按此扩展）。
+6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/数值参数。别把玩家数据塞进内容包。
+7. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。

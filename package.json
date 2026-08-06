@@ -14,7 +14,15 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dev:infra": "docker compose up -d postgres redis",
+    "dev:infra:down": "docker compose down",
+    "dev:infra:ps": "docker compose ps",
+    "dev:infra:logs": "docker compose logs -f postgres redis",
+    "migrate": "pnpm --filter @yjh/api migrate:up",
+    "migrate:down": "pnpm --filter @yjh/api migrate:down",
+    "migrate:create": "pnpm --filter @yjh/api migrate:create",
+    "seed": "pnpm --filter @yjh/api seed"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

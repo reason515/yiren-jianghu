@@ -462,8 +462,8 @@
 |---|---|---|---|
 | A1 初始化单仓 | ✅ 完成 | — | 骨架 + 基础配置，build/typecheck/test/lint/format 全绿 |
 | A2 CI 与仓库规范 | ✅ 完成 | — | GitHub Actions 门禁 + PR 模板 |
-| A3 本地 Docker 环境 | ⬜ | | |
-| A4 数据库迁移 | ⬜ | | |
+| A3 本地 Docker 环境 | ✅ 完成 | — | compose + .env.example + 脚本；本机未装 Docker，运行验证待服务器/CI |
+| A4 数据库迁移 | ✅ 完成 | — | node-pg-migrate 基线 + CI migrations 作业（up/down） |
 | A5 API 骨架 | ⬜ | | |
 | A6 内容包管线 | ⬜ | | |
 | B1 领域模型 | ⬜ | | |

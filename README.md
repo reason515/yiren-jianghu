@@ -51,7 +51,12 @@ pnpm typecheck    # 类型检查
 pnpm test         # 单元测试（vitest）
 pnpm lint         # ESLint
 pnpm format       # Prettier 格式化
+pnpm dev:infra    # 启动本地 PostgreSQL + Redis（需 Docker）
+pnpm migrate      # 执行数据库迁移（需 DATABASE_URL）
+pnpm seed         # 写入开发/封测数据
 ```
+
+> 本地依赖数据库时需要 Docker（`docker compose up -d postgres redis`）；迁移工具链在 CI 中以 PostgreSQL 服务验证。
 
 ## 仓库约定
 

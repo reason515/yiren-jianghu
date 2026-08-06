@@ -14,9 +14,18 @@
   "dependencies": {
     "@yjh/shared": "workspace:*"
   },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "node-pg-migrate": "^7.6.0",
+    "pg": "^8.13.0"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate:up": "node-pg-migrate up -m ./migrations",
+    "migrate:down": "node-pg-migrate down -m ./migrations -c 1",
+    "migrate:create": "node-pg-migrate create -m ./migrations",
+    "seed": "node ./scripts/seed.mjs"
   }
 }

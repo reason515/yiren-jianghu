@@ -48,6 +48,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Upload deploy assets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        if: env.DEPLOY_HOST != ''
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}

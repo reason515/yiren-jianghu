@@ -1,0 +1,9 @@
+{
+  "id": "buxie",
+  "name": "千层布鞋",
+  "kind": "armor",
+  "stats": { "dodge": 1 },
+  "value": 3,
+  "weight": 1,
+  "description": "千层底纳得密实，走南闯北不硌脚。鞋底沾过的土，比谁都能记住路。"
+}

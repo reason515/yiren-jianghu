@@ -1,0 +1,9 @@
+{
+  "id": "cubu_yi",
+  "name": "粗布衣",
+  "kind": "armor",
+  "stats": { "defense": 2 },
+  "value": 5,
+  "weight": 2,
+  "description": "粗麻织就的短褐，洗得发白，却最是耐穿。江湖人第一件家当，多半就是它。"
+}

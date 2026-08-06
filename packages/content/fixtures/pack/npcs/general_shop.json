@@ -5,7 +5,9 @@
   "level": 5,
   "goods": [
     { "itemId": "iron_sword", "buy": 10, "sell": 5 },
-    { "itemId": "dry_food", "buy": 1, "sell": 0 }
+    { "itemId": "dry_food", "buy": 1, "sell": 0 },
+    { "itemId": "cubu_yi", "buy": 5, "sell": 2 },
+    { "itemId": "buxie", "buy": 3, "sell": 1 }
   ],
   "dialogue": [
     "出门在外，肚里有粮，手里有剑，才算有底气。本店小本经营，价钱公道。",

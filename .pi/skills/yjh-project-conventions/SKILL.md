@@ -53,7 +53,7 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 
 - **E2E**：`services/api/e2e/`（真实 PG+Redis，迁移→起服→就绪/鉴权/DB/Redis 往返）。本地先 `pnpm dev:infra` 再 `pnpm test:e2e`；CI `e2e` 作业用服务容器提供 pg/redis 后运行。玩法全链路场景在 B/F 阶段扩展进 `e2e/`。
 - **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
-- **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API 镜像推 GHCR → SSH 服务器 docker compose 更新。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`，见 `deploy/README.md`。
+- **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范）**。
 - 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤。
 
 ## 文档-代码-测试一致性机制（Q2）
@@ -95,9 +95,18 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 4. **node-pg-migrate**：`runner` 是**函数**不是类（`await runner({ dbClient, dir, direction, migrationsTable })`，`dir` 用绝对路径）；**SQL 迁移不支持独立 `.down.sql` 文件**（down 必须与 up 同文件用 `-- down migration` 注释段）——本项目统一用 JS/CJS 迁移（显式 `exports.up/down`）。**复合主键必须作为 createTable 第三参数 options 传入**（`{ primaryKey: [...] }`），放进列对象会被当成名为 `primaryKey` 的列、type 解析为 undefined → PG 报 `type "undefined" does not exist`（CI migrations 作业踩过）。
 5. **内容包 CLI 路径**：`packages/content/bin/yjh-content.mjs` 显式目录参数按**包根（packages/content）相对**解析，默认 fixtures/pack。
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
+7. **GitHub Actions**：
+   - `secrets` **不能直接用于 `if` 条件**（工作流直接判无效、运行显示无 job 即失败）——先 `env: { X: ${{ secrets.X }} }` 再 `if: env.X != ''`；
+   - 运行"无任何 job 直接失败" = 工作流 YAML/表达式解析错误；
+   - Docker Hub/registry 返回 502 等瞬时故障（如拉 buildx 镜像）→ **直接 Re-run，不要改代码**；
+   - 弃用告警（Node20 actions）可通过升级 action 大版本消除（checkout@v5、setup-node@v5）。
+8. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
+9. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
 
 ## 下一步参考
 
 - 内容工作 → 读 `yjh-content-pack` skill。
+- 玩家可见文案 → 读 `yjh-wuxia-copywriting` skill（绝招/房间/NPC/任务/剧情）。
 - 计划任务状态 → `docs/design-and-development-plan.md` 执行记录表。
+- 项目级规则与技能触发 → `.pi/agent/AGENTS.md`。
 - 新增服务/包 → 复制现有包骨架（package.json + tsconfig 继承 `tsconfig.base.json` + src/index.ts + src/index.test.ts），并记得在根 workspace 声明。

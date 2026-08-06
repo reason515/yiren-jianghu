@@ -31,8 +31,8 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 - `id` 正则：`/^[a-z0-9][a-z0-9_-]*$/`。
 - 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体。
 - NPC 掉落 `drops[]`：`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）。
-- 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**。
-- 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品。
+- 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**；冷却字段为 `cooldownTurns`（回合制语义）；`effect.type="buff"` Schema 保留但 v1 引擎未实现（校验器发 warning）。
+- 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。
 - 数值参数 `params.json`：`afk.maxDurationHours ∈ [0.5, 24]`（校验器建议 1–12）、`dailyDiminishRate ∈ [0,1]`。
 
 ## CLI（packages/content）
@@ -49,7 +49,7 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 ## 新增/修改内容的标准流程
 
 1. 若来自 pkuxkx：先走下方筛选登记流程，取得"纳入"决定。
-2. 按 Schema 编写内容文件（文本**原创**，只复用结构与数值参考）。
+2. 按 Schema 编写内容文件（文本**原创**，只复用结构与数值参考）；**玩家可见文案（房间描写/NPC 对话/任务简报/绝招描述）必须遵循 `yjh-wuxia-copywriting` skill**。
 3. 修改 `packages/content/src/validate.test.ts` 或新增用例覆盖新规则/新字段。
 4. `pnpm build && pnpm test && pnpm content:validate` 全绿。
 5. 打版 `pnpm content:pack`，更新 `docs/design-and-development-plan.md` 对应任务状态。

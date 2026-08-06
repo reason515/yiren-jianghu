@@ -58,6 +58,15 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 字体：正文 `Noto Serif SC`；标题/主按钮 `ZCOOL XiaoWei`（与 xkx 一致）；禁止 Inter/Roboto/Arial 作主字体。
 - 禁止散落写死色值；新颜色先补 token。
 
+## 4.1 已落地组件基线（apps/h5-client/src/，勿重复造轮子）
+
+- 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）
+- 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage` / `CharacterCreateSheet`
+- 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
+- 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
+- 数据模型：`lib/sceneTypes.ts`；API 客户端：`lib/authApi.ts`（fetch 注入式，Taro 可替换）
+- 新界面先检查此处是否有可复用组件；扩展时保持 token 驱动 + 44px 触控 + aria。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

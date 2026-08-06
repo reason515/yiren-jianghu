@@ -22,7 +22,7 @@ description: 《一人江湖》(yiren-jianghu) 项目开发规范——单仓结
 ## 仓库结构
 
 ```text
-apps/h5-client/       # H5 客户端（Taro + React，E 阶段）
+apps/h5-client/       # H5 客户端（React 设计基线已落地；Taro 运行时接入为 E2.1 待办，接入前勿假设 Taro API 可用）
 services/api/         # API 服务（Fastify 应用工厂 createApp，A5 起）
 services/worker/      # 后台作业 Worker（挂机结算，C7 起）
 packages/shared/      # 协议版本与共享类型（客户端/服务端共用）
@@ -105,6 +105,13 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
    - 弃用告警（Node20 actions）可通过升级 action 大版本消除（checkout@v5、setup-node@v5）。
 10. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
 11. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
+12. **React 19 + tsc 声明（h5-client 前端约定）**：
+
+- 组件函数必须显式返回类型 `: JSX.Element`（import type { JSX } from "react"），否则 declaration emit 报 TS2742 "cannot be named without reference to @types/react"；
+- `@types/react` / `@types/react-dom` 必须作为**消费包的 devDependencies**（pnpm 严格隔离，根 devDeps 不可见）；
+- vitest include 需覆盖 `.tsx`：`"**/*.test.{ts,tsx}"`；
+- DOM 测试文件头部加 `// @vitest-environment happy-dom`（happy-dom 为测试包 devDep）；
+- React 受控 input 测试：直接设 `input.value` 不触发 onChange，须用原生 value setter（`Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set`）再 dispatch `input` 事件。
 
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 

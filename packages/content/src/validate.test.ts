@@ -51,6 +51,7 @@ function basePack(): ContentPack {
         practicePointsPerAction: 1,
         studyJingBase: 80,
       },
+      pvp: { dailyChallengeLimit: 5, kFactor: 32, seasonWeeks: 6 },
       economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
     },
     rooms: [

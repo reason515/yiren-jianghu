@@ -16,3 +16,4 @@ export * from "./perform.js";
 export * from "./growth.js";
 export * from "./tactic.js";
 export * from "./afk.js";
+export * from "./pvp.js";

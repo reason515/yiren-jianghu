@@ -63,6 +63,12 @@ export const paramsSchema = z.object({
     practicePointsPerAction: z.number().positive().default(1),
     studyJingBase: z.number().int().positive().default(80),
   }),
+  /** PVP：赛季与积分规则 */
+  pvp: z.object({
+    dailyChallengeLimit: z.number().int().positive().default(5),
+    kFactor: z.number().int().positive().default(32),
+    seasonWeeks: z.number().int().positive().default(6),
+  }),
   /** 经济：掉落基础与现金流出上限（防通胀） */
   economy: z.object({
     silverDropBase: z.number().nonnegative(),

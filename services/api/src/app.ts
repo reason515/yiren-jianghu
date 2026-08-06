@@ -8,6 +8,8 @@ import {
   createCharacterService,
   type CreateCharacterInput,
 } from "./characterService.js";
+import { SceneError, buildContentIndex, createSceneService } from "./sceneService.js";
+import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
 /**
@@ -21,8 +23,10 @@ import type { Db } from "./db.js";
 export interface AppDeps {
   /** 就绪检查：返回不可用原因列表；空数组表示就绪。 */
   readiness?: () => Promise<string[]>;
-  /** 数据库（注入后启用真实业务域：auth 等）。 */
+  /** 数据库（注入后启用真实业务域：auth/character/scene 等）。 */
   db?: Db;
+  /** 内容包（注入后启用场景/行囊组装；由部署加载 dev-pack 或线上包）。 */
+  content?: ContentPack;
 }
 
 export interface AppOptions {
@@ -51,6 +55,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
     opts.verifyToken ?? (db ? createAuthService({ db, inviteCodes }).verifyToken : undefined);
   const auth = db ? createAuthService({ db, inviteCodes }) : null;
   const characters = db ? createCharacterService(db) : null;
+  const scene = db && deps.content ? createSceneService(db, buildContentIndex(deps.content)) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -170,6 +175,46 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         return { ok: true };
       },
     );
+  }
+
+  // M2.5-scene/inventory：场景组装、移动、行囊；deps.db + deps.content 时启用
+  if (scene) {
+    app.get("/scene", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        const view = await scene.getScene(accountId);
+        if (!view) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+        return view;
+      } catch (err) {
+        if (err instanceof SceneError) return envelope(reply, 404, err.code, err.message);
+        throw err;
+      }
+    });
+
+    app.post("/scene/action", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { type?: string; dir?: string };
+      if (body.type !== "move") {
+        return envelope(reply, 501, "not_implemented", `动作 ${body.type ?? ""} 尚未实现`);
+      }
+      try {
+        const view = await scene.move(accountId, body.dir ?? "");
+        return view;
+      } catch (err) {
+        if (err instanceof SceneError) {
+          const status = err.code === "no_character" ? 404 : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.get("/inventory", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const items = await scene.getInventory(accountId);
+      if (!items) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return items;
+    });
   }
 
   // B2：按清单注册全量 API（已实现路由因 hasRoute 自动跳过）

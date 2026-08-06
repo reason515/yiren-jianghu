@@ -82,6 +82,9 @@ importers:
 
   services/api:
     dependencies:
+      '@yjh/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@yjh/shared':
         specifier: workspace:*
         version: link:../../packages/shared

@@ -1,0 +1,7 @@
+{
+  "expCurve": { "base": 100, "growth": 1.1 },
+  "potential": { "learnCostFactor": 1 },
+  "combat": { "baseHitRate": 0.7, "baseDodgeRate": 0.1, "baseParryRate": 0.15 },
+  "afk": { "maxDurationHours": 8, "dailyDiminishRate": 0.5 },
+  "economy": { "silverDropBase": 5, "maxCashflowPerDay": 1000 }
+}

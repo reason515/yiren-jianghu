@@ -1,0 +1,10 @@
+{
+  "id": "village_guard",
+  "name": "村口守卫",
+  "kind": "battle",
+  "level": 3,
+  "skills": [{ "skillId": "basic_sword", "level": 10 }],
+  "drops": [{ "itemId": "iron_sword", "chance": 0.2 }],
+  "aggressive": false,
+  "respawnSec": 60
+}

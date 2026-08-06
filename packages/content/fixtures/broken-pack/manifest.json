@@ -1,0 +1,5 @@
+{
+  "version": "0.1.0",
+  "name": "broken-pack",
+  "description": "含错误引用，用于验证校验器拒绝"
+}

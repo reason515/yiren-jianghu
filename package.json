@@ -22,7 +22,10 @@
     "migrate": "pnpm --filter @yjh/api migrate:up",
     "migrate:down": "pnpm --filter @yjh/api migrate:down",
     "migrate:create": "pnpm --filter @yjh/api migrate:create",
-    "seed": "pnpm --filter @yjh/api seed"
+    "seed": "pnpm --filter @yjh/api seed",
+    "content:validate": "pnpm --filter @yjh/content validate",
+    "content:preview": "pnpm --filter @yjh/content preview",
+    "content:pack": "pnpm --filter @yjh/content bundle"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

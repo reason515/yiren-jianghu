@@ -1,0 +1,9 @@
+{
+  "id": "iron_sword",
+  "name": "铁剑",
+  "kind": "weapon",
+  "stats": { "attack": 5 },
+  "value": 20,
+  "weight": 3,
+  "description": "铁匠铺里常见的粗铁长剑。"
+}

@@ -1,0 +1,233 @@
+import { z } from "zod";
+
+/**
+ * 内容包 Schema v0.1（A6 基础版，随 B1/D 阶段演进）。
+ * 覆盖：manifest / 数值参数 / 房间 / NPC / 物品 / 技能 / 绝招 / 任务 / 主线节点。
+ */
+
+const id = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/, "id 只能用小写字母、数字、_ 与 -");
+
+// ---------- 数值参数表（D1 填充，封测集中调参） ----------
+export const paramsSchema = z.object({
+  /** 经验曲线：下一级所需经验 = base * growth^(level-1)（首版简化） */
+  expCurve: z.object({ base: z.number().int().positive(), growth: z.number().positive() }),
+  /** 潜能：学习消耗系数（有效潜能 = potential - learned_points） */
+  potential: z.object({ learnCostFactor: z.number().positive() }),
+  /** 战斗基础值 */
+  combat: z.object({
+    baseHitRate: z.number().min(0).max(1),
+    baseDodgeRate: z.number().min(0).max(1),
+    baseParryRate: z.number().min(0).max(1),
+  }),
+  /** 挂机：时长上限与每日递减 */
+  afk: z.object({
+    maxDurationHours: z.number().min(0.5).max(24),
+    dailyDiminishRate: z.number().min(0).max(1),
+  }),
+  /** 经济：掉落基础与现金流出上限（防通胀） */
+  economy: z.object({
+    silverDropBase: z.number().nonnegative(),
+    maxCashflowPerDay: z.number().positive(),
+  }),
+});
+
+// ---------- 房间 ----------
+const exitSchema = z.object({
+  dir: z.string().min(1),
+  roomId: id,
+  name: z.string().optional(),
+  hidden: z.boolean().optional(),
+});
+
+const doorSchema = z.object({
+  dir: z.string().min(1),
+  name: z.string().default("门"),
+  locked: z.boolean().optional(),
+});
+
+const actionSchema = z.object({
+  command: z.string().min(1),
+  label: z.string().min(1),
+});
+
+export const roomSchema = z.object({
+  id,
+  area: z.string().min(1),
+  name: z.string().min(1),
+  shortDesc: z.string().default(""),
+  longDesc: z.string().default(""),
+  exits: z.array(exitSchema).default([]),
+  doors: z.array(doorSchema).default([]),
+  actions: z.array(actionSchema).default([]),
+  canSleep: z.boolean().optional(),
+  npcIds: z.array(id).default([]),
+  itemIds: z.array(id).default([]),
+});
+
+// ---------- NPC ----------
+const skillRefSchema = z.object({ skillId: id, level: z.number().int().nonnegative() });
+const dropSchema = z.object({
+  itemId: id,
+  chance: z.number().min(0).max(1),
+  min: z.number().int().nonnegative().default(1),
+  max: z.number().int().nonnegative().default(1),
+  minExp: z.number().int().nonnegative().optional(),
+});
+
+export const npcSchema = z.object({
+  id,
+  name: z.string().min(1),
+  kind: z.enum(["battle", "vendor", "apprentice_master", "quest_giver", "npc"]),
+  level: z.number().int().nonnegative().optional(),
+  attrs: z
+    .object({ str: z.number(), int: z.number(), con: z.number(), dex: z.number() })
+    .optional(),
+  skills: z.array(skillRefSchema).default([]),
+  equipment: z.array(id).default([]),
+  drops: z.array(dropSchema).default([]),
+  aggressive: z.boolean().default(false),
+  respawnSec: z.number().int().positive().optional(),
+  dialogue: z.array(z.string()).default([]),
+});
+
+// ---------- 物品 ----------
+const itemStatsSchema = z.object({
+  attack: z.number().optional(),
+  defense: z.number().optional(),
+  dodge: z.number().optional(),
+  parry: z.number().optional(),
+  maxQi: z.number().optional(),
+  maxJing: z.number().optional(),
+  maxNeili: z.number().optional(),
+});
+
+export const itemSchema = z.object({
+  id,
+  name: z.string().min(1),
+  kind: z.enum(["weapon", "armor", "drug", "food", "misc"]),
+  stats: itemStatsSchema.optional(),
+  value: z.number().int().nonnegative().default(0),
+  weight: z.number().nonnegative().default(1),
+  stackable: z.boolean().default(false),
+  description: z.string().default(""),
+  usable: z
+    .object({
+      effect: z.enum(["heal_qi", "heal_jing", "restore_neili", "feed", "quench"]),
+      amount: z.number().positive(),
+    })
+    .optional(),
+});
+
+// ---------- 技能 ----------
+export const skillSchema = z.object({
+  id,
+  name: z.string().min(1),
+  category: z.enum(["force", "weapon", "dodge", "parry", "knowledge"]),
+  description: z.string().default(""),
+  maxLevel: z.number().int().positive().default(500),
+  baseLevel: z.number().int().nonnegative().default(0),
+});
+
+// ---------- 绝招 ----------
+const performConditionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("self_qi_below_pct"), value: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("self_neili_above_pct"), value: z.number().min(0).max(100) }),
+  z.object({ type: z.literal("skill_level_at_least"), value: z.number().int().nonnegative() }),
+  z.object({ type: z.literal("enemy_qi_below_pct"), value: z.number().min(0).max(100) }),
+]);
+
+export const performSchema = z.object({
+  id,
+  skillId: id,
+  name: z.string().min(1),
+  cost: z.object({
+    qi: z.number().int().nonnegative().default(0),
+    jing: z.number().int().nonnegative().default(0),
+    neili: z.number().int().nonnegative().default(0),
+  }),
+  cooldownSec: z.number().positive(),
+  conditions: z.array(performConditionSchema).default([]),
+  effect: z.object({
+    type: z.enum(["damage", "heal", "buff"]),
+    amount: z.number().positive(),
+    target: z.enum(["enemy", "self"]).default("enemy"),
+  }),
+  description: z.string().default(""),
+});
+
+// ---------- 任务 ----------
+const questPhaseSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("goto"), targetId: id }),
+  z.object({
+    type: z.literal("kill"),
+    targetId: id,
+    count: z.number().int().positive().default(1),
+  }),
+  z.object({ type: z.literal("talk"), targetId: id }),
+  z.object({
+    type: z.literal("deliver"),
+    targetId: id,
+    count: z.number().int().positive().default(1),
+  }),
+  z.object({
+    type: z.literal("collect"),
+    targetId: id,
+    count: z.number().int().positive().default(1),
+  }),
+]);
+
+export const questSchema = z.object({
+  id,
+  name: z.string().min(1),
+  kind: z.enum(["sect", "bounty", "main"]),
+  minExp: z.number().int().nonnegative().default(0),
+  phases: z.array(questPhaseSchema).min(1),
+  rewards: z.object({
+    exp: z.number().int().nonnegative().default(0),
+    potential: z.number().int().nonnegative().default(0),
+    silver: z.number().int().nonnegative().default(0),
+    items: z.array(z.object({ itemId: id, count: z.number().int().positive() })).default([]),
+  }),
+  repeatable: z.boolean().default(false),
+});
+
+// ---------- 主线节点 ----------
+export const storySchema = z.object({
+  id,
+  title: z.string().min(1),
+  questId: id.optional(),
+  text: z.string().default(""),
+  next: z.array(id).default([]),
+  conditions: z.array(z.string()).default([]),
+});
+
+// ---------- manifest ----------
+export const manifestSchema = z.object({
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  name: z.string().min(1),
+  description: z.string().default(""),
+});
+
+// ---------- 内容包整体 ----------
+export const contentPackSchema = z.object({
+  manifest: manifestSchema,
+  params: paramsSchema,
+  rooms: z.array(roomSchema).default([]),
+  npcs: z.array(npcSchema).default([]),
+  items: z.array(itemSchema).default([]),
+  skills: z.array(skillSchema).default([]),
+  performs: z.array(performSchema).default([]),
+  quests: z.array(questSchema).default([]),
+  story: z.array(storySchema).default([]),
+});
+
+export type ContentPack = z.infer<typeof contentPackSchema>;
+export type Params = z.infer<typeof paramsSchema>;
+export type Room = z.infer<typeof roomSchema>;
+export type Npc = z.infer<typeof npcSchema>;
+export type Item = z.infer<typeof itemSchema>;
+export type Skill = z.infer<typeof skillSchema>;
+export type Perform = z.infer<typeof performSchema>;
+export type Quest = z.infer<typeof questSchema>;
+export type StoryNode = z.infer<typeof storySchema>;
+export type Manifest = z.infer<typeof manifestSchema>;

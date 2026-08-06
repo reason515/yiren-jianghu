@@ -1,0 +1,8 @@
+{
+  "id": "village_square",
+  "area": "newbie",
+  "name": "村口广场",
+  "shortDesc": "青石铺就的村口广场，晒谷场上晾着金黄稻谷。",
+  "exits": [{ "dir": "south", "roomId": "village_inn" }],
+  "npcIds": ["village_guard"]
+}

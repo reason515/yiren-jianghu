@@ -1,0 +1,6 @@
+{
+  "id": "broken_room",
+  "area": "newbie",
+  "name": "坏房间",
+  "exits": [{ "dir": "north", "roomId": "nowhere" }]
+}

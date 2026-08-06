@@ -1,0 +1,7 @@
+{
+  "id": "q_ghost",
+  "name": "打鬼",
+  "kind": "bounty",
+  "phases": [{ "type": "kill", "targetId": "ghost", "count": 1 }],
+  "rewards": { "exp": 10 }
+}

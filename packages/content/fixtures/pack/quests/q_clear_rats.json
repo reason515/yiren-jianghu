@@ -1,0 +1,9 @@
+{
+  "id": "q_clear_rats",
+  "name": "清理鼠患",
+  "kind": "bounty",
+  "minExp": 0,
+  "phases": [{ "type": "kill", "targetId": "village_guard", "count": 1 }],
+  "rewards": { "exp": 50, "potential": 10, "silver": 10 },
+  "repeatable": true
+}

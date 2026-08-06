@@ -1,0 +1,7 @@
+{
+  "id": "basic_sword",
+  "name": "基础剑法",
+  "category": "weapon",
+  "description": "村中武师传授的入门剑法。",
+  "maxLevel": 100
+}

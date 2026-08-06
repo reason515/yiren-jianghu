@@ -1,0 +1,10 @@
+{
+  "id": "taiyi_rain",
+  "skillId": "xuanmen_sword",
+  "name": "太乙剑雨",
+  "cost": { "jing": 8, "neili": 12 },
+  "cooldownTurns": 6,
+  "conditions": [{ "type": "skill_level_at_least", "value": 40 }],
+  "effect": { "type": "damage", "amount": 20, "target": "enemy" },
+  "description": "剑势连绵，如暴雨倾泻，令对手无从招架。"
+}

@@ -3,7 +3,7 @@
   "skillId": "basic_sword",
   "name": "疾风斩",
   "cost": { "qi": 0, "jing": 5, "neili": 10 },
-  "cooldownSec": 6,
+  "cooldownTurns": 3,
   "conditions": [{ "type": "self_neili_above_pct", "value": 30 }],
   "effect": { "type": "damage", "amount": 12, "target": "enemy" },
   "description": "看似平凡的一剑，胜在快如疾风。"

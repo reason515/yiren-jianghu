@@ -122,6 +122,13 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         message: `绝招 ${perform.id} 引用不存在技能 ${perform.skillId}`,
       });
     }
+    if (perform.effect.type === "buff") {
+      issues.push({
+        code: "perform_buff_unsupported",
+        severity: "warning",
+        message: `绝招 ${perform.id} 为 buff 类型，v1 战斗引擎未实现（保留 Schema，后续版本支持）`,
+      });
+    }
   }
 
   // 任务

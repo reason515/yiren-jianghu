@@ -1,0 +1,10 @@
+{
+  "id": "qiankun_gather",
+  "skillId": "xuanmen_force",
+  "name": "乾坤聚气",
+  "cost": { "neili": 15 },
+  "cooldownTurns": 5,
+  "conditions": [{ "type": "self_qi_below_pct", "value": 60 }],
+  "effect": { "type": "heal", "amount": 25, "target": "self" },
+  "description": "运转玄门内功，浊气下沉、真气归元，伤势为之平复。"
+}

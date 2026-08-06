@@ -173,7 +173,8 @@ export const performSchema = z.object({
     jing: z.number().int().nonnegative().default(0),
     neili: z.number().int().nonnegative().default(0),
   }),
-  cooldownSec: z.number().positive(),
+  /** 冷却（回合制引擎按“回合”解释：1 回合 = 1 次行动）。 */
+  cooldownTurns: z.number().positive(),
   conditions: z.array(performConditionSchema).default([]),
   effect: z.object({
     type: z.enum(["damage", "heal", "buff"]),

@@ -50,6 +50,16 @@ export const DEFAULT_PARAMS: GameParams = {
     waterBase: 200,
     waterPerDex: 10,
   },
+  growth: {
+    learnJingCostBase: 150,
+    potentialCostPerLevel: 1,
+    expGateExponent: 3,
+    expGateDivisor: 10,
+    practiceQiBase: 20,
+    practiceQiPerLevel: 1,
+    practicePointsPerAction: 1,
+    studyJingBase: 80,
+  },
   economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
 };
 

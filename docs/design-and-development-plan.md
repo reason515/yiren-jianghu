@@ -474,6 +474,7 @@
 | C2 Vitals 计算 | ✅ 完成 | — | game-core/vitals：动态上限（qi/jing/neili/jingli）+ eff 钳制 + 食物饮水；参数表 vitals 段（内容包驱动），属性矩阵单测 |
 | C3 战斗引擎 v1 | ✅ 完成 | — | game-core/combat：seeded RNG（mulberry32）+ 命中三态 + 分系伤害/减伤 + 回合循环 + 动作选择器接口 + 事件流；参数表 combat 段扩展，确定性单测（55 用例） |
 | C4 绝招定义与执行 | ✅ 完成 | — | 4 个代表性绝招内容（内功回气/兵器伤害/技能门槛/处决）+ 条件/消耗/冷却校验 + 映射战斗动作 + 冷却跟踪；buff 类型保留 Schema 但校验器告警；71 用例 |
+| C5 技能成长 | ✅ 完成 | — | game-core/growth：learn（潜能+精，exp 门槛 = 等级³/10）/practice（气血累积）/study（精累积）；有效潜能修正；84 用例 |
 | D1–D8 切片内容 | ⬜ | | |
 | E1–E13 客户端 | ⬜ | | |
 | F1–F4 联调测试 | ⬜ | | |

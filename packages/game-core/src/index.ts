@@ -13,3 +13,4 @@ export * from "./vitals.js";
 export * from "./random.js";
 export * from "./combat.js";
 export * from "./perform.js";
+export * from "./growth.js";

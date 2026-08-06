@@ -52,6 +52,17 @@ export const paramsSchema = z.object({
     waterBase: z.number().int().positive().default(200),
     waterPerDex: z.number().int().nonnegative().default(10),
   }),
+  /** 成长（学习/练习/读书）：exp 门槛与资源消耗 */
+  growth: z.object({
+    learnJingCostBase: z.number().int().positive().default(150),
+    potentialCostPerLevel: z.number().positive().default(1),
+    expGateExponent: z.number().positive().default(3),
+    expGateDivisor: z.number().positive().default(10),
+    practiceQiBase: z.number().int().positive().default(20),
+    practiceQiPerLevel: z.number().int().nonnegative().default(1),
+    practicePointsPerAction: z.number().positive().default(1),
+    studyJingBase: z.number().int().positive().default(80),
+  }),
   /** 经济：掉落基础与现金流出上限（防通胀） */
   economy: z.object({
     silverDropBase: z.number().nonnegative(),

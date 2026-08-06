@@ -113,6 +113,12 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - DOM 测试文件头部加 `// @vitest-environment happy-dom`（happy-dom 为测试包 devDep）；
 - React 受控 input 测试：直接设 `input.value` 不触发 onChange，须用原生 value setter（`Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set`）再 dispatch `input` 事件。
 
+13. **受控组件 DOM 测试（E6 踩过）**：
+
+- **受控组件（props 驱动）的 onChange 测试必须用 useState harness**：只捕获数据而不更新 props，UI 不重渲染，DOM 断言必失败（TacticEditor 教训）；
+- React 重渲染后**旧 DOM 引用失效**：多次点击后要重新查询（`const row = () => host.querySelector(...)`），不要缓存节点；
+- 测试辅助函数（`props()`）须**显式返回组件 Props 类型**，否则 onChange 等函数类型被推断成联合，闭包参数变 `never`（TS2339）。
+
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 
 | 任务类型                                         | 第一步必读 skill                                                                                |

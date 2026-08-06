@@ -1,0 +1,65 @@
+/* 战斗视图样式（E4；全部 tokens） */
+
+.combat {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.combat-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.combat-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.combat-side.foe .combat-name {
+  color: var(--cinnabar);
+}
+.combat-side.self .combat-name {
+  color: var(--paper-dim);
+}
+.combat-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+.combat-log {
+  max-height: 40vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.combat-line {
+  margin: 0;
+  color: var(--paper-dim);
+  line-height: 1.8;
+  font-size: 14px;
+}
+.combat-line.hl {
+  color: var(--jade-bright);
+}
+.combat-line.dg {
+  color: var(--cinnabar);
+}
+.combat-result {
+  margin: 0;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 8px 0;
+}
+.combat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

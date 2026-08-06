@@ -495,6 +495,7 @@
 | E1 H5 设计基线 | ✅ 完成 | — | tokens.css（墨色武侠 token 体系）+ 基础组件 Sheet/Chip/Bar/Toast（44px 触控/aria/语义标签）+ happy-dom DOM 单测；Taro 脚手架随 E2 登录页接入 |
 | E2 登录与角色 | ✅ 完成 | — | LoginPage（邀请码）+ CharacterCreateSheet（名号/性别分段/四维分配 80 池）+ ConfirmSheet（放弃二次确认）+ authApi（可注入 fetch，错误信封映射）；文案按 wuxia 规范；156 用例；Taro 运行时接入为 E2.1 待办 |
 | E3 场景与探索 | ✅ 完成 | — | SceneView（叙事优先+见闻 Tab）+ ExitPad 九宫格（map-design 场景方位图，八向+上下进出竖列）+ EntitySheet（能力→动作：交易/拜师/请托/较量/拾取）+ sceneTypes 数据模型；160 用例 |
+| E4 手动战斗 UI | ✅ 完成 | — | CombatView（双方状态 Bar + 战报演出 + 动作按钮：普攻/绝招/回气/逃跑 + 结果收束横幅）；服务端权威：客户端只发动作意图；164 用例 |
 | F1–F4 联调测试 | ⬜ | | |
 | G1–G5 部署封测 | ⬜ | | |
 

@@ -2,24 +2,30 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { authContexts, envelope, requireAuth, type TokenVerifier } from "./http.js";
 import { registerApiStubs } from "./routes.js";
+import { AuthError, createAuthService } from "./authService.js";
+import type { Db } from "./db.js";
 
 /**
- * API 应用工厂（A5 骨架，B2 扩展：按清单注册全量路由，未实现为 501 stub）。
- * - 依赖注入：deps.readiness 便于测试与后续接入 pg/redis 就绪检查
- * - 请求上下文：requestId 贯穿日志与错误信封（Fastify 内置 requestIdHeader/genReqId）
- * - 鉴权：requireAuth 供受保护路由使用（G3 接入邀请码/微信认证）
- * - 限流骨架：每 IP 令牌桶（占位实现，G3 迁移到 Redis 分布式限流）
+ * API 应用工厂（A5 骨架，B2 清单，M2.5 接入 DB 注入与 auth 域）。
+ * - 依赖注入：deps.readiness / deps.db（auth 等业务域真实实现）
+ * - 请求上下文：requestId 贯穿日志与错误信封
+ * - 鉴权：deps.db 存在时 verifyToken 走 sessions 表；否则保持占位 stub
+ * - 限流骨架：每 IP 令牌桶（G3 迁移 Redis）
  */
 
 export interface AppDeps {
   /** 就绪检查：返回不可用原因列表；空数组表示就绪。 */
   readiness?: () => Promise<string[]>;
+  /** 数据库（注入后启用真实业务域：auth 等）。 */
+  db?: Db;
 }
 
 export interface AppOptions {
   logger?: boolean;
   deps?: AppDeps;
-  /** 令牌校验器（A5 占位：非空 token 即视为有效，G3 替换为真实认证）。 */
+  /** 邀请码列表（默认取环境变量 INVITE_CODES，逗号分隔）。 */
+  inviteCodes?: string[];
+  /** 令牌校验器（默认：deps.db 存在时查 sessions；否则占位）。 */
   verifyToken?: TokenVerifier;
 }
 
@@ -32,7 +38,13 @@ interface RateBucket {
 }
 
 export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance> {
-  const { deps = {}, verifyToken } = opts;
+  const { deps = {} } = opts;
+  const db = deps.db;
+  const inviteCodes = opts.inviteCodes ?? (process.env.INVITE_CODES ?? "").split(",");
+  // 鉴权：显式 verifyToken > db 会话表 > 占位 stub
+  const verifyToken =
+    opts.verifyToken ?? (db ? createAuthService({ db, inviteCodes }).verifyToken : undefined);
+  const auth = db ? createAuthService({ db, inviteCodes }) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -86,7 +98,27 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
     return { accountId: authContexts.get(req)?.accountId };
   });
 
-  // B2：按清单注册全量 API（未实现为 501 stub）
+  // M2.5-auth：真实登录（邀请码 → 账号 + 会话 token）；deps.db 未注入时保留 501 stub
+  if (auth) {
+    app.post("/auth/login", async (req, reply) => {
+      const body = (req.body ?? {}) as { inviteCode?: unknown };
+      const inviteCode = typeof body.inviteCode === "string" ? body.inviteCode : "";
+      if (!inviteCode) {
+        return envelope(reply, 400, "invalid_request", "缺少邀请帖号");
+      }
+      try {
+        const session = await auth.login(inviteCode);
+        return { accountId: session.accountId, token: session.token };
+      } catch (err) {
+        if (err instanceof AuthError) {
+          return envelope(reply, 401, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+  }
+
+  // B2：按清单注册全量 API（已实现路由因 hasRoute 自动跳过）
   registerApiStubs(app, verifyToken);
 
   return app;

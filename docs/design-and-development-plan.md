@@ -29,7 +29,8 @@
 | M0 工程基座 | ✅ 完成 | — | A1–A6 全部完成，本机全绿；Docker 运行验证待服务器/CI |
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
-| M3 H5 垂直闭环 | ✅ 完成 | — | E1–E13 全部完成：设计 token + 20 组件 + 7 数据模型 + 重连/恢复客户端，204 用例全绿；Taro 运行时接入为 E2.1 待办（封测前提） |
+| M3 H5 垂直闭环 | ✅ 完成 | — | E 阶段客户端全量（20 组件 + 7 数据模型），204→209 用例 |
+| M2.5 服务端业务 | 🔄 进行中 | — | 补充发现的计划缺口：B2 仅建清单+501 stub，服务端各域 handler 需实现后才能 F 联调；auth 域已完成 |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
 | M3 H5 垂直闭环 | E+F 阶段：客户端 + 联调 + 端到端冒烟 | 冒烟脚本全绿，真机可玩 | 3–4 周 |
@@ -396,6 +397,19 @@
 - 轻量插画占位、战斗演出动画、环境音占位
 - **估时**：2 人日（可延后）
 
+## 阶段 M2.5：服务端业务（API 真实实现，F 联调前置）
+
+> 发现的计划缺口：B2 只建了协议清单与 501 stub，E 阶段全是客户端；F 的端到端冒烟需要真实 handler。按域逐个实现（`services/api/src/`），已实现路由因 hasRoute 自动顶替 stub。每域：代码 + 单测（mock db）+ `docs/protocol.md` 无需变更（路由已在清单）。
+
+- M2.5-auth ✅：`POST /auth/login`（邀请码 → 账号幂等绑定 + sessions 会话 token）、verifyToken 查 sessions（过期/未知拒绝）；迁移 0006（accounts.invite_code + sessions 表）；DB 依赖注入（deps.db）
+- M2.5-account/character：GET /account、GET/POST /characters、PUT /characters/name、POST /characters/discard（单角色约束 + 30 天冻结）
+- M2.5-scene/inventory：GET /scene（内容包房间 + NPC/物品组装）、POST /scene/action、inventory 四接口
+- M2.5-skills/quests：skills 三接口（learn/practice/study 调 game-core growth）、quests 三接口（接/交/查）
+- M2.5-templates/afk：templates CRUD（tactic 校验）+ afk start/stop/status/reports（对接 C7 状态机 + Redis/Worker）
+- M2.5-pvp/leaderboard：pvp 四接口（快照/种子/ELO）+ 榜单两接口（快照）
+- M2.5-forum：forum 六接口（受控纯文本 + 审核状态）
+- M2.5-session：GET /session/resume（重连恢复点 + 未读结算）
+
 ## 阶段 F：联调与测试
 
 ### F1 规则单元测试
@@ -493,6 +507,7 @@
 | D7 任务与主线 | ✅ 完成 | — | 4 任务（新手悬赏/衙门悬赏/门派差事）+ 主线 5 节点（初入江湖→拜师→出村→入城→入门） |
 | D8 内容校验与导入 | ✅ 完成 | — | 打版 dev-pack@0.2.0（58 文件，error=0）；权利登记与目录一致（结构参照 newbie_lxsz/city/wudang，文本原创） |
 | E1–E13 客户端 | ⬜ | | |
+| M2.5-auth 登录/会话 | ✅ 完成 | — | POST /auth/login（邀请码幂等绑定 + sessions token）、verifyToken 查会话表、deps.db 注入、迁移 0006；209 用例 |
 | E1 H5 设计基线 | ✅ 完成 | — | tokens.css（墨色武侠 token 体系）+ 基础组件 Sheet/Chip/Bar/Toast（44px 触控/aria/语义标签）+ happy-dom DOM 单测；Taro 脚手架随 E2 登录页接入 |
 | E2 登录与角色 | ✅ 完成 | — | LoginPage（邀请码）+ CharacterCreateSheet（名号/性别分段/四维分配 80 池）+ ConfirmSheet（放弃二次确认）+ authApi（可注入 fetch，错误信封映射）；文案按 wuxia 规范；156 用例；Taro 运行时接入为 E2.1 待办 |
 | E3 场景与探索 | ✅ 完成 | — | SceneView（叙事优先+见闻 Tab）+ ExitPad 九宫格（map-design 场景方位图，八向+上下进出竖列）+ EntitySheet（能力→动作：交易/拜师/请托/较量/拾取）+ sceneTypes 数据模型；160 用例 |

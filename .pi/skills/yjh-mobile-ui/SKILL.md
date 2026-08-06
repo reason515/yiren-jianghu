@@ -64,8 +64,9 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage` / `CharacterCreateSheet`
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
+- 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（行止启动：模板/时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
-- 数据模型：`lib/sceneTypes.ts` + `combatTypes.ts` + `characterTypes.ts` + `tacticTypes.ts`；API 客户端：`lib/authApi.ts`（fetch 注入式，Taro 可替换）
+- 数据模型：`lib/sceneTypes.ts` + `combatTypes.ts` + `characterTypes.ts` + `tacticTypes.ts` + `afkTypes.ts` + `questTypes.ts`；API 客户端：`lib/authApi.ts`（fetch 注入式，Taro 可替换）
 - 新界面先检查此处是否有可复用组件；扩展时保持 token 驱动 + 44px 触控 + aria。
 
 ## 5. 与已定项目决策的对齐

@@ -119,6 +119,12 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - React 重渲染后**旧 DOM 引用失效**：多次点击后要重新查询（`const row = () => host.querySelector(...)`），不要缓存节点；
 - 测试辅助函数（`props()`）须**显式返回组件 Props 类型**，否则 onChange 等函数类型被推断成联合，闭包参数变 `never`（TS2339）。
 
+14. **组件与类型同名、SVG 测试（E7/E9 踩过）**：
+
+- 组件与类型同名（如 `AfkReportView` 既是组件又是接口）会导致 `export *` 重复导出冲突（TS2308）——类型改名 `*Data` 或组件改名；
+- **happy-dom 的 SVG 元素（g/rect）没有 `.click()`**——DOM 测试用 `dispatchEvent(new MouseEvent("click", { bubbles: true }))`（E9 MapSheet）；
+- happy-dom 的 SVG 测量 API（`getTotalLength()` 等）可能未实现，测试勿依赖；用节点/边数量断言代替。
+
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 
 | 任务类型                                         | 第一步必读 skill                                                                                |

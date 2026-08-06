@@ -88,6 +88,22 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         });
       }
     }
+    for (const good of npc.goods) {
+      if (!itemIds.has(good.itemId)) {
+        issues.push({
+          code: "broken_goods_ref",
+          severity: "error",
+          message: `NPC ${npc.id} 商店库存引用不存在物品 ${good.itemId}`,
+        });
+      }
+      if (good.buy < good.sell) {
+        issues.push({
+          code: "goods_price_inverted",
+          severity: "warning",
+          message: `NPC ${npc.id} 商品 ${good.itemId} 买入价低于卖出价（倒贴）`,
+        });
+      }
+    }
     for (const drop of npc.drops) {
       if (!itemIds.has(drop.itemId)) {
         issues.push({

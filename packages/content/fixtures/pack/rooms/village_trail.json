@@ -1,0 +1,10 @@
+{
+  "id": "village_trail",
+  "area": "newbie",
+  "name": "村外小径",
+  "shortDesc": "出村三里的土路，两侧荒草齐腰。",
+  "longDesc": "出了村口，土路两旁的荒草齐腰深，风一过沙沙作响。隐约可见远处官道的轮廓——那是去往大城的方向。草丛里偶有动静，几只野狗远远站着，盯着行人手里的干粮。",
+  "grid": [3, 0],
+  "exits": [{ "dir": "west", "roomId": "village_general" }],
+  "npcIds": ["wild_dog"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "master_wang",
+  "name": "王师傅",
+  "kind": "apprentice_master",
+  "level": 30,
+  "skills": [{ "skillId": "basic_sword", "level": 60 }],
+  "dialogue": [
+    "老夫姓王，村里人唤一声王师傅。想学拳，先跟我把这路基础剑法练扎实。",
+    "练武之人，根基最要紧。心浮气躁，学什么都白搭。",
+    "剑是死的，人是活的。招式要练进骨头里，临敌才能想都不想就用出来。"
+  ]
+}

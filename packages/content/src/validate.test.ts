@@ -126,4 +126,18 @@ describe("validateContentPack", () => {
     const issues = validateContentPack(pack);
     expect(issues.some((i) => i.code === "broken_drop_ref")).toBe(true);
   });
+
+  it("flags broken vendor goods reference", () => {
+    const pack = basePack();
+    pack.npcs[0] = { ...pack.npcs[0]!, goods: [{ itemId: "ghost_good", buy: 10, sell: 5 }] };
+    const issues = validateContentPack(pack);
+    expect(issues.some((i) => i.code === "broken_goods_ref")).toBe(true);
+  });
+
+  it("warns when sell price exceeds buy price", () => {
+    const pack = basePack();
+    pack.npcs[0] = { ...pack.npcs[0]!, goods: [{ itemId: "iron_sword", buy: 10, sell: 20 }] };
+    const issues = validateContentPack(pack);
+    expect(issues.some((i) => i.code === "goods_price_inverted")).toBe(true);
+  });
 });

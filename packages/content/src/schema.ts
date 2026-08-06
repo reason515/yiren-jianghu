@@ -101,6 +101,8 @@ export const roomSchema = z.object({
   name: z.string().min(1),
   shortDesc: z.string().default(""),
   longDesc: z.string().default(""),
+  /** 地图布局语义网格坐标（八向约束，见 yjh-map-design）；D/E 阶段用于区域地图渲染。 */
+  grid: z.tuple([z.number(), z.number()]).optional(),
   exits: z.array(exitSchema).default([]),
   doors: z.array(doorSchema).default([]),
   actions: z.array(actionSchema).default([]),
@@ -130,6 +132,16 @@ export const npcSchema = z.object({
   skills: z.array(skillRefSchema).default([]),
   equipment: z.array(id).default([]),
   drops: z.array(dropSchema).default([]),
+  /** 商店库存（kind=vendor 时生效）：物品 + 买卖价。 */
+  goods: z
+    .array(
+      z.object({
+        itemId: id,
+        buy: z.number().int().nonnegative().default(0),
+        sell: z.number().int().nonnegative().default(0),
+      }),
+    )
+    .default([]),
   aggressive: z.boolean().default(false),
   respawnSec: z.number().int().positive().optional(),
   dialogue: z.array(z.string()).default([]),

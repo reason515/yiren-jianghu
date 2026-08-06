@@ -1,0 +1,13 @@
+{
+  "id": "village_general",
+  "area": "newbie",
+  "name": "村口杂货铺",
+  "shortDesc": "檐下挂着草鞋与斗笠，柜台摆着油盐酱醋。",
+  "longDesc": "铺子不大，东西却全：檐下草鞋斗笠，柜台油盐酱醋，墙角堆着半袋米和几捆干粮。掌柜是个精瘦的中年人，拨着算盘，眼皮也不抬：「要什么，自己瞧。」",
+  "grid": [2, 0],
+  "exits": [
+    { "dir": "west", "roomId": "village_square" },
+    { "dir": "east", "roomId": "village_trail" }
+  ],
+  "npcIds": ["general_shop"]
+}

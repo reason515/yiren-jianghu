@@ -1,0 +1,9 @@
+{
+  "id": "village_start",
+  "area": "newbie",
+  "name": "老屋·旧榻",
+  "shortDesc": "土墙斑驳，窗纸透进一线晨光。",
+  "longDesc": "你在一张硬板床上醒来。屋里只一张矮桌、一盏油灯，墙上挂着去年的干艾草。窗外的晒谷场上有鸡鸣——这是个不大的村子，风从檐角掠过，像是有人走动。门扉虚掩，晨光里浮着微尘。",
+  "grid": [0, 0],
+  "exits": [{ "dir": "east", "roomId": "village_square" }]
+}

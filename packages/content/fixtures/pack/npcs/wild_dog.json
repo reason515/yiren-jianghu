@@ -1,0 +1,10 @@
+{
+  "id": "wild_dog",
+  "name": "野狗",
+  "kind": "battle",
+  "level": 1,
+  "skills": [{ "skillId": "basic_sword", "level": 0 }],
+  "aggressive": true,
+  "respawnSec": 30,
+  "drops": [{ "itemId": "dry_food", "chance": 0.4 }]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "dry_food",
+  "name": "干粮",
+  "kind": "food",
+  "value": 1,
+  "weight": 1,
+  "stackable": true,
+  "description": "粗面烙成的干粮，硬得能砸核桃，却是出门在外最实在的倚仗。",
+  "usable": { "effect": "feed", "amount": 30 }
+}

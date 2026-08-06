@@ -1,0 +1,25 @@
+/* 重连提示样式（E12；全部 tokens） */
+
+.reconnect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(8, 7, 6, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.reconnect-title {
+  font-family: var(--font-display);
+  color: var(--cinnabar);
+  font-size: 20px;
+  letter-spacing: 3px;
+  margin: 0;
+}
+.reconnect-detail {
+  color: var(--paper-dim);
+  font-size: 14px;
+  margin: 0;
+}

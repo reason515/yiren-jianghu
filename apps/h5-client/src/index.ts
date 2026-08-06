@@ -22,6 +22,7 @@ export * from "./components/GrindBanner.js";
 export * from "./components/AfkSheet.js";
 export * from "./components/AfkReportView.js";
 export * from "./components/QuestPanel.js";
+export * from "./components/MapSheet.js";
 export * from "./lib/authApi.js";
 export * from "./lib/sceneTypes.js";
 export * from "./lib/combatTypes.js";

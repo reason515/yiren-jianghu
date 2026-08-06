@@ -1,0 +1,64 @@
+/* 区域地图样式（E9；map-design：墨色舆图、玉色当前、铜金线、北标） */
+
+.map-wrap {
+  position: relative;
+  touch-action: none;
+}
+.map-svg {
+  width: 100%;
+  height: 46vh;
+  min-height: 300px;
+  display: block;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.map-edge {
+  stroke: var(--gold-muted);
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.72;
+}
+.map-node rect {
+  fill: var(--ink-lift);
+  stroke: var(--line-strong);
+}
+.map-node.visited rect {
+  fill: rgba(201, 168, 105, 0.06);
+  stroke: var(--gold-muted);
+}
+.map-node.current rect {
+  fill: rgba(95, 143, 120, 0.22);
+  stroke: var(--jade-bright);
+  stroke-width: 2.5;
+}
+.map-node.locked {
+  opacity: 0.38;
+}
+.map-node text {
+  fill: var(--paper);
+  font-size: 14px;
+  font-family: var(--font-body);
+}
+.map-north {
+  fill: var(--gold-muted);
+  font-size: 12px;
+}
+.map-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+.map-controls button {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper);
+  font-size: 13px;
+  padding: 0 10px;
+}

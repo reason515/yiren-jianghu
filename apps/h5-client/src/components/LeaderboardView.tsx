@@ -1,0 +1,69 @@
+import { useState, type JSX } from "react";
+import { Sheet } from "./base/Sheet.js";
+import type { LeaderboardData, LeaderboardKind } from "../lib/leaderboardTypes.js";
+
+/** 排行榜（双轨 seg；数值带语义标签，我的行玉色高亮）。 */
+export interface LeaderboardViewProps {
+  open: boolean;
+  growth: LeaderboardData;
+  season: LeaderboardData;
+  onClose: () => void;
+}
+
+export function LeaderboardView({
+  open,
+  growth,
+  season,
+  onClose,
+}: LeaderboardViewProps): JSX.Element | null {
+  const [kind, setKind] = useState<LeaderboardKind>("growth");
+  const data = kind === "growth" ? growth : season;
+
+  return (
+    <Sheet open={open} title="天下名册" onClose={onClose}>
+      <div className="seg" role="tablist" aria-label="榜单">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={kind === "growth"}
+          className={`seg-btn${kind === "growth" ? " on" : ""}`}
+          onClick={() => setKind("growth")}
+        >
+          成长榜
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={kind === "season_pvp"}
+          className={`seg-btn${kind === "season_pvp" ? " on" : ""}`}
+          onClick={() => setKind("season_pvp")}
+        >
+          论剑榜
+        </button>
+      </div>
+
+      {data.season && (
+        <p className="lb-season" data-testid="lb-season">
+          {data.season.name} · {data.season.status === "active" ? "赛季进行中" : "已结算"}
+          {data.season.endsAt ? ` · 至 ${data.season.endsAt}` : ""}
+        </p>
+      )}
+
+      {data.entries.length === 0 ? (
+        <p className="lb-empty">榜上尚无留名。</p>
+      ) : (
+        <ol className="lb-list" data-testid="lb-list">
+          {data.entries.map((e) => (
+            <li key={e.characterId} className={`lb-row${e.isMe ? " me" : ""}`}>
+              <span className="lb-rank">{e.rank}</span>
+              <span className="lb-name">{e.name}</span>
+              <span className="lb-value">
+                {kind === "growth" ? "经验" : "积分"} {e.value}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Sheet>
+  );
+}

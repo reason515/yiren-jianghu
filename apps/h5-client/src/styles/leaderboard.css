@@ -1,0 +1,42 @@
+/* 排行榜样式（E11；全部 tokens） */
+
+.lb-season {
+  color: var(--gold-muted);
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.lb-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+}
+.lb-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lb-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  min-height: var(--touch-min);
+  border-top: 1px solid var(--line);
+  color: var(--paper-dim);
+  font-size: 14px;
+}
+.lb-row.me {
+  color: var(--jade-bright);
+  background: rgba(95, 143, 120, 0.1);
+}
+.lb-rank {
+  color: var(--gold-muted);
+  font-family: var(--font-display);
+}
+.lb-row:nth-child(-n + 3) .lb-rank {
+  color: var(--gold);
+}
+.lb-value {
+  color: var(--paper-faint);
+  font-size: 12px;
+}

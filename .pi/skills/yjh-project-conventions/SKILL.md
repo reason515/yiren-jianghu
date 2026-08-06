@@ -109,7 +109,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 
 - 组件函数必须显式返回类型 `: JSX.Element`（import type { JSX } from "react"），否则 declaration emit 报 TS2742 "cannot be named without reference to @types/react"；
 - `@types/react` / `@types/react-dom` 必须作为**消费包的 devDependencies**（pnpm 严格隔离，根 devDeps 不可见）；
-- vitest include 需覆盖 `.tsx`：`"**/*.test.{ts,tsx}"`；
+- vitest include 需覆盖 `.tsx`：`"**/*.test.{ts,tsx}"`；**含 JSX 的测试文件必须命名 `.tsx`**（哪怕放 lib/，命名 `.ts` 会 JSX 解析失败，E12 reconnect 踩过）；
 - DOM 测试文件头部加 `// @vitest-environment happy-dom`（happy-dom 为测试包 devDep）；
 - React 受控 input 测试：直接设 `input.value` 不触发 onChange，须用原生 value setter（`Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set`）再 dispatch `input` 事件。
 

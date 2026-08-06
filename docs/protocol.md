@@ -26,17 +26,78 @@ protocolVersion: 1
 GET /health
 GET /ready
 GET /private (auth)
+POST /auth/login
+POST /auth/logout (auth)
+GET /session/resume (auth)
+GET /account (auth)
+GET /characters/me (auth)
+POST /characters (auth)
+POST /characters/discard (auth)
+PUT /characters/name (auth)
+GET /scene (auth)
+POST /scene/action (auth)
+GET /inventory (auth)
+POST /inventory/equip (auth)
+POST /inventory/unequip (auth)
+POST /inventory/use (auth)
+GET /skills (auth)
+POST /skills/learn (auth)
+POST /skills/practice (auth)
+GET /quests (auth)
+POST /quests/accept (auth)
+POST /quests/report (auth)
+GET /templates (auth)
+POST /templates (auth)
+PUT /templates/:id (auth)
+DELETE /templates/:id (auth)
+POST /afk/start (auth)
+POST /afk/stop (auth)
+GET /afk/status (auth)
+GET /afk/reports (auth)
+GET /pvp/season (auth)
+GET /pvp/opponents (auth)
+POST /pvp/match (auth)
+GET /pvp/matches/:id (auth)
+GET /leaderboard/growth
+GET /leaderboard/season
+GET /forum/sections
+GET /forum/posts
+GET /forum/posts/:id
+POST /forum/posts (auth)
+POST /forum/posts/:id/comments (auth)
+POST /forum/likes (auth)
+POST /forum/reports (auth)
+GET /content/version
 
 ## WS 事件
 state.sync
+scene.update
+player.vitals
+inv.update
+skills.update
+quest.status
 combat.event
 afk.status
 afk.report
 pvp.report
 ```
 
-# 3. 约定
+# 3. 重连与恢复协议
+
+客户端意外断线后：
+
+1. 客户端重连 WebSocket，携带会话 token（`Authorization: Bearer <token>`）。
+2. 调用 `GET /session/resume` 获取恢复点：
+   - `stateVersion`：当前状态版本号（用于增量同步判断）；
+   - `character`：角色快照（`CharacterSnapshot`，含 vitals/位置/状态）；
+   - `pendingAfkReports`：断线期间完成的挂机战报（未读结算）；
+   - `pendingPvpReportIds`：断线期间完成的 PVP 战报 id。
+3. 服务端随后按 WS 事件流推送补发（`state.sync` 全量 → 增量事件）。
+4. 已启动的挂机作业由服务端继续结算，不依赖客户端在线。
+
+# 4. 约定
 
 - 路由行格式：`METHOD /path`；需要鉴权的路由以 `(auth)` 标注（不影响解析）。
 - 事件行格式：小写字母、数字、点、下划线、连字符。
-- 客户端/服务端共用类型以 `@yjh/shared` 为唯一来源；本清单不得与 `EVENT_TYPES` 发散。
+- 客户端/服务端共用类型与编解码以 `@yjh/shared` 为唯一来源（`codec.ts`：`eventEnvelopeSchema` / `sessionResumeSchema`）；本清单不得与 `EVENT_TYPES` 发散。
+- 未实现 API 返回 `501 { error: { code: "not_implemented" } }`，B/E 阶段按 `services/api/src/apiManifest.ts` 的 domain 逐个落地。

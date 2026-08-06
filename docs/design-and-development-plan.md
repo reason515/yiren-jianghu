@@ -467,7 +467,7 @@
 | A5 API 骨架 | ✅ 完成 | — | Fastify 应用工厂：健康/就绪/错误信封/requestId/限流骨架/鉴权占位，13 用例 |
 | A6 内容包管线 | ✅ 完成 | — | zod Schema + 引用校验 + CLI（validate/preview/bundle）+ fixtures，18 用例 |
 | B1 领域模型 | ✅ 完成 | — | 5 个领域迁移（账号/角色/技能/物品/模板、战斗/AFK、PVP/榜单、论坛/审计/内容版本）+ docs/database-schema.md；CI up/down 验证 |
-| B2 协议 | ⬜ | | |
+| B2 协议 | ✅ 完成 | — | docs/protocol.md 全量清单（44 路由 + 10 事件 + 重连协议）；@yjh/shared 类型与 zod codec；API 按清单注册 501 stub（契约测试强制一致） |
 | 工程机制：E2E 冒烟 + CD 脚手架 + 协议一致性 | ✅ 完成 | — | CI e2e 作业（真实 PG+Redis）；deploy 工作流 + Dockerfile + 生产 compose 脚手架（激活需 secrets）；docs/protocol.md ↔ 代码契约测试（test:docs） |
 | C1–C10 规则引擎 | ⬜ | | 按清单顺序推进 |
 | C1 数值参数表 | ✅ 完成 | — | game-core/params：经验/潜能/挂机递减/装载校验（复用 content Schema 单一来源），确定性单测 |

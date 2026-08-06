@@ -1,11 +1,13 @@
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
+import { authContexts, envelope, requireAuth, type TokenVerifier } from "./http.js";
+import { registerApiStubs } from "./routes.js";
 
 /**
- * API 应用工厂（A5 骨架）。
+ * API 应用工厂（A5 骨架，B2 扩展：按清单注册全量路由，未实现为 501 stub）。
  * - 依赖注入：deps.readiness 便于测试与后续接入 pg/redis 就绪检查
  * - 请求上下文：requestId 贯穿日志与错误信封（Fastify 内置 requestIdHeader/genReqId）
- * - 鉴权占位：requireAuth 供受保护路由使用（G3 接入邀请码/微信认证）
+ * - 鉴权：requireAuth 供受保护路由使用（G3 接入邀请码/微信认证）
  * - 限流骨架：每 IP 令牌桶（占位实现，G3 迁移到 Redis 分布式限流）
  */
 
@@ -18,7 +20,7 @@ export interface AppOptions {
   logger?: boolean;
   deps?: AppDeps;
   /** 令牌校验器（A5 占位：非空 token 即视为有效，G3 替换为真实认证）。 */
-  verifyToken?: (token: string) => Promise<{ accountId: string } | null>;
+  verifyToken?: TokenVerifier;
 }
 
 const RATE_LIMIT_MAX = 120; // 每分钟每 IP（占位）
@@ -27,31 +29,6 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 interface RateBucket {
   tokens: number;
   resetAt: number;
-}
-
-/** 认证上下文（避免修改 Fastify 请求/回复对象）。 */
-const authContexts = new WeakMap<FastifyRequest, { accountId: string }>();
-
-function envelope(
-  reply: FastifyReply,
-  statusCode: number,
-  code: string,
-  message: string,
-): FastifyReply {
-  const requestId = reply.request.id ?? "";
-  return reply.status(statusCode).send({ error: { code, message, requestId } });
-}
-
-/** 受保护路由的前置钩子：校验 Bearer token，注入 accountId 到请求上下文。 */
-export function requireAuth(verifyToken: AppOptions["verifyToken"]) {
-  return async (req: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> => {
-    const header = (req.headers.authorization as string | undefined) ?? "";
-    const token = header.replace(/^Bearer\s+/i, "");
-    const account = verifyToken ? await verifyToken(token) : token ? { accountId: "stub" } : null;
-    if (!account) return envelope(reply, 401, "unauthorized", "未登录或登录已过期");
-    authContexts.set(req, { accountId: account.accountId });
-    return undefined;
-  };
 }
 
 export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance> {
@@ -108,6 +85,9 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   app.get("/private", { preHandler: requireAuth(verifyToken) }, async (req) => {
     return { accountId: authContexts.get(req)?.accountId };
   });
+
+  // B2：按清单注册全量 API（未实现为 501 stub）
+  registerApiStubs(app, verifyToken);
 
   return app;
 }

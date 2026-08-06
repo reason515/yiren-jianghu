@@ -29,8 +29,8 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ## Schema 要点（改 schema 前先读 schema.ts）
 
 - `id` 正则：`/^[a-z0-9][a-z0-9_-]*$/`。
-- 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体。
-- NPC 掉落 `drops[]`：`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）。
+- 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体；`grid`（可选 `[col, row]`）为地图语义网格坐标（八向布局，见 yjh-map-design）。
+- NPC 掉落 `drops[]`：`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）；`goods`（商店库存：itemId + buy/sell，kind=vendor 时生效）。
 - 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**；冷却字段为 `cooldownTurns`（回合制语义）；`effect.type="buff"` Schema 保留但 v1 引擎未实现（校验器发 warning）。
 - 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。
 - 数值参数 `params.json`：`afk.maxDurationHours ∈ [0.5, 24]`（校验器建议 1–12）、`dailyDiminishRate ∈ [0,1]`。
@@ -86,3 +86,4 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/数值参数。别把玩家数据塞进内容包。
 7. **地图布局数据（grid 坐标/出口方向/via 绕行/世界图 geo）按 `yjh-map-design` 规范设计**，D/E 阶段随内容包落地（rooms 加 grid 或新增 maps 集合），校验并入 validator；逻辑导航（连通性）在 `game-core/map.ts`（C10），两者共享出口真相。
 8. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。
+9. **内容包 JSON 文本内嵌英文引号 `"` 会破坏 JSON 解析**（D2 踩过：房间/NPC 对话里的引号）。中文对话一律用「」引号（JSON 合法且更符合文风）；写完跑 `pnpm content:validate` 会第一时间抓到。

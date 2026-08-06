@@ -6,3 +6,5 @@ import { PROTOCOL_VERSION } from "@yjh/shared";
 
 export const CLIENT_NAME = "yjh-h5";
 export const CLIENT_PROTOCOL_VERSION = PROTOCOL_VERSION;
+
+export * from "./components/base/index.js";

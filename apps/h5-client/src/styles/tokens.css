@@ -1,0 +1,78 @@
+/**
+ * 《一人江湖》设计 Token（E1，墨色武侠）。
+ * 所有界面颜色/字体必须使用此处变量，禁止散落写死色值。
+ * 规范见 yjh-mobile-ui skill。
+ */
+:root {
+  /* 字体 */
+  --font-body: "Noto Serif SC", serif;
+  --font-display: "ZCOOL XiaoWei", serif;
+  --font-mono: ui-monospace, "Cascadia Code", monospace;
+
+  /* 基础色板（墨色武侠） */
+  --ink: #12100e;
+  --ink-lift: #1a1714;
+  --ink-soft: #242119;
+  --paper: #e8dfd0;
+  --paper-dim: #b9ad98;
+  --paper-faint: #7f7565;
+  --jade: #5f8f78;
+  --jade-bright: #8fbfa6;
+  --cinnabar: #b54a3a;
+  --gold: #c9a869;
+  --gold-muted: #8d7040;
+  --line: rgba(232, 223, 208, 0.12);
+  --line-strong: rgba(232, 223, 208, 0.22);
+
+  /* 状态资源 */
+  --stat-qi: #c45c52;
+  --stat-jing: #7a9eb0;
+  --stat-jingli: #6b9e8a;
+  --stat-neili: #5f8f78;
+  --stat-food: #c4a35a;
+  --stat-water: #6a9bb8;
+  --stat-potential: #c9a227;
+  --stat-exp: #b07ab0;
+
+  /* 四维 */
+  --attr-str: #d08060;
+  --attr-int: #7a9ec8;
+  --attr-con: #8faf70;
+  --attr-dex: #c4b06a;
+
+  /* 武功门类 */
+  --skill-force: #8fbfa6;
+  --skill-weapon: #d09080;
+  --skill-dodge: #7a9eb0;
+  --skill-parry: #a09080;
+  --skill-knowledge: #c4a35a;
+  --skill-misc: #b9ad98;
+
+  /* 精通程度 低→高 */
+  --mastery-1: #5a7a9a;
+  --mastery-2: #6a8f9e;
+  --mastery-3: #7aaf94;
+  --mastery-4: #6ec4c0;
+  --mastery-5: #9ed4e8;
+  --mastery-6: #f0e6c8;
+
+  /* 物品 */
+  --item-weapon: #d09080;
+  --item-armor: #7a9eb0;
+  --item-food: #c4a35a;
+  --item-money: #e0c060;
+  --item-drug: #a080c0;
+  --item-misc: #b9ad98;
+  --item-equipped: #8fbfa6;
+
+  /* 品质（须与文字标签并存） */
+  --quality-common: var(--paper);
+  --quality-fine: #7a9eb0;
+  --quality-rare: #a080c0;
+  --quality-legendary: #d8904d;
+
+  /* 触控与安全区 */
+  --touch-min: 44px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}

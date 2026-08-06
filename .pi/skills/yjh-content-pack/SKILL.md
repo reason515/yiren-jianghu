@@ -84,4 +84,5 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 4. fixtures 有两套：`pack/`（有效）与 `broken-pack/`（故意坏引用，验证拒绝）。CI 的 content:validate 用默认 fixtures，别把 broken-pack 设为默认。
 5. **新增参数段（如 vitals/growth/pvp）必须 5 处同步**，漏一处 CI/单测必红：① `packages/content/src/schema.ts` 的 `paramsSchema` ② `fixtures/pack/params.json` ③ `fixtures/broken-pack/params.json` ④ `packages/game-core/src/params.ts` 的 `DEFAULT_PARAMS` ⑤ `packages/content/src/validate.test.ts` 的 basePack（C2/C5/C8 均按此扩展）。
 6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/数值参数。别把玩家数据塞进内容包。
-7. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。
+7. **地图布局数据（grid 坐标/出口方向/via 绕行/世界图 geo）按 `yjh-map-design` 规范设计**，D/E 阶段随内容包落地（rooms 加 grid 或新增 maps 集合），校验并入 validator；逻辑导航（连通性）在 `game-core/map.ts`（C10），两者共享出口真相。
+8. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。

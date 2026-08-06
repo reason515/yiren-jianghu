@@ -9,6 +9,7 @@
 | 任何在本仓库写代码、改配置、跑测试、提交、部署相关任务                                                  | `yjh-project-conventions` | `.pi/skills/yjh-project-conventions/SKILL.md` |
 | 内容包/Schema/校验/CLI；从 pkuxkx 筛选、移植、登记内容                                                  | `yjh-content-pack`        | `.pi/skills/yjh-content-pack/SKILL.md`        |
 | 编写或优化任何玩家可见游戏文本（绝招/招式、战斗演出、房间场景、NPC 对话、任务简报、剧情事件、物品描述） | `yjh-wuxia-copywriting`   | `.pi/skills/yjh-wuxia-copywriting/SKILL.md`   |
+| 设计或修改区域地图/世界地图/场景方位图（八向网格、多视图一致性、地图数据契约、校验与交互）              | `yjh-map-design`          | `.pi/skills/yjh-map-design/SKILL.md`          |
 
 **强制规则**：
 

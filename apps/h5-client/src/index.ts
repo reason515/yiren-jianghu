@@ -16,6 +16,8 @@ export * from "./components/SceneView.js";
 export * from "./components/ExitPad.js";
 export * from "./components/EntitySheet.js";
 export * from "./components/CombatView.js";
+export * from "./components/CharacterSheet.js";
 export * from "./lib/authApi.js";
 export * from "./lib/sceneTypes.js";
 export * from "./lib/combatTypes.js";
+export * from "./lib/characterTypes.js";

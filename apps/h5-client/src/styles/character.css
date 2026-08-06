@@ -1,0 +1,153 @@
+/* 角色面板样式（E5；全部 tokens，细线分栏） */
+
+.char-summary {
+  color: var(--paper-dim);
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.char-section {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.char-section-title {
+  font-family: var(--font-display);
+  color: var(--paper-dim);
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin: 0;
+}
+.char-attr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--touch-min);
+}
+.char-attr-label {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.char-attr-value {
+  color: var(--paper);
+  font-size: 14px;
+}
+.char-skill-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-min);
+}
+.char-skill-name {
+  font-size: 14px;
+  color: var(--paper);
+}
+.char-skill-name.skill-force {
+  color: var(--skill-force);
+}
+.char-skill-name.skill-weapon {
+  color: var(--skill-weapon);
+}
+.char-skill-name.skill-dodge {
+  color: var(--skill-dodge);
+}
+.char-skill-name.skill-parry {
+  color: var(--skill-parry);
+}
+.char-skill-name.skill-knowledge {
+  color: var(--skill-knowledge);
+}
+.char-skill-mark {
+  color: var(--item-equipped);
+  font-style: normal;
+  font-size: 12px;
+}
+.char-skill-level {
+  font-style: normal;
+  font-size: 12px;
+}
+.char-skill-level.mastery-1 {
+  color: var(--mastery-1);
+}
+.char-skill-level.mastery-2 {
+  color: var(--mastery-2);
+}
+.char-skill-level.mastery-3 {
+  color: var(--mastery-3);
+}
+.char-skill-level.mastery-4 {
+  color: var(--mastery-4);
+}
+.char-skill-level.mastery-5 {
+  color: var(--mastery-5);
+}
+.char-skill-level.mastery-6 {
+  color: var(--mastery-6);
+}
+.char-skill-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-soft);
+  overflow: hidden;
+}
+.char-skill-bar b {
+  display: block;
+  height: 100%;
+  background: var(--jade);
+  border-radius: 2px;
+}
+.char-equip-row {
+  display: flex;
+  gap: 10px;
+  min-height: var(--touch-min);
+  align-items: center;
+}
+.char-equip-slot {
+  color: var(--paper-faint);
+  font-size: 13px;
+  width: 40px;
+}
+.char-equip-item {
+  color: var(--item-armor);
+  font-size: 14px;
+}
+.char-inv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--touch-min);
+}
+.char-inv-name {
+  font-size: 14px;
+}
+.char-inv-name.item-weapon {
+  color: var(--item-weapon);
+}
+.char-inv-name.item-armor {
+  color: var(--item-armor);
+}
+.char-inv-name.item-food {
+  color: var(--item-food);
+}
+.char-inv-name.item-drug {
+  color: var(--item-drug);
+}
+.char-inv-name.item-misc {
+  color: var(--item-misc);
+}
+.char-inv-qty {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+.char-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  margin: 0;
+}
+.char-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}

@@ -15,3 +15,4 @@ export * from "./combat.js";
 export * from "./perform.js";
 export * from "./growth.js";
 export * from "./tactic.js";
+export * from "./afk.js";

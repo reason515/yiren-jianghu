@@ -159,7 +159,7 @@ describe("createTacticSelector（优先级 + 兜底）", () => {
       },
     ]);
     const selector = createTacticSelector(tpl, DEPS);
-    const battle = { turn: 1, get: (k: "a" | "b") => view() };
+    const battle = { turn: 1, get: (_k: "a" | "b") => view() };
     expect(selector(battle, "a", () => 0.5)).toEqual({ type: "attack" }); // defaultAction
   });
 });

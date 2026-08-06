@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS, effectivePotential } from "./params.js";
 import {
   isLevelAllowed,
-  jingCostForLearn,
   learnUp,
-  potentialCostForNext,
   practiceCost,
   practiceOnce,
   practicePointsNeeded,

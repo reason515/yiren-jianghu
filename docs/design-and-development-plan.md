@@ -461,7 +461,7 @@
 | 任务 | 状态 | 完成提交 | 备注 |
 |---|---|---|---|
 | A1 初始化单仓 | ✅ 完成 | — | 骨架 + 基础配置，build/typecheck/test/lint/format 全绿 |
-| A2 CI 与仓库规范 | ⬜ | | |
+| A2 CI 与仓库规范 | ✅ 完成 | — | GitHub Actions 门禁 + PR 模板 |
 | A3 本地 Docker 环境 | ⬜ | | |
 | A4 数据库迁移 | ⬜ | | |
 | A5 API 骨架 | ⬜ | | |

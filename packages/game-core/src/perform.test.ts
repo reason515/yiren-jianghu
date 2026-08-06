@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
 import { runBattle, attackOnly, type BattleContext } from "./combat.js";
-import { createSeededRng } from "./random.js";
 import {
   canUsePerform,
   createPerformCooldownTracker,

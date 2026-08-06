@@ -1,0 +1,15 @@
+# 构建上下文裁剪：避免把本地产物/敏感文件带进镜像
+node_modules
+**/node_modules
+**/dist
+.pnpm-store
+.git
+.github
+docs
+*.log
+.env
+.env.*
+!.env.example
+coverage
+*.tgz
+*.pack.json

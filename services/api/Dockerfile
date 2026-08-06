@@ -17,5 +17,9 @@ WORKDIR /app
 RUN corepack enable
 COPY --from=build /app ./
 WORKDIR /app/services/api
+# 非 root 运行（应用不写容器内文件，数据都在 PG/Redis）
+USER node
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 CMD ["node", "dist/index.js"]

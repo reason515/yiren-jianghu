@@ -47,8 +47,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy via SSH
-        # secrets 不能直接用于 if 条件（GitHub 限制），先经 env 再判断；未配置 DEPLOY_HOST 时跳过
+      - name: Upload deploy assets
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "deploy/scripts/deploy-release.sh,docker-compose.prod.yml,.env.example"
+          target: /opt/yiren-jianghu
+
+      - name: Run deploy (script file, auditable)
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         if: env.DEPLOY_HOST != ''
@@ -60,6 +68,5 @@ jobs:
           script: |
             set -e
             cd /opt/yiren-jianghu
-            docker compose -f docker-compose.prod.yml pull api
-            docker compose -f docker-compose.prod.yml up -d api
-            docker image prune -f
+            chmod +x deploy/scripts/deploy-release.sh
+            ./deploy/scripts/deploy-release.sh main

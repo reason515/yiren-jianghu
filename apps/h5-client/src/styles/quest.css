@@ -1,0 +1,120 @@
+/* 任务与主线面板样式（E8；全部 tokens） */
+
+.quest-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.quest-section {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quest-section-title {
+  font-family: var(--font-display);
+  color: var(--paper-dim);
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin: 0;
+}
+.story-chain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.story-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-min);
+  color: var(--paper-faint);
+  font-size: 14px;
+}
+.story-node.done {
+  color: var(--paper-dim);
+}
+.story-node.done .story-node-title::before {
+  content: "✓ ";
+  color: var(--jade);
+}
+.story-node.current {
+  color: var(--paper);
+}
+.story-node-now {
+  font-size: 11px;
+  color: var(--cinnabar);
+  border: 1px solid rgba(181, 74, 58, 0.5);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.quest-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quest-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.quest-card-name {
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.quest-kind {
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+}
+.quest-kind.kind-sect {
+  color: var(--skill-knowledge);
+}
+.quest-kind.kind-bounty {
+  color: var(--gold);
+}
+.quest-kind.kind-main {
+  color: var(--cinnabar);
+}
+.quest-briefing {
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 0;
+}
+.quest-phases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--paper-dim);
+  font-size: 13px;
+}
+.quest-phases li.done {
+  color: var(--jade-bright);
+}
+.quest-reward {
+  color: var(--gold-muted);
+  font-size: 12px;
+  margin: 0;
+}
+.quest-done-tag {
+  color: var(--jade-bright);
+  font-size: 13px;
+}
+.quest-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  margin: 0;
+}

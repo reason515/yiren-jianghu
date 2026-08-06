@@ -1,0 +1,49 @@
+/* 视觉与演出（E13；动效克制：短淡入，不做影响阅读的粒子） */
+
+.art-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  color: var(--paper);
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+}
+.art-placeholder.jade {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+.art-placeholder.cinnabar {
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
+}
+.art-placeholder.gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.art-placeholder.sm {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+.art-placeholder.md {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+}
+
+/* 绝招演出行：入场短淡入 + 玉色高亮（300ms，不抢占阅读） */
+.combat-line.perform-flash {
+  animation: perform-flash 0.3s ease-out;
+}
+@keyframes perform-flash {
+  from {
+    background: rgba(143, 191, 166, 0.35);
+    transform: translateX(0);
+  }
+  to {
+    background: transparent;
+    transform: translateX(4px);
+  }
+}

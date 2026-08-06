@@ -59,6 +59,7 @@ pnpm test:e2e     # E2E 冒烟（需真实 PostgreSQL + Redis，见下）
 ```
 
 > 本地依赖数据库时需要 Docker（`docker compose up -d postgres redis`）；迁移工具链在 CI 中以 PostgreSQL 服务验证。
+> **国内拉镜像超时**：首次拉 `postgres:16-alpine`/`redis:7-alpine` 前，先按 `deploy/README.md` 的 daemon.json 配置 registry 镜像（如 `docker.m.daocloud.io`），否则拉取可能超时。
 > E2E：先 `pnpm dev:infra` 起 pg/redis，再 `pnpm test:e2e`；CI 的 `e2e` 作业自动提供服务容器。
 > 部署：`docker-compose.prod.yml` + `.github/workflows/deploy.yml`（GHCR 镜像 + SSH），激活见 `deploy/README.md`。
 

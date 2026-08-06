@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { createClient, type RedisClientType } from "redis";
-import { Runner } from "node-pg-migrate";
+import { runner } from "node-pg-migrate";
 import { createApp } from "../src/app.js";
 import type { FastifyInstance } from "fastify";
 
@@ -29,16 +29,15 @@ let pool: pg.Pool;
 let redis: RedisClientType;
 
 beforeAll(async () => {
-  // 1) 迁移到最新
+  // 1) 迁移到最新（node-pg-migrate 的 runner 是函数而非类；dir 传绝对路径）
   const dbClient = new pg.Client({ connectionString: DATABASE_URL });
   await dbClient.connect();
-  const runner = await Runner.create({
+  await runner({
     dbClient,
     dir: MIGRATIONS_DIR,
     direction: "up",
     migrationsTable: "pgmigrations",
   });
-  await runner.run();
   await dbClient.end();
 
   // 2) 连接池与 redis

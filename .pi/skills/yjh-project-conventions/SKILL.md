@@ -92,7 +92,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 1. **pnpm 10 默认拦截依赖的 build 脚本**（如 esbuild）。已批准方式：根 `package.json` 的 `pnpm.onlyBuiltDependencies` 声明，勿用交互式 approve。
 2. **脚本名别叫 `pack`**：`pnpm --filter X pack` 会触发 npm pack 而不是你的脚本。内容包打版脚本名是 `bundle`。
 3. **Fastify v5**：`reply.locals` 不存在、`req.log` 是只读 getter。认证上下文用 `WeakMap<FastifyRequest, ...>`；requestId 用内置 `requestIdHeader`/`genReqId`。
-4. **node-pg-migrate SQL 迁移**：上行 `<timestamp>_<name>.sql`，下行用 `<timestamp>_<name>.down.sql`；迁移命令读取环境变量 `DATABASE_URL`。
+4. **node-pg-migrate**：`runner` 是**函数**不是类（`await runner({ dbClient, dir, direction, migrationsTable })`，`dir` 用绝对路径）；**SQL 迁移不支持独立 `.down.sql` 文件**（down 必须与 up 同文件用 `-- down migration` 注释段）——本项目统一用 JS/CJS 迁移（显式 `exports.up/down`）。
 5. **内容包 CLI 路径**：`packages/content/bin/yjh-content.mjs` 显式目录参数按**包根（packages/content）相对**解析，默认 fixtures/pack。
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
 

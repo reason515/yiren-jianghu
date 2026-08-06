@@ -1,0 +1,121 @@
+/* 场景与探索样式（E3；全部 tokens，细线分栏如简牍） */
+
+.scene {
+  padding: 16px 16px calc(16px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.scene-title {
+  font-family: var(--font-display);
+  color: var(--paper);
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+.scene-desc {
+  color: var(--paper-dim);
+  line-height: 1.85;
+  margin: 0;
+  font-size: 15px;
+}
+.scene-hint {
+  color: var(--gold-muted);
+  font-size: 12px;
+}
+.scene-block {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scene-block-head h2 {
+  font-family: var(--font-display);
+  color: var(--paper-dim);
+  font-size: 14px;
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+/* ---- ExitPad 九宫格 ---- */
+.exit-pad {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.exit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  max-width: 260px;
+}
+.exit-cell {
+  min-height: 44px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--ink-lift);
+  color: var(--paper-faint);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.exit-cell.has {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+.exit-cell:disabled {
+  cursor: default;
+}
+.exit-cell.center {
+  background: var(--ink-soft);
+  border-color: var(--line-strong);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 12px;
+  text-align: center;
+  padding: 4px;
+}
+.exit-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.exit-cell.vertical {
+  min-width: 44px;
+}
+.exit-north {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  color: var(--gold-muted);
+  font-size: 11px;
+}
+
+/* ---- 见闻 Tab 与 chips ---- */
+.scene-tabs {
+  display: flex;
+  gap: 8px;
+}
+.scene-tabs button {
+  min-height: var(--touch-min);
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper-dim);
+  font-size: 14px;
+}
+.scene-tabs button.on {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

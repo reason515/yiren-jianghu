@@ -12,4 +12,8 @@ export * from "./components/ConfirmSheet.js";
 export * from "./components/AttributeAllocator.js";
 export * from "./components/LoginPage.js";
 export * from "./components/CharacterCreateSheet.js";
+export * from "./components/SceneView.js";
+export * from "./components/ExitPad.js";
+export * from "./components/EntitySheet.js";
 export * from "./lib/authApi.js";
+export * from "./lib/sceneTypes.js";

@@ -1,0 +1,9 @@
+{
+  "id": "wild_wolf",
+  "name": "后山野狼",
+  "kind": "battle",
+  "level": 4,
+  "aggressive": true,
+  "respawnSec": 45,
+  "drops": [{ "itemId": "dry_food", "chance": 0.2 }]
+}

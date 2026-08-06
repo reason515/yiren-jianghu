@@ -1,0 +1,16 @@
+{
+  "id": "sect_master",
+  "name": "玄真道长",
+  "kind": "apprentice_master",
+  "level": 60,
+  "skills": [
+    { "skillId": "xuanmen_force", "level": 120 },
+    { "skillId": "xuanmen_sword", "level": 100 },
+    { "skillId": "xuanmen_taoism", "level": 100 }
+  ],
+  "dialogue": [
+    "我玄门剑宗，入门先正心。你既已上山，便与山下种种做个了断——练剑即是修心。",
+    "内功是本，剑法是用。根基不牢，剑再快也是空中楼阁。",
+    "后山野狼近来成患，伤了采药的弟子。你且去料理了它们，也算入门第一课。"
+  ]
+}

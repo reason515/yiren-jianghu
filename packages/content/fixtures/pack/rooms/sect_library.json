@@ -1,0 +1,10 @@
+{
+  "id": "sect_library",
+  "area": "sect",
+  "name": "藏经阁",
+  "shortDesc": "三层木楼，架上摆满了书卷。",
+  "longDesc": "藏经阁三层木楼，一层是经史，二层是剑谱，三层极少有人上去。阁中长老坐在窗边翻书，阳光从窗格漏下来，照在他手边的一叠纸笺上。见你进来，他抬了抬眼皮：「要借书，先洗手。」",
+  "grid": [1, -1],
+  "exits": [{ "dir": "west", "roomId": "sect_yard" }],
+  "npcIds": ["librarian"]
+}

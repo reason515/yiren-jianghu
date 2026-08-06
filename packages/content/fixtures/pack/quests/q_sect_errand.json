@@ -1,0 +1,10 @@
+{
+  "id": "q_sect_errand",
+  "name": "门派差事·后山清患",
+  "kind": "sect",
+  "minExp": 80,
+  "briefing": "后山近来有野狼出没，伤了几名采药的师弟。掌门交代：清理干净，莫让它们惊扰练功的同门——这也是你入门的第一课。",
+  "phases": [{ "type": "kill", "targetId": "wild_wolf", "count": 1 }],
+  "rewards": { "exp": 50, "potential": 12, "silver": 10 },
+  "repeatable": true
+}

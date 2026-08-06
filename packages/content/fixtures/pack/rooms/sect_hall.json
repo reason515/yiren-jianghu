@@ -1,0 +1,13 @@
+{
+  "id": "sect_hall",
+  "area": "sect",
+  "name": "祖师堂",
+  "shortDesc": "堂中供着一柄古剑，香火缭绕。",
+  "longDesc": "祖师堂里光线昏沉，正中供着一柄古剑，剑鞘上的漆已斑驳。香炉里的烟袅袅升起，在堂顶聚了又散。玄真道长盘坐在蒲团上，闭目调息，听到你的脚步声，眼也不睁：「进来吧，把门带上。」",
+  "grid": [0, -1],
+  "exits": [
+    { "dir": "south", "roomId": "sect_yard" },
+    { "dir": "north", "roomId": "sect_cliff" }
+  ],
+  "npcIds": ["sect_master"]
+}

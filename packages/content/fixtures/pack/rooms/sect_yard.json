@@ -1,0 +1,14 @@
+{
+  "id": "sect_yard",
+  "area": "sect",
+  "name": "演武场",
+  "shortDesc": "青砖铺地，两列木人桩排到院墙根。",
+  "longDesc": "演武场青砖铺地，两列木人桩排到院墙根，桩身被剑痕刻得密密麻麻。场中几个弟子正练剑，剑光起落，带起一阵阵风声。檐下挂着一口铜钟，钟身上铸着四个字：「闻钟而舞」。",
+  "grid": [0, 0],
+  "exits": [
+    { "dir": "south", "roomId": "city_sect_gate" },
+    { "dir": "north", "roomId": "sect_hall" },
+    { "dir": "east", "roomId": "sect_library" }
+  ],
+  "npcIds": ["senior_brother"]
+}

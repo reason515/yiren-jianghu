@@ -1,0 +1,179 @@
+/* 认证/创建流程样式（E2；全部 tokens，44px 触控，禁原生 select） */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+  background: var(--ink);
+}
+.auth-title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  color: var(--paper);
+  letter-spacing: 6px;
+}
+.auth-sub {
+  font-family: var(--font-display);
+  color: var(--gold);
+  letter-spacing: 4px;
+}
+.auth-desc {
+  color: var(--paper-dim);
+  text-align: center;
+  line-height: 1.75;
+  margin: 8px 0 24px;
+}
+
+.form {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.input {
+  min-height: var(--touch-min);
+  background: var(--ink-lift);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--paper);
+  padding: 0 14px;
+  font-size: 16px;
+  font-family: var(--font-body);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--jade);
+}
+.form-error {
+  color: var(--cinnabar);
+  font-size: 13px;
+  margin: 0;
+}
+.btn {
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-soft);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 2px;
+  padding: 0 18px;
+}
+.btn.primary {
+  background: var(--jade);
+  border-color: transparent;
+  color: #f3eee2;
+}
+.btn.danger {
+  background: var(--cinnabar);
+  border-color: transparent;
+  color: #f6e8e2;
+}
+.btn:disabled {
+  opacity: 0.45;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-label {
+  color: var(--paper-dim);
+  font-size: 13px;
+}
+.field-hint {
+  color: var(--paper-faint);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.seg {
+  display: flex;
+  gap: 8px;
+}
+.seg-btn {
+  flex: 1;
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-lift);
+  color: var(--paper-dim);
+  font-size: 15px;
+}
+.seg-btn.on {
+  border-color: var(--jade);
+  color: var(--jade-bright);
+}
+
+.attr-allocator {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.attr-remaining {
+  color: var(--gold);
+  font-size: 13px;
+}
+.attr-remaining[data-ok="false"] {
+  color: var(--cinnabar);
+}
+.attr-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 40px auto;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-min);
+}
+.attr-label {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.attr-hint {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+.attr-value {
+  text-align: right;
+  font-size: 18px;
+}
+.attr-btns {
+  display: flex;
+  gap: 6px;
+}
+.attr-btn {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-soft);
+  color: var(--paper);
+  font-size: 18px;
+}
+.attr-btn:disabled {
+  opacity: 0.35;
+}
+
+.create-lead {
+  color: var(--paper-dim);
+  line-height: 1.75;
+  margin: 0 0 12px;
+}
+.confirm-message {
+  color: var(--paper-dim);
+  line-height: 1.85;
+  margin: 0 0 16px;
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+.confirm-actions .btn {
+  flex: 1;
+}

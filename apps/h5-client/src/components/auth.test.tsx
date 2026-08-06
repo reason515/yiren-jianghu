@@ -1,0 +1,152 @@
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it } from "vitest";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import type { ReactElement } from "react";
+import { AttributeAllocator, type Attrs } from "./AttributeAllocator.js";
+import { ConfirmSheet } from "./ConfirmSheet.js";
+import { LoginPage } from "./LoginPage.js";
+import type { AuthApi } from "../lib/authApi.js";
+
+function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  act(() => root.render(ui));
+  return { host, root };
+}
+
+afterEach(() => {
+  document.body.innerHTML = "";
+});
+
+function buttons(host: HTMLDivElement, aria: string): HTMLButtonElement {
+  const btn = host.querySelector<HTMLButtonElement>(`button[aria-label="${aria}"]`);
+  if (!btn) throw new Error(`未找到按钮 ${aria}`);
+  return btn;
+}
+
+describe("AttributeAllocator", () => {
+  const INIT: Attrs = { str: 20, int: 20, con: 20, dex: 20 };
+
+  it("加减更新数值并回调 onChange；总和不超过预算", () => {
+    let latest: Attrs = INIT;
+    const { host } = render(
+      <AttributeAllocator
+        initial={INIT}
+        budget={80}
+        min={10}
+        max={30}
+        onChange={(a) => (latest = a)}
+      />,
+    );
+    // 初始 20×4=80 已满：先减再加，验证变更与回调
+    act(() => buttons(host, "膂力减").click());
+    expect(latest.str).toBe(19);
+    act(() => buttons(host, "膂力加").click());
+    expect(latest.str).toBe(20);
+    // 预算用满后（79+1=80），再加一次应被拒绝
+    act(() => buttons(host, "悟性加").click());
+    expect(latest.int).toBe(20);
+  });
+
+  it("上限 30 / 下限 10 禁用按钮", () => {
+    const { host } = render(
+      <AttributeAllocator
+        initial={{ str: 30, int: 10, con: 20, dex: 20 }}
+        budget={80}
+        min={10}
+        max={30}
+        onChange={() => undefined}
+      />,
+    );
+    expect(buttons(host, "膂力加").disabled).toBe(true);
+    expect(buttons(host, "悟性减").disabled).toBe(true);
+  });
+
+  it("显示剩余点数", () => {
+    const { host } = render(
+      <AttributeAllocator
+        initial={{ str: 20, int: 20, con: 20, dex: 20 }}
+        budget={80}
+        min={10}
+        max={30}
+        onChange={() => undefined}
+      />,
+    );
+    expect(host.textContent).toContain("剩余可分配：0");
+  });
+});
+
+describe("ConfirmSheet", () => {
+  it("渲染消息；确认/取消回调", () => {
+    let confirm = 0;
+    let cancel = 0;
+    const { host } = render(
+      <ConfirmSheet
+        open
+        title="放下这柄剑"
+        message="江湖一入深似海。你确定要放下吗？"
+        confirmLabel="放下"
+        onConfirm={() => (confirm += 1)}
+        onCancel={() => (cancel += 1)}
+      />,
+    );
+    expect(host.textContent).toContain("江湖一入深似海");
+    act(() => host.querySelector<HTMLButtonElement>(".btn.danger")!.click());
+    expect(confirm).toBe(1);
+    const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>(".btn")].find(
+      (b) => b.textContent === "再想想",
+    )!;
+    act(() => cancelBtn.click());
+    expect(cancel).toBe(1);
+  });
+});
+
+describe("LoginPage", () => {
+  it("提交邀请码调用 api.login 并回传会话", async () => {
+    const api: AuthApi = {
+      login: async () => ({ accountId: "acc_1", token: "tok" }),
+      createCharacter: async () => ({ characterId: "c" }),
+      discardCharacter: async () => ({ ok: true }),
+    };
+    let session: unknown = null;
+    const { host } = render(<LoginPage api={api} onLoggedIn={(s) => (session = s)} />);
+    const input = host.querySelector<HTMLInputElement>(".input")!;
+    // React 受控 input：用原生 value setter 触发 onChange
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    )!.set!;
+    act(() => {
+      setter.call(input, "invite-1");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      host
+        .querySelector<HTMLFormElement>(".form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(session).toEqual({ accountId: "acc_1", token: "tok" });
+  });
+
+  it("邀请码为空时提示且不调用 api", async () => {
+    let called = false;
+    const api: AuthApi = {
+      login: async () => {
+        called = true;
+        return { accountId: "x", token: "x" };
+      },
+      createCharacter: async () => ({ characterId: "c" }),
+      discardCharacter: async () => ({ ok: true }),
+    };
+    const { host } = render(<LoginPage api={api} onLoggedIn={() => undefined} />);
+    await act(async () => {
+      host
+        .querySelector<HTMLFormElement>(".form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(called).toBe(false);
+    expect(host.textContent).toContain("请先填上邀请帖号");
+  });
+});

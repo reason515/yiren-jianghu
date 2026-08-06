@@ -493,6 +493,7 @@
 | D8 内容校验与导入 | ✅ 完成 | — | 打版 dev-pack@0.2.0（58 文件，error=0）；权利登记与目录一致（结构参照 newbie_lxsz/city/wudang，文本原创） |
 | E1–E13 客户端 | ⬜ | | |
 | E1 H5 设计基线 | ✅ 完成 | — | tokens.css（墨色武侠 token 体系）+ 基础组件 Sheet/Chip/Bar/Toast（44px 触控/aria/语义标签）+ happy-dom DOM 单测；Taro 脚手架随 E2 登录页接入 |
+| E2 登录与角色 | ✅ 完成 | — | LoginPage（邀请码）+ CharacterCreateSheet（名号/性别分段/四维分配 80 池）+ ConfirmSheet（放弃二次确认）+ authApi（可注入 fetch，错误信封映射）；文案按 wuxia 规范；156 用例；Taro 运行时接入为 E2.1 待办 |
 | F1–F4 联调测试 | ⬜ | | |
 | G1–G5 部署封测 | ⬜ | | |
 

@@ -8,3 +8,8 @@ export const CLIENT_NAME = "yjh-h5";
 export const CLIENT_PROTOCOL_VERSION = PROTOCOL_VERSION;
 
 export * from "./components/base/index.js";
+export * from "./components/ConfirmSheet.js";
+export * from "./components/AttributeAllocator.js";
+export * from "./components/LoginPage.js";
+export * from "./components/CharacterCreateSheet.js";
+export * from "./lib/authApi.js";

@@ -8,7 +8,20 @@ function basePack(): ContentPack {
     params: {
       expCurve: { base: 100, growth: 1.1 },
       potential: { learnCostFactor: 1 },
-      combat: { baseHitRate: 0.7, baseDodgeRate: 0.1, baseParryRate: 0.15 },
+      combat: {
+        baseHitRate: 0.7,
+        baseDodgeRate: 0.1,
+        baseParryRate: 0.15,
+        hitPerAttackDiff: 0.01,
+        dodgePerDodgeDiff: 0.01,
+        parryPerParryDiff: 0.01,
+        weaponDmgPerLevel: 0.5,
+        forceDmgPerLevel: 0.4,
+        defenseReduce: 0.5,
+        damageVariance: 0.1,
+        recoverNeiliPerTurn: 20,
+        fleeBaseChance: 0.7,
+      },
       afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
       vitals: {
         qiBase: 100,

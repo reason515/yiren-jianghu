@@ -472,6 +472,7 @@
 | C1–C10 规则引擎 | ⬜ | | 按清单顺序推进 |
 | C1 数值参数表 | ✅ 完成 | — | game-core/params：经验/潜能/挂机递减/装载校验（复用 content Schema 单一来源），确定性单测 |
 | C2 Vitals 计算 | ✅ 完成 | — | game-core/vitals：动态上限（qi/jing/neili/jingli）+ eff 钳制 + 食物饮水；参数表 vitals 段（内容包驱动），属性矩阵单测 |
+| C3 战斗引擎 v1 | ✅ 完成 | — | game-core/combat：seeded RNG（mulberry32）+ 命中三态 + 分系伤害/减伤 + 回合循环 + 动作选择器接口 + 事件流；参数表 combat 段扩展，确定性单测（55 用例） |
 | D1–D8 切片内容 | ⬜ | | |
 | E1–E13 客户端 | ⬜ | | |
 | F1–F4 联调测试 | ⬜ | | |

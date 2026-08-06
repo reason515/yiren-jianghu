@@ -10,3 +10,5 @@ export const GAME_CORE_VERSION = `core-${PROTOCOL_VERSION}`;
 export { PROTOCOL_VERSION };
 export * from "./params.js";
 export * from "./vitals.js";
+export * from "./random.js";
+export * from "./combat.js";

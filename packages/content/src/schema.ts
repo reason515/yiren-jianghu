@@ -13,11 +13,20 @@ export const paramsSchema = z.object({
   expCurve: z.object({ base: z.number().int().positive(), growth: z.number().positive() }),
   /** 潜能：学习消耗系数（有效潜能 = potential - learned_points） */
   potential: z.object({ learnCostFactor: z.number().positive() }),
-  /** 战斗基础值 */
+  /** 战斗基础值（命中/躲闪/招架）与伤害系数 */
   combat: z.object({
     baseHitRate: z.number().min(0).max(1),
     baseDodgeRate: z.number().min(0).max(1),
     baseParryRate: z.number().min(0).max(1),
+    hitPerAttackDiff: z.number().default(0.01),
+    dodgePerDodgeDiff: z.number().default(0.01),
+    parryPerParryDiff: z.number().default(0.01),
+    weaponDmgPerLevel: z.number().default(0.5),
+    forceDmgPerLevel: z.number().default(0.4),
+    defenseReduce: z.number().default(0.5),
+    damageVariance: z.number().min(0).max(0.5).default(0.1),
+    recoverNeiliPerTurn: z.number().nonnegative().default(20),
+    fleeBaseChance: z.number().min(0).max(1).default(0.7),
   }),
   /** 挂机：时长上限与每日递减 */
   afk: z.object({

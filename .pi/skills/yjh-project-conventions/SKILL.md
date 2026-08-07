@@ -51,10 +51,24 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 
 ## E2E 与 CI/CD
 
-- **E2E**：`services/api/e2e/`（真实 PG+Redis，迁移→起服→就绪/鉴权/DB/Redis 往返）。本地先 `pnpm dev:infra` 再 `pnpm test:e2e`；CI `e2e` 作业用服务容器提供 pg/redis 后运行。玩法全链路场景在 B/F 阶段扩展进 `e2e/`。
+- **E2E**：`services/api/e2e/`（真实 PG+Redis，迁移→起服→全链路）。本地先 `pnpm dev:infra` 再 `pnpm test:e2e`；CI `e2e` 作业用服务容器提供 pg/redis 后运行。
+  - `smoke.e2e.test.ts`（基础：就绪/鉴权/DB/Redis 往返）+ `journey.e2e.test.ts`（F3 全链路 11 步：登录→建角→恢复点→场景→学武→任务→挂机→PVP→断线恢复→装备→论坛→登出；F2 结算验证已并入）。
+  - **e2e 文件串行**（`vitest.e2e.config.ts` `fileParallelism: false`）：每个文件 beforeAll 迁移同一真库，并行会迁移锁竞争。
+  - **SQL 造数点标注**：依赖未落地的域（战斗/商店/回精）用 SQL 直接准备状态（如提 exp/潜能、推进任务相位、造行囊、回精），**必须注释标注"待 X 域落地后移除"**；唯一邀请码按运行生成 → 幂等可重跑。
+  - **复用 dev 库的断言要稳健**：榜单/对手 TopN 会被历史运行数据占满（新角色 exp 0 排不进 Top10）——断言"排除自己/非空/计数≥"，不断言"包含特定新角色"。
+  - **e2e 的价值**：mock db 测不到的真实集成问题——复合主键缺失（ON CONFLICT 42P10）、jsonb 二次解析、限流生效、精耗尽导致结算空转。新域落地后至少让 journey 走一遍。
 - **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
 - **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范）**。
 - 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤。
+
+## Worker 作业模式（F2，后台任务照此扩展）
+
+- **纯函数结算与 DB 落地分离**：`worker/src/settlement.ts`（无 IO 纯函数，单测覆盖成长细节）+ `run.ts`（DB 读写）。
+- **DB 轮询替代 Redis 延迟队列**：以 `last_tick_at` 为基准结算 `deltaHours`——离线期间照常推进，**崩溃恢复天然覆盖**（启动即跑一轮）。封测规模（<1k 作业）轮询足够；量大再上 Redis。
+- **并发幂等三件套**：每作业一个事务 + `SELECT ... FOR UPDATE` 行锁抢占（多实例不重复结算）+ 原子写回（作业状态/角色资源/技能在同事务提交）。
+- **结算粒度**：挂机频率参数进内容包 params（`afk.studyAttemptsPerHour`），worker 按时长换算次数并**封顶**（2000）防失控；精/气血耗尽即停（不报错）。
+- **终态写战报**：`report` jsonb（含 wuxia 叙事）+ `read_at` 未读（resume 拉取后置已读）。
+- 集成验证：e2e 直接调用 `settleDueJobs({ pool, content, now })`（now 前移模拟时长），断言资源消耗信号而非精确成长值（成长细节归纯函数单测）。
 
 ## 文档-代码-测试一致性机制（Q2）
 

@@ -401,15 +401,15 @@
 
 > **前置**：F0 PVE 战斗域（服务端）——战斗 UI 无可接 API 前无法验收；任务 kill 相位也依赖战斗。
 
-- **E14.1 场景交互完善**（依赖 F0）：NPC 对话/交易/请托、物品拾取、EntitySheet 接线（动作从世界中长出）；场景刷新与移动反馈
+- **E14.1 场景交互完善**（依赖 F0）：NPC 对话/交易/请托（**交易面板借鉴 xkx ShopView**，见 docs/sibling-borrowings.md）、物品拾取、EntitySheet 接线（动作从世界中长出）；场景刷新与移动反馈
   - 验收：村口广场 NPC 可对话、商店可交易、拾取入行囊
-- **E14.2 角色面板与学武**：CharacterSheet 数据加载（vitals/武功/装备/行囊）+ 装备卸装/使用（inventory 三接口）+ learn/practice/study 动作与数值反馈
+- **E14.2 角色面板与学武**：CharacterSheet 数据加载（vitals/武功/装备/行囊）+ 装备卸装/使用（inventory 三接口）+ learn/practice/study 动作与数值反馈（**面板结构借鉴 xkx TrainSheet/buildPracticeOptions**）
   - 验收：面板与 API 数据一致；学武耗精/升级即时反馈
 - **E14.3 任务面板**：QuestPanel 接/交/查 + 主线足迹 + 可前往（goto 相位）导航；进度推进靠 F0 战斗 kill
   - 验收：接 q_newbie_trail → 战斗杀野狗 → 交差发奖闭环
 - **E14.4 挂机闭环**：GrindBanner（运行状态）+ AfkSheet（模板/时长/启停）+ AfkReportView（叙事战报 + 未读角标）
   - 验收：启动→横幅→停止→战报叙事回响；重连后未读战报
-- **E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；TacticEditor 战术模板（条件/动作 chips）
+- **E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；TacticEditor 战术模板（条件/动作 chips）；**战斗中悬浮动作条交互借鉴 xkx FloatingPerfBar**
   - 验收：手动战斗可打野狗/盗匪；模板影响自动行为
 - **E14.6 PVP 对战 UI**：对手列表/赛季信息/发起对战（二次确认）/战报回放
   - 验收：与第二账号对战完整闭环
@@ -419,11 +419,11 @@
   - 验收：地图可达区域可导航；榜单数据正确
 - **E14.9 断线重连体验**：ReconnectingOverlay + resume 恢复点 + 状态同步
   - 验收：断线重连回到场景且未读战报提示
-- **E14.10 体验打磨（美观度+易用性）**：tokens.css 视觉一致性复核、页面过渡/按钮反馈动效、sound.ts 音效、空态/加载态/错误态、toast 反馈、44px 触控复核、375/390/430 断点与底部安全区
+- **E14.10 体验打磨（美观度+易用性）**：tokens.css 视觉一致性复核（**对照 xkx stat-exp/potential token 补漏**）、页面过渡/按钮反馈动效、sound.ts 音效、空态/加载态/错误态、toast 反馈（**xkx 浮层内 toast 约定**）、44px 触控复核、375/390/430 断点与底部安全区；**ChoiceRow 分段控件泛型化（禁 select）**
   - 验收：mobile-ui 体验承诺——30 秒内知道"我在哪、有何变化、下一步"
-- **E14.11 新手引导**：首启引导（登录→建角→第一条任务→学武→首次战斗），文案遵循 yjh-wuxia-copywriting
+- **E14.11 新手引导**：首启引导（登录→建角→第一条任务→学武→首次战斗），文案遵循 yjh-wuxia-copywriting；**方法参考 sanguo first-session-ux-v3（首日闭环/首战教学展示），GuideTip 轻量提示组件**
   - 验收：新玩家 30 秒内完成一次可理解行动
-- **E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环（登录→建角→探索→学武→任务→战斗→挂机→PVP→论坛）+ 生产部署更新（重新 build:web + 上传）
+- **E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环（登录→建角→探索→学武→任务→战斗→挂机→PVP→论坛）+ 生产部署更新（重新 build:web + 上传）；**新待办：移植 sanguo check-doc-consistency（design-docs §4 落地）**
   - 验收：试玩清单全绿（复用 beta-launch-checklist 门禁）
 - **依赖**：E1–E13、M2.5 API、F0 战斗域
 - **估时**：5–7 人日（E14.1–14.9 各 0.5 日，14.10–14.12 各 0.5–1 日）

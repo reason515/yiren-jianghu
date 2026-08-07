@@ -64,10 +64,12 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const { deps = {} } = opts;
   const db = deps.db;
   const inviteCodes = opts.inviteCodes ?? (process.env.INVITE_CODES ?? "").split(",");
-  // 鉴权：显式 verifyToken > db 会话表 > 占位 stub
+  // 鉴权：显式 verifyToken > db 会话表 > 占位 stub；allowAnyInvite 为测试便利（env ALLOW_ANY_INVITE=1，封测前关闭）
+  const allowAnyInvite = process.env.ALLOW_ANY_INVITE === "1";
   const verifyToken =
-    opts.verifyToken ?? (db ? createAuthService({ db, inviteCodes }).verifyToken : undefined);
-  const auth = db ? createAuthService({ db, inviteCodes }) : null;
+    opts.verifyToken ??
+    (db ? createAuthService({ db, inviteCodes, allowAnyInvite }).verifyToken : undefined);
+  const auth = db ? createAuthService({ db, inviteCodes, allowAnyInvite }) : null;
   const characters = db ? createCharacterService(db) : null;
   const scene = db && deps.content ? createSceneService(db, buildContentIndex(deps.content)) : null;
   const skills = db && deps.content ? createSkillsService(db, deps.content) : null;

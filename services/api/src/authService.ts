@@ -18,6 +18,8 @@ export interface AuthServiceOptions {
   inviteCodes: string[];
   tokenTtlMs?: number;
   now?: () => number;
+  /** 测试/自测便利：任意邀请码（含空串）放行（封测前必须关闭，见 beta-launch-checklist）。 */
+  allowAnyInvite?: boolean;
 }
 
 export interface AuthService {
@@ -37,7 +39,9 @@ export function createAuthService(opts: AuthServiceOptions): AuthService {
   return {
     async login(rawCode) {
       const code = rawCode.trim();
-      if (!codes.has(code)) throw new AuthError("invalid_invite", "邀请帖无效");
+      if (!codes.has(code) && !opts.allowAnyInvite) {
+        throw new AuthError("invalid_invite", "邀请帖无效");
+      }
 
       const existing = await opts.db.query<{ id: string; status?: string }>(
         "SELECT id, status FROM accounts WHERE invite_code = $1",

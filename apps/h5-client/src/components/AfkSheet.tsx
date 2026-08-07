@@ -1,5 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
+import { ChoiceRow } from "./base/ChoiceRow.js";
 import type {
   AfkQuestOption,
   AfkSkillOption,
@@ -94,28 +95,15 @@ export function AfkSheet({
         <div className="afk-form">
           <div className="field">
             <span className="field-label">行止</span>
-            <div className="seg" role="tablist" aria-label="行止法门">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "study"}
-                className={`seg-btn${mode === "study" ? " on" : ""}`}
-                disabled={pending}
-                onClick={() => setMode("study")}
-              >
-                修炼
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "quest"}
-                className={`seg-btn${mode === "quest" ? " on" : ""}`}
-                disabled={pending}
-                onClick={() => setMode("quest")}
-              >
-                行侠
-              </button>
-            </div>
+            <ChoiceRow
+              label="行止法门"
+              options={[
+                { value: "study", label: "修炼", disabled: pending },
+                { value: "quest", label: "行侠", disabled: pending },
+              ]}
+              value={mode}
+              onChange={setMode}
+            />
           </div>
 
           {mode === "study" ? (

@@ -137,3 +137,50 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ---- 主界面底部导航 ---- */
+.app-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  gap: 2px;
+  padding: 6px 8px calc(6px + var(--safe-b));
+  background: var(--ink-lift);
+  border-top: 1px solid var(--line);
+}
+.app-nav-btn {
+  min-height: var(--touch-min);
+  padding: 0 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--paper-dim);
+  font-family: var(--font-body);
+  font-size: 13px;
+  transition: color 0.15s ease;
+}
+.app-nav-btn:active {
+  color: var(--jade-bright);
+}
+
+/* ---- 全局 toast 容器（App 层，浮于所有浮层之上） ---- */
+.toast-host {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: calc(96px + var(--safe-b));
+  pointer-events: none;
+}
+.toast-host .toast {
+  position: static;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}

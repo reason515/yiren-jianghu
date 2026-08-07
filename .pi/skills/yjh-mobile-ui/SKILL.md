@@ -60,7 +60,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 
 ## 4.1 已落地组件基线（apps/h5-client/src/，勿重复造轮子）
 
-- 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）
+- 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage` / `CharacterCreateSheet`
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
@@ -131,6 +131,12 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 重连流程：复用 `lib/reconnect.ts` 状态机（指数退避、最多 5 次）；每次重试 = `GET /session/resume` + 刷新全量状态（场景/战局/任务/挂机/榜单），成功即 `connected` 关遮罩。
 - 未读回响：resume 的 `pendingAfkReports` 补拉全文并打开 `AfkReportView`；`pendingPvpReportIds` 首场拉取 `GET /pvp/matches/:id` 直接弹回响。战局按契约 4.3 优先 `GET /combat/status` 恢复。
 - 重连遮罩只覆盖 `reconnecting` 态；连超 5 次隐藏遮罩并以一条 toast 提示，不再自动打扰（后续操作恢复网络即正常）。
+
+## 4.10 基础组件与样式约定（E14.10）
+
+- **ChoiceRow<T> 泛化分段**：互斥分段统一用 `components/base/ChoiceRow.tsx`（`options/value/onChange/label`；禁原生 select）；AfkSheet 修炼/行侠、LeaderboardView 双轨、CharacterCreateSheet 性别均已替换。新增分段先查此处复用。
+- **主界面底部导航与全局 toast 是真实缺口历史**：`.app-nav`（fixed 底部、`--safe-b` 内边距、44px 按钮）与 `.toast-host`（fixed、z-index 300、pointer-events 只放行 toast 本身）必须存在，新增主界面布局勿删；toast 只在 App 层出现，浮层内反馈也走全局 toast（z-index 高于 overlay 100）。
+- 触控/安全区：`--touch-min: 44px`、`--safe-b/--safe-t`（env(safe-area-inset-*)）；sheet-scroll 与 app-nav 均已接 safe-b。颜色一律来自 tokens，新颜色先补 token 再使用。
 
 ## 5. 与已定项目决策的对齐
 

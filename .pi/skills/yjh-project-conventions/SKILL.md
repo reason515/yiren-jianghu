@@ -159,6 +159,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 26. **浏览器自动化验证的干扰（G4/H5 实测）**：① **生产限流（120/分钟/IP）会被自动化高频请求触发**——连续 eval/curl 会让验证循环自己撞 429，App 按设计清 token 回登录页；验证要"静默窗口 + 低频率"，或测试期调大 `RATE_LIMIT_PER_MIN`；② **React 19 受控输入在 CDP eval 注入不触发 onChange**（原生 setter + input 事件无效）——真实用户打字正常；自动化验证优先走 API 层 + localStorage 塞 token 绕过登录页；③ 前端真机验证的边界：渲染/链路可自动化，交互留给真实用户低频率操作。
 27. **服务端逐回合战斗（F0）**：战斗会话持久化 `seed + state(rngCalls/nextSeq/performCooldowns/双方战斗体)`，事件独立按 `(session_id, seq)` 追加；**事件 payload 必须同时保存 `actor` 与 `data`**，否则前端无法区分双方动作。`perform` 事件还须带 `performId`，以供前端演出；冷却必须写入 `performCooldowns`，断线恢复不能重置。jsonb 读取仍按字符串/对象双保险。手动 action 只接收白名单意图、服务端续算 NPC 回合并写回角色资源；胜利按 NPC 内容包 `battleRewards`/`drops` 结算并调 `questsService.recordProgress(..., "kill", npcId)`。**同一 action 用 `Db.transaction` + `SELECT ... FOR UPDATE` 锁住会话行**，避免双击/重试重复掉落、成长或任务推进。首个 `battle_start` 固定 `seq=0`，其 SQL 参数形态与普通事件不同，mock 必须分别模拟。PVP 与 PVE 的角色战斗体必须复用同一工厂，避免门类/属性公式漂移；会话/action 覆盖开战→续算→绝招冷却→胜利结算→任务推进及拒绝分支的 service 测试，之后再进真库 e2e。
 28. **本地 E2E 环境变量**：`pnpm test:e2e` 已通过根 `package.json` 的 `node --env-file-if-exists=.env` 自动加载 `DATABASE_URL`；不要绕过该脚本直接运行 Vitest。先 `pnpm dev:infra`，再跑 E2E。若报缺少 `DATABASE_URL`，先检查根 `.env`，而非只确认 Docker 已启动。
+29. **App 主界面布局/toast 样式脱节（E14.10 踩过）**：`App.tsx` 用了 `.app-nav`（底部导航）与 `.toast-host`（全局 toast 容器）但 base.css 长期缺定义——导航/toast 实际不可见/无样式，E2E 断言不到视觉层所以一直没暴露。凡新增 App 级布局类，必须在 `base.css`（主界面骨架）同步定义并保留；toast 走全局 `.toast-host`（z-index 300 高于浮层），勿复用 base `.toast` 的隐藏默认（opacity:0 需 `.show`）。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

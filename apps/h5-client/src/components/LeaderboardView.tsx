@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
+import { ChoiceRow } from "./base/ChoiceRow.js";
 import type { LeaderboardData, LeaderboardKind } from "../lib/leaderboardTypes.js";
 
 /** 排行榜（双轨 seg；数值带语义标签，我的行玉色高亮）。 */
@@ -21,26 +22,15 @@ export function LeaderboardView({
 
   return (
     <Sheet open={open} title="天下名册" onClose={onClose}>
-      <div className="seg" role="tablist" aria-label="榜单">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={kind === "growth"}
-          className={`seg-btn${kind === "growth" ? " on" : ""}`}
-          onClick={() => setKind("growth")}
-        >
-          成长榜
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={kind === "season_pvp"}
-          className={`seg-btn${kind === "season_pvp" ? " on" : ""}`}
-          onClick={() => setKind("season_pvp")}
-        >
-          论剑榜
-        </button>
-      </div>
+      <ChoiceRow
+        label="榜单"
+        options={[
+          { value: "growth", label: "成长榜" },
+          { value: "season_pvp", label: "论剑榜" },
+        ]}
+        value={kind}
+        onChange={setKind}
+      />
 
       {data.season && (
         <p className="lb-season" data-testid="lb-season">

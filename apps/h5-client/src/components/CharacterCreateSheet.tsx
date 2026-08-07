@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
+import { ChoiceRow } from "./base/ChoiceRow.js";
 import { AttributeAllocator, ATTR_META, type Attrs, type AttrKey } from "./AttributeAllocator.js";
 import type { ApiError, AuthApi, CreateCharacterInput } from "../lib/authApi.js";
 
@@ -78,20 +79,15 @@ export function CharacterCreateSheet({
         </label>
         <div className="field">
           <span className="field-label">性别</span>
-          <div className="seg" role="radiogroup" aria-label="性别">
-            {(["male", "female"] as const).map((g) => (
-              <button
-                key={g}
-                type="button"
-                className={`seg-btn${gender === g ? " on" : ""}`}
-                aria-checked={gender === g}
-                role="radio"
-                onClick={() => setGender(g)}
-              >
-                {g === "male" ? "男儿" : "女儿"}
-              </button>
-            ))}
-          </div>
+          <ChoiceRow
+            label="性别"
+            options={[
+              { value: "male", label: "男儿" },
+              { value: "female", label: "女儿" },
+            ]}
+            value={gender}
+            onChange={setGender}
+          />
         </div>
         <div className="field">
           <span className="field-label">四维 · 分配根基</span>

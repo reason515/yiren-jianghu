@@ -3,3 +3,4 @@ export * from "./Sheet.js";
 export * from "./Chip.js";
 export * from "./Bar.js";
 export * from "./Toast.js";
+export * from "./ChoiceRow.js";

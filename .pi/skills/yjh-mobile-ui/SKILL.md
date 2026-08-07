@@ -70,6 +70,19 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 数据模型：`lib/sceneTypes.ts` + `combatTypes.ts` + `characterTypes.ts` + `tacticTypes.ts` + `afkTypes.ts` + `questTypes.ts` + `forumTypes.ts` + `leaderboardTypes.ts`；客户端：`lib/authApi.ts` + `resumeClient.ts` + `reconnect.ts` + `sound.ts` + `effects.ts`（均 fetch/impl 可注入，Taro 可替换）
 - 新界面先检查此处是否有可复用组件；扩展时保持 token 驱动 + 44px 触控 + aria。
 
+## 4.2 姊妹项目借鉴约定（xkx2001-utf8 / sanguo-mud 提炼）
+
+> 借鉴目录与 E14 映射见 `docs/sibling-borrowings.md`；此处为**可执行约定**。拿用边界：结构/交互/风格可借鉴，**xkx 的 MUD 特化逻辑（命令解析/`__xxx__` 拦截）不复制**（本项目服务端权威、无原始指令）；玩家可见文案一律原创。
+
+- **stat token 命名**：经验/潜能/生存资源用独立 `--stat-exp` / `--stat-potential` / `--stat-qi` / `--stat-jing` 等（与 xkx tokens.css 对齐），不混用通用色；新状态先补 token 再使用。
+- **分段控件泛型化**：互斥选择统一 `ChoiceRow<T>`（分段按钮，选中态玉色描边）；沿用禁原生 `<select>`；人物/物品列表仍用 chip。
+- **浮层内反馈用 toast**：在 Sheet 内触发的操作反馈（学武/交易/装备等）用 toast 呈现（z-index 高于所有浮层，参考 xkx z-index:200）；**多行反馈合并为一条完整 toast**；内容与操作结果叙事一致，不拼接自定义文案。
+- **attr-card 属性卡规范**（属性设置/重设共用）：左边框属性色 + `--font-display` 属性名着属性色；数值 `当前 → 新值`（新值着属性色）；分配状态条（满足玉色 / 不足或超出朱砂）；加减按钮到边界/超预算禁用。
+- **战斗中悬浮动作条**（借鉴 xkx FloatingPerfBar）：战斗中出现在屏底居中、浮于浮层之上、可收起；**只在战斗中显示**，平时不占场景区。
+- **NPC 能力 → 场景动作**：NPC 对话/交易/请托等动作由 NPC 定义（内容包 `npc` 能力字段）**生成**动作 chip，不写死——与"动作从世界中长出"一致（xkx inferNpcCapabilityActions 思想）。
+- **新手引导方法**（sanguo first-session-ux 思想）：首启引导走"登录→建角→第一条任务→学武→首次战斗"闭环；**首战为教学展示**（必胜、弱敌、时长短，目标是第一次完整感受战斗文本与气血回响而非挑战）；引导提示用轻量组件（GuideTip 式 text + onDismiss），不打断主流程。
+- **执行登记**：借鉴条目在 E14 各子任务执行记录登记来源（沿用 pkuxkx 登记纪律精神）。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

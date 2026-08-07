@@ -3,7 +3,7 @@ import { Chip } from "./base/Chip.js";
 import { Sheet } from "./base/Sheet.js";
 import type { ForumPost, ForumViewData, ForumViewState } from "../lib/forumTypes.js";
 
-/** 论坛视图（受控纯文本社区：板块 → 帖子 → 详情；点赞/举报动作）。 */
+/** 论坛视图（受控纯文本社区：板块 → 帖子 → 详情；点赞/举报/发帖/评论动作）。 */
 export interface ForumViewProps {
   data: ForumViewData;
   view: ForumViewState;
@@ -14,6 +14,8 @@ export interface ForumViewProps {
   onLike: (postId: string) => void;
   onReportPost: (postId: string) => void;
   onReportComment: (commentId: string) => void;
+  onComposePost: () => void;
+  onComposeComment: () => void;
 }
 
 export function ForumView({
@@ -26,6 +28,8 @@ export function ForumView({
   onLike,
   onReportPost,
   onReportComment,
+  onComposePost,
+  onComposeComment,
 }: ForumViewProps): JSX.Element {
   return (
     <div className="forum" data-testid="forum">
@@ -47,9 +51,14 @@ export function ForumView({
 
       {view === "posts" && (
         <div className="forum-posts">
-          <button type="button" className="forum-back" onClick={onBack}>
-            ← 板块
-          </button>
+          <div className="forum-toolbar">
+            <button type="button" className="forum-back" onClick={onBack}>
+              ← 板块
+            </button>
+            <button type="button" className="forum-compose" onClick={onComposePost}>
+              发帖
+            </button>
+          </div>
           {data.posts.map((p) => (
             <div className="forum-post-row" key={p.id}>
               <button type="button" className="forum-post-title" onClick={() => onOpenPost(p.id)}>
@@ -101,6 +110,9 @@ export function ForumView({
               </div>
             ))}
           </div>
+          <button type="button" className="forum-compose" onClick={onComposeComment}>
+            回帖
+          </button>
         </div>
       )}
     </div>
@@ -109,10 +121,11 @@ export function ForumView({
 
 export function ForumSheet({
   open,
+  onClose,
   ...rest
-}: ForumViewProps & { open: boolean }): JSX.Element | null {
+}: ForumViewProps & { open: boolean; onClose: () => void }): JSX.Element | null {
   return (
-    <Sheet open={open} title="江湖茶话" onClose={rest.onBack}>
+    <Sheet open={open} title="江湖茶话" onClose={onClose}>
       <ForumView {...rest} />
     </Sheet>
   );

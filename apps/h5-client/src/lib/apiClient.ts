@@ -5,6 +5,7 @@ import type { QuestOverviewResponse } from "./questTypes.js";
 import type { AfkJobData, AfkReportData, AfkStartConfig, AfkStatusResponse } from "./afkTypes.js";
 import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
 import type { PvpMatchDetail } from "./pvpTypes.js";
+import type { ForumComment, ForumPost, ForumSection } from "./forumTypes.js";
 
 /**
  * H5 API 客户端：统一 fetch + 错误信封解析（服务端权威，客户端只发意图）。
@@ -49,12 +50,17 @@ export interface ApiClient {
   stopAfk(): Promise<AfkReportData>;
   getAfkReports(): Promise<AfkReportData[]>;
   getTemplates(): Promise<Array<{ id: string; name: string }>>;
-  getForumSections(): Promise<unknown[]>;
-  getForumPosts(sectionId?: string): Promise<unknown[]>;
-  getForumPost(postId: string): Promise<unknown>;
-  createForumPost(input: { sectionId: string; title: string; body: string }): Promise<unknown>;
-  addForumComment(postId: string, body: string): Promise<unknown>;
-  toggleForumLike(postId: string): Promise<unknown>;
+  getForumSections(): Promise<ForumSection[]>;
+  getForumPosts(sectionId?: string): Promise<ForumPost[]>;
+  getForumPost(postId: string): Promise<{ post: ForumPost; comments: ForumComment[] } | null>;
+  createForumPost(input: { sectionId: string; title: string; body: string }): Promise<ForumPost>;
+  addForumComment(postId: string, body: string): Promise<ForumComment>;
+  toggleForumLike(postId: string): Promise<{ liked: boolean; likeCount: number }>;
+  reportForumPost(input: {
+    targetType: "post" | "comment";
+    targetId: string;
+    reason: string;
+  }): Promise<{ ok: true }>;
   getLeaderboard(kind: "growth" | "season_pvp"): Promise<unknown>;
   getPvpSeason(): Promise<unknown>;
   getPvpOpponents(): Promise<unknown[]>;
@@ -128,6 +134,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     createForumPost: (input) => post("/forum/posts", input),
     addForumComment: (postId, body) => post(`/forum/posts/${postId}/comments`, { body }),
     toggleForumLike: (postId) => post("/forum/likes", { postId }),
+    reportForumPost: (input) => post("/forum/reports", input),
     getLeaderboard: (kind) => get(`/leaderboard/${kind}`),
     getPvpSeason: () => get("/pvp/season"),
     getPvpOpponents: () => get("/pvp/opponents"),

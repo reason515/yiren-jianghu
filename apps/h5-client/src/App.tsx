@@ -22,6 +22,8 @@ import { AfkSheet } from "./components/AfkSheet.js";
 import { AfkReportView } from "./components/AfkReportView.js";
 import { PvpView } from "./components/PvpView.js";
 import { PvpReplayView } from "./components/PvpReplayView.js";
+import { ForumSheet } from "./components/ForumView.js";
+import { PostComposer } from "./components/PostComposer.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
 import {
@@ -36,6 +38,7 @@ import {
   type AfkTemplateOption,
 } from "./lib/afkTypes.js";
 import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./lib/pvpTypes.js";
+import type { ForumComment, ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
 import type {
   SceneItem,
   SceneNpc,
@@ -100,6 +103,21 @@ export function App(): JSX.Element {
   const [pvpChallenge, setPvpChallenge] = useState<PvpOpponent | null>(null);
   const [pvpReplay, setPvpReplay] = useState<PvpMatchDetail | null>(null);
   const [pvpReplayOpen, setPvpReplayOpen] = useState(false);
+  const [forumData, setForumData] = useState<ForumViewData>({
+    sections: [],
+    posts: [],
+    comments: [],
+  });
+  const [forumView, setForumView] = useState<ForumViewState>("sections");
+  const [forumActivePost, setForumActivePost] = useState<ForumPost | null>(null);
+  const [forumSectionId, setForumSectionId] = useState<string | null>(null);
+  const [forumComposer, setForumComposer] = useState<
+    | { kind: "post"; sectionId: string }
+    | { kind: "comment"; postId: string }
+    | { kind: "report"; targetType: "post" | "comment"; targetId: string }
+    | null
+  >(null);
+  const [forumPending, setForumPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
@@ -292,6 +310,132 @@ export function App(): JSX.Element {
       })
       .catch(notify)
       .finally(() => setPvpPending(false));
+  };
+
+  const refreshForumSections = useCallback(async (): Promise<void> => {
+    try {
+      const sections = await api.getForumSections();
+      setForumData((prev) => ({ ...prev, sections }));
+      setForumView("sections");
+    } catch (e) {
+      notify(e);
+    }
+  }, [api]);
+
+  const openForum = (): void => {
+    setPanel("forum");
+    void refreshForumSections();
+  };
+
+  const onForumOpenSection = (sectionId: string): void => {
+    setForumSectionId(sectionId);
+    void api
+      .getForumPosts(sectionId)
+      .then((posts) => {
+        setForumData((prev) => ({ ...prev, posts }));
+        setForumView("posts");
+      })
+      .catch(notify);
+  };
+
+  const onForumOpenPost = (postId: string): void => {
+    void api
+      .getForumPost(postId)
+      .then((detail) => {
+        if (!detail) {
+          setError("这帖子已随风而去。");
+          return;
+        }
+        setForumActivePost(detail.post);
+        setForumData((prev) => ({ ...prev, comments: detail.comments }));
+        setForumView("post");
+      })
+      .catch(notify);
+  };
+
+  const onForumBack = (): void => {
+    if (forumView === "post") {
+      setForumView("posts");
+    } else if (forumView === "posts") {
+      void refreshForumSections();
+    }
+  };
+
+  const onForumLike = (postId: string): void => {
+    if (forumPending) return;
+    setForumPending(true);
+    void api
+      .toggleForumLike(postId)
+      .then(({ liked, likeCount }) => {
+        setForumActivePost((prev) =>
+          prev && prev.id === postId ? { ...prev, likedByMe: liked, likeCount } : prev,
+        );
+        setForumData((prev) => ({
+          ...prev,
+          posts: prev.posts.map((post) =>
+            post.id === postId ? { ...post, likedByMe: liked, likeCount } : post,
+          ),
+        }));
+        setError(liked ? "已记下这一赞。" : "收回了这一赞。");
+      })
+      .catch(notify)
+      .finally(() => setForumPending(false));
+  };
+
+  const onForumReportPost = (postId: string): void => {
+    setForumComposer({ kind: "report", targetType: "post", targetId: postId });
+  };
+
+  const onForumReportComment = (commentId: string): void => {
+    setForumComposer({ kind: "report", targetType: "comment", targetId: commentId });
+  };
+
+  const onForumComposePost = (): void => {
+    if (!forumSectionId) return;
+    setForumComposer({ kind: "post", sectionId: forumSectionId });
+  };
+
+  const onForumComposeComment = (): void => {
+    if (!forumActivePost) return;
+    setForumComposer({ kind: "comment", postId: forumActivePost.id });
+  };
+
+  const onForumComposerSubmit = (input: { title?: string; body: string }): void => {
+    if (!forumComposer || forumPending) return;
+    setForumPending(true);
+    const task = (() => {
+      switch (forumComposer.kind) {
+        case "post":
+          return api.createForumPost({
+            sectionId: forumComposer.sectionId,
+            title: input.title ?? "",
+            body: input.body,
+          });
+        case "comment":
+          return api.addForumComment(forumComposer.postId, input.body);
+        case "report":
+          return api.reportForumPost({
+            targetType: forumComposer.targetType,
+            targetId: forumComposer.targetId,
+            reason: input.body,
+          });
+      }
+    })();
+    void task
+      .then(async () => {
+        setForumComposer(null);
+        if (forumComposer.kind === "post") {
+          setError("已贴上江湖茶话。");
+          await refreshForumSections();
+        } else if (forumComposer.kind === "comment") {
+          setError("已回帖。");
+          await onForumOpenPost(forumComposer.postId);
+        } else {
+          setError("已递呈坊主处置。");
+        }
+      })
+      .catch(notify)
+      .finally(() => setForumPending(false));
   };
 
   const onAfkStart = (config: AfkStartConfig): void => {
@@ -515,6 +659,12 @@ export function App(): JSX.Element {
     setPvpChallenge(null);
     setPvpReplay(null);
     setPvpReplayOpen(false);
+    setForumData({ sections: [], posts: [], comments: [] });
+    setForumView("sections");
+    setForumActivePost(null);
+    setForumSectionId(null);
+    setForumComposer(null);
+    setForumPending(false);
     setPanel("none");
   };
 
@@ -571,7 +721,7 @@ export function App(): JSX.Element {
             <button className="app-nav-btn" onClick={openQuests}>
               任务
             </button>
-            <button className="app-nav-btn" onClick={() => setPanel("forum")}>
+            <button className="app-nav-btn" onClick={openForum}>
               论坛
             </button>
             <button className="app-nav-btn" onClick={() => setPanel("leaderboard")}>
@@ -625,6 +775,50 @@ export function App(): JSX.Element {
           pending={pvpPending}
           onChallenge={onChallenge}
           onClose={() => setPanel("none")}
+        />
+      )}
+
+      {panel === "forum" && (
+        <ForumSheet
+          open
+          data={forumData}
+          view={forumView}
+          activePost={forumActivePost ?? undefined}
+          onOpenSection={onForumOpenSection}
+          onOpenPost={onForumOpenPost}
+          onBack={onForumBack}
+          onLike={onForumLike}
+          onReportPost={onForumReportPost}
+          onReportComment={onForumReportComment}
+          onComposePost={onForumComposePost}
+          onComposeComment={onForumComposeComment}
+          onClose={() => setPanel("none")}
+        />
+      )}
+
+      {forumComposer && (
+        <PostComposer
+          open
+          title={
+            forumComposer.kind === "post"
+              ? "发新帖"
+              : forumComposer.kind === "comment"
+                ? "回帖"
+                : "举报"
+          }
+          showTitleField={forumComposer.kind === "post"}
+          maxBodyLength={
+            forumComposer.kind === "post" ? 500 : forumComposer.kind === "comment" ? 200 : 100
+          }
+          submitLabel={
+            forumComposer.kind === "post"
+              ? "发布"
+              : forumComposer.kind === "comment"
+                ? "回帖"
+                : "递呈"
+          }
+          onSubmit={onForumComposerSubmit}
+          onClose={() => setForumComposer(null)}
         />
       )}
 

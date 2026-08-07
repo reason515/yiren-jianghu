@@ -60,6 +60,8 @@ const DATA: ForumViewData = {
 };
 
 describe("ForumView（论坛）", () => {
+  const noop = (): void => undefined;
+
   it("板块列表渲染与打开回调", () => {
     let opened = "";
     const { host } = render(
@@ -67,11 +69,13 @@ describe("ForumView（论坛）", () => {
         data={DATA}
         view="sections"
         onOpenSection={(s) => (opened = s)}
-        onOpenPost={() => undefined}
-        onBack={() => undefined}
-        onLike={() => undefined}
-        onReportPost={() => undefined}
-        onReportComment={() => undefined}
+        onOpenPost={noop}
+        onBack={noop}
+        onLike={noop}
+        onReportPost={noop}
+        onReportComment={noop}
+        onComposePost={noop}
+        onComposeComment={noop}
       />,
     );
     expect(host.textContent).toContain("新手茶棚");
@@ -83,19 +87,22 @@ describe("ForumView（论坛）", () => {
     expect(opened).toBe("s2");
   });
 
-  it("帖子列表：标题/作者/点赞·评论数；打开与点赞回调", () => {
+  it("帖子列表：标题/作者/点赞·评论数；打开与点赞回调；顶部可发帖", () => {
     let opened = "";
     let liked = "";
+    let composed = 0;
     const { host } = render(
       <ForumView
         data={DATA}
         view="posts"
-        onOpenSection={() => undefined}
+        onOpenSection={noop}
         onOpenPost={(p) => (opened = p)}
-        onBack={() => undefined}
+        onBack={noop}
         onLike={(p) => (liked = p)}
-        onReportPost={() => undefined}
-        onReportComment={() => undefined}
+        onReportPost={noop}
+        onReportComment={noop}
+        onComposePost={() => (composed += 1)}
+        onComposeComment={noop}
       />,
     );
     expect(host.textContent).toContain("初入江湖，求前辈指点");
@@ -106,22 +113,27 @@ describe("ForumView（论坛）", () => {
         .click(),
     );
     expect(opened).toBe("p1");
+    act(() => host.querySelector<HTMLButtonElement>(".forum-compose")!.click());
+    expect(composed).toBe(1);
   });
 
-  it("帖子详情：正文/评论/点赞·举报", () => {
+  it("帖子详情：正文/评论/点赞·举报/回帖", () => {
     const likes: string[] = [];
     const reports: string[] = [];
+    let commented = 0;
     const { host } = render(
       <ForumView
         data={DATA}
         view="post"
         activePost={DATA.posts[0]}
-        onOpenSection={() => undefined}
-        onOpenPost={() => undefined}
-        onBack={() => undefined}
+        onOpenSection={noop}
+        onOpenPost={noop}
+        onBack={noop}
         onLike={(p) => likes.push(p)}
         onReportPost={(p) => reports.push(p)}
-        onReportComment={() => undefined}
+        onReportComment={noop}
+        onComposePost={noop}
+        onComposeComment={() => (commented += 1)}
       />,
     );
     expect(host.textContent).toContain("野狗都打不过");
@@ -138,6 +150,8 @@ describe("ForumView（论坛）", () => {
     );
     expect(likes).toEqual(["p1"]);
     expect(reports).toEqual(["p1"]);
+    act(() => host.querySelector<HTMLButtonElement>(".forum-compose")!.click());
+    expect(commented).toBe(1);
   });
 });
 

@@ -36,6 +36,21 @@
   color: var(--paper-dim);
   font-size: 13px;
 }
+.forum-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.forum-compose {
+  min-height: var(--touch-min);
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--jade);
+  background: var(--ink-lift);
+  color: var(--jade-bright);
+  font-size: 14px;
+}
 .forum-posts {
   display: flex;
   flex-direction: column;

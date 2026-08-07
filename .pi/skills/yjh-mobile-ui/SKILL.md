@@ -112,6 +112,13 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 匹配成功后拉取 `GET /pvp/matches/:id` 以事件流回放；叙事行与 PVE 共用 `battleEventLine`（combatTypes 导出），避免两套文案漂移。回放中 actor a=我方（挑战者）、b=对手（应战者）。
 - 归档战报（G2 archive.sh 后 report 为 NULL）显示“已归档”提示而非空白；400 错误（无角色/赛季未开/次数已尽）以 toast 展示服务端武侠文案。
 
+## 4.7 论坛接线契约（E14.7）
+
+- 打开论坛时先拉 `GET /forum/sections`，进入板块拉 `GET /forum/posts?sectionId=`，打开帖子拉 `GET /forum/posts/:id`（含评论）；服务端数据是唯一事实来源。
+- 发帖/回帖/举报共用 `PostComposer`：发帖带标题（≤24 字）、回帖与举报只填正文（回帖 ≤200 字，举报理由 ≤100 字）；纯文本由服务端把关，客户端不加工格式。
+- 点赞后以 `POST /forum/likes` 返回值更新本地 `likedByMe`/`likeCount`（公开读接口不携带个人态）；举报走 `POST /forum/reports { targetType, targetId, reason }`，反馈用一条 toast（“已递呈坊主处置”）。
+- 反馈（发帖/回帖/举报/点赞）统一用浮层内 toast；操作期间禁用重复提交。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

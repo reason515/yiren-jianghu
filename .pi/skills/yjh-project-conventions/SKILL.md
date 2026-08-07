@@ -61,6 +61,8 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 - **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API/Worker 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范 + G1 实战）**。
 - 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤；**并检查容器入口接线**（见常见坑 #24）。
 - **G1 服务器部署实战要点（117.72.34.43，京东云 2GB 小机）**：镜像用**服务器本地 docker build**（git archive 源码包上传 → build，buildkit 缓存复用，2GB 内存 OK）；**自定义 tag（如 yiren/api:main）不被 daocloud 镜像代理**（白名单外）——`API_IMAGE=yiren/api:main docker compose up` 指向本地镜像；**容器内 `DATABASE_URL`/`REDIS_URL` 的 host 用 compose 服务名（postgres/redis）非 localhost**；Nginx 只绑 loopback 转发（公网 80→127.0.0.1:3000）；Windows 无 sshpass 时用 node+ssh2 脚本（密码认证）执行 SSH/SFTP。
+- **G4 生产回归脚本要点（beta-regression.sh，封测门禁在用）**：回归前**清理残留状态**（如旧挂机 running → 先 stop）；**API 响应解析要断言结构**（shell+python 里 `assert isinstance(d, list)` 防把错误信封 `{"error":...}` 误读成正常数据——G4 曾把 `len({"error"})==1` 当"对手数 1"）；**幂等准备**（建角 409 忽略、回精 SQL）；curl 辅助函数注意**参数顺序**（path/token/body）。封测门禁清单见 `docs/beta-launch-checklist.md`。
+- **服务器 cron 配置后必须 `crontab -l` 验证**（G4 发现 G2 配的 cron 意外丢失）；cron 条目纳入备份/清单核验项。
 
 ## Worker 作业模式（F2，后台任务照此扩展）
 

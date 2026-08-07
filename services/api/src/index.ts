@@ -4,7 +4,7 @@
  */
 import pg from "pg";
 import { loadContentDir } from "@yjh/content";
-import { createApp } from "./app.js";
+import { createApp, type AppDeps } from "./app.js";
 import { createPgDb } from "./db.js";
 
 export { createApp } from "./app.js";
@@ -14,7 +14,7 @@ const port = Number(process.env.API_PORT ?? 3000);
 const DATABASE_URL = process.env.DATABASE_URL;
 const CONTENT_DIR = process.env.CONTENT_DIR ?? "/app/packages/content/fixtures/pack";
 
-let deps: Parameters<typeof createApp>[0]["deps"] = {};
+let deps: AppDeps = {};
 let pool: pg.Pool | undefined;
 if (DATABASE_URL) {
   pool = new pg.Pool({ connectionString: DATABASE_URL, max: 20 });

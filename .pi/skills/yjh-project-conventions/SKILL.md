@@ -58,8 +58,9 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
   - **复用 dev 库的断言要稳健**：榜单/对手 TopN 会被历史运行数据占满（新角色 exp 0 排不进 Top10）——断言"排除自己/非空/计数≥"，不断言"包含特定新角色"。
   - **e2e 的价值**：mock db 测不到的真实集成问题——复合主键缺失（ON CONFLICT 42P10）、jsonb 二次解析、限流生效、精耗尽导致结算空转。新域落地后至少让 journey 走一遍。
 - **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
-- **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范）**。
-- 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤。
+- **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API/Worker 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范 + G1 实战）**。
+- 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤；**并检查容器入口接线**（见常见坑 #24）。
+- **G1 服务器部署实战要点（117.72.34.43，京东云 2GB 小机）**：镜像用**服务器本地 docker build**（git archive 源码包上传 → build，buildkit 缓存复用，2GB 内存 OK）；**自定义 tag（如 yiren/api:main）不被 daocloud 镜像代理**（白名单外）——`API_IMAGE=yiren/api:main docker compose up` 指向本地镜像；**容器内 `DATABASE_URL`/`REDIS_URL` 的 host 用 compose 服务名（postgres/redis）非 localhost**；Nginx 只绑 loopback 转发（公网 80→127.0.0.1:3000）；Windows 无 sshpass 时用 node+ssh2 脚本（密码认证）执行 SSH/SFTP。
 
 ## Worker 作业模式（F2，后台任务照此扩展）
 
@@ -148,6 +149,8 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 20. **路由集成测试错误断言在 `.json().error` 下**：错误信封为 `{ error: { code, message, requestId } }`，`app.inject` 后断言错误要 `(res.json() as { error: { code } }).error`（M2.5-skills/quests 集成测试踩过）；服务层直接 `rejects.toMatchObject({ code })` 不受影响。
 21. **服务端运行时校验字段的类型用 `string` 而非字面量联合**：路由层收 `unknown` → 服务端 `if (kind !== "study" && kind !== "quest") throw invalid_kind`——若入参类型收窄成 `"study" | "quest"`，非法分支会变 TS 死代码（M2.5-afk 踩过：`AfkStartInput.kind` 一度收窄导致 `invalid_kind` 断言无法编译，放宽为 string 后校验分支才可测）。服务端权威：**类型收窄只做防御，业务校验始终以运行时为准**。
 22. **jsonb 列 SELECT 返回的是已解析对象（真库）**：pg 驱动对 jsonb 自动解析成对象，而 mock db 常存 JSON 字符串——读侧 `JSON.parse(value)` 在真库会抛 `"[object Object]" is not valid JSON`（F3 e2e 全链路抓出：afk/reports 与 pvp/matches 两处）；**读 jsonb 一律双保险** `typeof v === "string" ? JSON.parse(v) : v`（templatesService 早有此守卫）。写侧 `JSON.stringify` 不变。
+23. **部署脚本的管道吞退出码（#11 的部署变体）**：`docker build ... | tail -1` 让 exit code 变 tail 的（0）——build 失败照样 `compose up` 旧镜像（G1 踩过：worker 镜像 build 失败但旧镜像被重启）。部署命令不要接管道，或用 `&&`/检查 `$?`（G1 用 `docker build ... > log && echo BUILD_OK` 模式）。
+24. **生产容器入口必须显式接线 db/content（工厂测试通过 ≠ 入口接线）**：`createApp({ deps })` 只在测试/本地显式注入；**生产入口 `index.ts` 不读 DATABASE_URL 时全部路由走 501 stub**（G1 生产冒烟抓出：M2.5 全程本地注入测过但容器里全 stub）；Worker 同理需要独立 `main.ts` 进程入口（只导出函数会让容器 `Restarting (0)` 循环）。新增服务上线前：验证容器入口（非 build/单测）+ 生产冒烟脚本（登录→建角→场景→挂机→论坛等一条真实链路）。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

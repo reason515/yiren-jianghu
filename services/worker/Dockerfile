@@ -18,4 +18,4 @@ COPY --from=build /app ./
 WORKDIR /app/services/worker
 USER node
 # Worker 为常驻循环进程，无 HTTP 探针；由 compose restart 策略守护
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/main.js"]

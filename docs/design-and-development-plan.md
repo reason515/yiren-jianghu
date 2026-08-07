@@ -479,7 +479,7 @@
 |---|---|---|---|
 | A1 初始化单仓 | ✅ 完成 | — | 骨架 + 基础配置，build/typecheck/test/lint/format 全绿 |
 | A2 CI 与仓库规范 | ✅ 完成 | — | GitHub Actions 门禁 + PR 模板 |
-| A3 本地 Docker 环境 | ✅ 完成 | — | compose + .env.example + 脚本；本机未装 Docker，运行验证待服务器/CI |
+| A3 本地 Docker 环境 | ✅ 完成 | — | compose + .env.example + 脚本；本机 Docker Desktop + WSL2 就绪，dev:infra/migrate（0001–0006）/e2e 本地真库全绿（见 docs/docker-local-setup.md） |
 | A4 数据库迁移 | ✅ 完成 | — | node-pg-migrate 基线 + CI migrations 作业（up/down） |
 | A5 API 骨架 | ✅ 完成 | — | Fastify 应用工厂：健康/就绪/错误信封/requestId/限流骨架/鉴权占位，13 用例 |
 | A6 内容包管线 | ✅ 完成 | — | zod Schema + 引用校验 + CLI（validate/preview/bundle）+ fixtures，18 用例 |

@@ -26,4 +26,5 @@
 - 设计与开发计划（任务状态）：`docs/design-and-development-plan.md`
 - 数据库 Schema：`docs/database-schema.md`
 - 协议清单：`docs/protocol.md`
+- 本地 Docker 环境搭建：`docs/docker-local-setup.md`
 - pkuxkx 内容筛选目录：`docs/pkuxkx-content-catalog.md`

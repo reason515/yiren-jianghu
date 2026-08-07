@@ -42,7 +42,7 @@ pnpm test            # vitest run（根扫描所有 *.test.ts）
 pnpm lint            # ESLint（flat config，typescript-eslint）
 pnpm format          # Prettier 写回（docs/ 与 pnpm-lock.yaml 已 ignore）
 pnpm format:check    # 格式门禁
-pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker；国内拉镜像先配 daemon.json）
+pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker；国内拉镜像先配 daemon.json；首次环境搭建见 docs/docker-local-setup.md）
 pnpm migrate / migrate:down / migrate:create / seed   # 数据库迁移（services/api；脚本经 --env-file-if-exists 自动读根 .env 的 DATABASE_URL，CI 无 .env 时回退环境变量）
 pnpm content:validate / content:preview / content:pack  # 内容包（见 yjh-content-pack）
 pnpm test:docs     # 协议一致性契约测试（docs/protocol.md ↔ 代码）
@@ -126,6 +126,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - happy-dom 的 SVG 测量 API（`getTotalLength()` 等）可能未实现，测试勿依赖；用节点/边数量断言代替。
 
 15. **mock db SQL 分支顺序敏感**：内存 mock 按 `text.includes(...)` 匹配，**具体的 SELECT（带全列）要放在通用分支（如 `FROM characters WHERE account_id`）之前**，否则字段被吞成 undefined（M2.5-character 踩过）。新增查询前先确认分支顺序。
+16. **本地 Docker 环境（一次性搭建坑，详见 `docs/docker-local-setup.md`）**：安装器下载判完成看 `Content-Length`（勿凭感觉估大小）；`install --quiet --accept-license` 必须 `Start-Process -Verb RunAs` 提权（UAC 超时会被取消）；**WSL2 未启用时 engine 起不来**（后端日志 `dialing 192.168.65.7 ... context canceled`）→ 管理员 `wsl --install --no-distribution` + 重启；Windows daemon.json 在 `%USERPROFILE%\.docker\daemon.json`，改后重启 Docker Desktop 生效；`pnpm migrate` 报 `SASL ... client password must be a string` = `.env` 未被加载（脚本已用 `--env-file-if-exists` 兜底）。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

@@ -43,6 +43,8 @@ export interface AppOptions {
   inviteCodes?: string[];
   /** 令牌校验器（默认：deps.db 存在时查 sessions；否则占位）。 */
   verifyToken?: TokenVerifier;
+  /** 压测/测试专用：关闭每 IP 限流（F4 基线测量；生产限流策略随 G3 迁移 Redis 正式化）。 */
+  disableRateLimit?: boolean;
 }
 
 const RATE_LIMIT_MAX = 120; // 每分钟每 IP（占位）
@@ -79,6 +81,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   // 限流骨架：每 IP 令牌桶（占位）
   const buckets = new Map<string, RateBucket>();
   app.addHook("onRequest", async (req, reply) => {
+    if (opts.disableRateLimit) return;
     const ip = req.ip;
     const now = Date.now();
     let bucket = buckets.get(ip);

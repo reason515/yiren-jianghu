@@ -433,6 +433,7 @@
 ### F4 性能与容量基线
 
 - 单机 200 并发 API 压测；挂机 Worker 每 tick 成本；PG/Redis 容量预估
+- **✅ 已完成**：`docs/performance-baseline.md`——/health 4,354 RPS / /ready 2,556 / /scene 1,839（p95 < 130ms）；worker 6.1ms/作业；限流器 120/分钟实测生效；50 人封测 3 个月 PG < 2GB、Redis < 50MB，单机足矣；pvp 战报事件流为主要增长项（G2 归档待办）；新增 `AppOptions.disableRateLimit`（压测专用）
 - **估时**：1 人日
 
 ## 阶段 G：部署与封测

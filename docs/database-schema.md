@@ -122,13 +122,14 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 | scheduled_end_at | timestamptz | 时长上限（Worker 到期结算） |
 | last_tick_at | timestamptz | 心跳 |
 | report / stop_reason | jsonb / text | 战报与停止原因 |
+| read_at | timestamptz | NULL，重连恢复点未读标记（resume 返回后置已读） |
 
 索引 `(status, scheduled_end_at)`：Worker 崩溃恢复扫描运行中且到期作业。
 
 ## 3.8 PVP（seasons / matches / scores / leaderboard_snapshots）
 
 - pvp_seasons：name、starts_at、ends_at、status（upcoming/active/ended）
-- pvp_matches：season_id、challenger/defender_id、双方 snapshot jsonb、seed、result（challenger_win/defender_win/draw/invalid）、score_delta、report jsonb
+- pvp_matches：season_id、challenger/defender_id、双方 snapshot jsonb、seed、result（challenger_win/defender_win/draw/invalid）、score_delta、report jsonb、read_at（NULL，重连恢复点未读标记）
 - pvp_scores：PK (character_id, season_id)、score
 - leaderboard_snapshots：kind（growth/season_pvp）、season_id、generated_at、entries jsonb——长期榜与赛季榜都按快照落库，供历史查询
 

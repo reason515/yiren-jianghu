@@ -15,6 +15,7 @@ import { TemplatesError, createTemplatesService } from "./templatesService.js";
 import { AfkError, createAfkService } from "./afkService.js";
 import { PvpError, createPvpService } from "./pvpService.js";
 import { ForumError, createForumService } from "./forumService.js";
+import { SessionError, createSessionService } from "./sessionService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -68,6 +69,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const afk = db && deps.content ? createAfkService(db, deps.content) : null;
   const pvp = db && deps.content ? createPvpService(db, deps.content) : null;
   const forum = db ? createForumService(db) : null;
+  const session = db ? createSessionService(db) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -661,6 +663,14 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
           );
         throw err;
       }
+    });
+  }
+
+  // M2.5-session：重连恢复点（stateVersion + 角色快照 + 未读挂机/PVP 战报，返回即置已读）；deps.db 时启用
+  if (session) {
+    app.get("/session/resume", { preHandler: requireAuth(verifyToken) }, async (req) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      return session.resume(accountId);
     });
   }
 

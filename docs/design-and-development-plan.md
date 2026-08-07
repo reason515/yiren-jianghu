@@ -30,7 +30,7 @@
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
 | M3 H5 垂直闭环 | ✅ 完成 | — | E 阶段客户端全量（20 组件 + 7 数据模型），204→209 用例 |
-| M2.5 服务端业务 | 🔄 进行中 | — | 补充发现的计划缺口：B2 仅建清单+501 stub，服务端各域 handler 需实现后才能 F 联调；auth 域已完成 |
+| M2.5 服务端业务 | ✅ 完成 | — | B2 缺口全部补齐：auth/character/scene/skills/quests/templates/afk/pvp/leaderboard/forum/session 十一域真实 handler（含迁移 0006–0008），协议清单全覆盖；291 用例全绿 + 本地真库 e2e |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
 | M3 H5 垂直闭环 | E+F 阶段：客户端 + 联调 + 端到端冒烟 | 冒烟脚本全绿，真机可玩 | 3–4 周 |
@@ -515,6 +515,7 @@
 | M2.5-templates/afk | ✅ 完成 | — | templatesService（CRUD + tactic zod Schema + validateTacticTemplate 语义校验 + 论剑默认唯一 + 上限 12）；afkService（start/stop/status/reports：kind/时长/武功/模板归属校验、快照固化、cancelled 战报 + wuxia 叙事、无作业正常态）；无需新迁移（表在 0002/0003）；267 用例；本地真库 e2e 全绿 |
 | M2.5-pvp/leaderboard | ✅ 完成 | — | pvpService：赛季自举（无活跃季时幂等创建）、对手列表、startMatch（快照构造：C2 真公式上限 + 门类等级占位公式、默认论剑模板回退、每日 5 次、赛季窗口、固定 seed 模拟 + ELO 结算落库 + 战报事件流）、getMatch（仅参与者）；leaderboard 实时榜（growth/season_pvp，快照表留给 worker 生成）；10 用例；277 全绿 + 本地真库 e2e |
 | M2.5-forum | ✅ 完成 | — | forumService：板块自举（3 默认坊）+ 帖/评论/点赞/举报（受控纯文本：长度 + 拒 <>/、仅可见目标可互动、举报队列 open 状态）；公开读（含计数子查询）/鉴权写；9 用例；286 全绿 + 本地真库 e2e |
+| M2.5-session | ✅ 完成 | — | GET /session/resume：stateVersion（协议版本）+ 角色快照（vitals/位置/有效潜能）+ 未读挂机/PVP 战报（迁移 0008：afk_jobs/pvp_matches.read_at，返回即置已读）；无角色正常态 character:null；5 用例；291 全绿 + 本地真库迁移/e2e |
 | E1 H5 设计基线 | ✅ 完成 | — | tokens.css（墨色武侠 token 体系）+ 基础组件 Sheet/Chip/Bar/Toast（44px 触控/aria/语义标签）+ happy-dom DOM 单测；Taro 脚手架随 E2 登录页接入 |
 | E2 登录与角色 | ✅ 完成 | — | LoginPage（邀请码）+ CharacterCreateSheet（名号/性别分段/四维分配 80 池）+ ConfirmSheet（放弃二次确认）+ authApi（可注入 fetch，错误信封映射）；文案按 wuxia 规范；156 用例；Taro 运行时接入为 E2.1 待办 |
 | E3 场景与探索 | ✅ 完成 | — | SceneView（叙事优先+见闻 Tab）+ ExitPad 九宫格（map-design 场景方位图，八向+上下进出竖列）+ EntitySheet（能力→动作：交易/拜师/请托/较量/拾取）+ sceneTypes 数据模型；160 用例 |

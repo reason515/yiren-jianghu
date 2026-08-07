@@ -385,11 +385,13 @@ export function createPvpService(db: Db, content: ContentPack): PvpService {
       );
       const row = rows.rows[0];
       if (!row) return null;
-      const report = (typeof row.report === "string" ? JSON.parse(row.report) : row.report) as {
-        events: unknown[];
-        turns: number;
-        winner: string;
-      };
+      const report = row.report
+        ? ((typeof row.report === "string" ? JSON.parse(row.report) : row.report) as {
+            events: unknown[];
+            turns: number;
+            winner: string;
+          })
+        : { events: [] as unknown[], turns: 0, winner: "unknown" }; // 归档后（G2 archive.sh）report 为 NULL
       return {
         id: row.id,
         result: row.result,

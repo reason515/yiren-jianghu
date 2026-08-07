@@ -1,12 +1,19 @@
 # 《一人江湖》生产部署（G1 脚手架）
 # 用法（服务器）：cp .env.example .env 并按需修改；docker compose -f docker-compose.prod.yml up -d
-# 说明：postgres/redis 不暴露公网端口；api 由 CD 推送的镜像启动；worker/h5 在 C7/E 阶段追加。
+# 说明：postgres/redis 不暴露公网端口；api/worker 由 CD 推送的镜像或本地构建启动；日志 json-file 轮转（每容器 10MB×3）。
 name: yiren-jianghu-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   postgres:
     image: postgres:16-alpine
     env_file: .env
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -22,6 +29,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    logging: *default-logging
     volumes:
       - redisdata:/data
     healthcheck:
@@ -34,6 +42,7 @@ services:
   api:
     image: ${API_IMAGE:-ghcr.io/reason515/yiren-jianghu/api:main}
     env_file: .env
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +61,7 @@ services:
   worker:
     image: ${WORKER_IMAGE:-ghcr.io/reason515/yiren-jianghu/worker:main}
     env_file: .env
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy

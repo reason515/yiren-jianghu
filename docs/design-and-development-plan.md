@@ -511,6 +511,7 @@
 | M2.5-account/character | ✅ 完成 | — | POST/GET /characters（单角色约束 + 名号唯一 + 属性 80 池校验 + 初始房间）、GET /account、POST /characters/discard（active→discarded 冻结）；215 用例 |
 | M2.5-scene/inventory | ✅ 完成 | — | GET /scene（内容包组装房间/NPC/物品/动作）、POST /scene/action（move 分支，其余 501）、GET /inventory（def 回填 + 装备标记）；deps.content 注入；221 用例 |
 | M2.5-skills/quests | ✅ 完成 | — | skillsService（learn 扣潜能/精 + exp 门槛；practice/study 逐次演练可批量，进度点持久化）；questsService（接/交/查 + recordProgress 钩子，可重复任务重接重置）；迁移 0007（character_quests + character_skills.practice_points）；新增 POST /skills/study 同步清单/协议；@yjh/game-core 依赖接入；本地真库迁移 + e2e 全绿；248 用例 |
+| M2.5-templates/afk | ✅ 完成 | — | templatesService（CRUD + tactic zod Schema + validateTacticTemplate 语义校验 + 论剑默认唯一 + 上限 12）；afkService（start/stop/status/reports：kind/时长/武功/模板归属校验、快照固化、cancelled 战报 + wuxia 叙事、无作业正常态）；无需新迁移（表在 0002/0003）；267 用例；本地真库 e2e 全绿 |
 | E1 H5 设计基线 | ✅ 完成 | — | tokens.css（墨色武侠 token 体系）+ 基础组件 Sheet/Chip/Bar/Toast（44px 触控/aria/语义标签）+ happy-dom DOM 单测；Taro 脚手架随 E2 登录页接入 |
 | E2 登录与角色 | ✅ 完成 | — | LoginPage（邀请码）+ CharacterCreateSheet（名号/性别分段/四维分配 80 池）+ ConfirmSheet（放弃二次确认）+ authApi（可注入 fetch，错误信封映射）；文案按 wuxia 规范；156 用例；Taro 运行时接入为 E2.1 待办 |
 | E3 场景与探索 | ✅ 完成 | — | SceneView（叙事优先+见闻 Tab）+ ExitPad 九宫格（map-design 场景方位图，八向+上下进出竖列）+ EntitySheet（能力→动作：交易/拜师/请托/较量/拾取）+ sceneTypes 数据模型；160 用例 |

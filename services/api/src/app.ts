@@ -11,6 +11,8 @@ import {
 import { SceneError, buildContentIndex, createSceneService } from "./sceneService.js";
 import { SkillsError, createSkillsService } from "./skillsService.js";
 import { QuestsError, createQuestsService } from "./questsService.js";
+import { TemplatesError, createTemplatesService } from "./templatesService.js";
+import { AfkError, createAfkService } from "./afkService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -60,6 +62,8 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const scene = db && deps.content ? createSceneService(db, buildContentIndex(deps.content)) : null;
   const skills = db && deps.content ? createSkillsService(db, deps.content) : null;
   const quests = db && deps.content ? createQuestsService(db, deps.content) : null;
+  const templates = db && deps.content ? createTemplatesService(db, deps.content) : null;
+  const afk = db && deps.content ? createAfkService(db, deps.content) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -343,6 +347,147 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
             err.code,
             err.message,
           );
+        throw err;
+      }
+    });
+  }
+
+  // M2.5-templates/afk：战术模板 CRUD（tactic 校验 + 论剑默认唯一）+ 挂机 start/stop/status/reports；deps.db + deps.content 时启用
+  if (templates && afk) {
+    app.get("/templates", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const list = await templates.list(accountId);
+      if (!list) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return list;
+    });
+
+    app.post("/templates", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as {
+        name?: unknown;
+        config?: unknown;
+        isDefaultPvp?: unknown;
+      };
+      try {
+        return await templates.create(accountId, {
+          name: typeof body.name === "string" ? body.name : "",
+          config: body.config as never,
+          isDefaultPvp: Boolean(body.isDefaultPvp),
+        });
+      } catch (err) {
+        if (err instanceof TemplatesError)
+          return envelope(reply, err.code === "no_character" ? 404 : 400, err.code, err.message);
+        throw err;
+      }
+    });
+
+    app.put("/templates/:id", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const { id } = req.params as { id: string };
+      const body = (req.body ?? {}) as {
+        name?: unknown;
+        config?: unknown;
+        isDefaultPvp?: unknown;
+      };
+      try {
+        return await templates.update(accountId, id, {
+          name: typeof body.name === "string" ? body.name : "",
+          config: body.config as never,
+          isDefaultPvp: Boolean(body.isDefaultPvp),
+        });
+      } catch (err) {
+        if (err instanceof TemplatesError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.delete("/templates/:id", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const { id } = req.params as { id: string };
+      try {
+        await templates.remove(accountId, id);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof TemplatesError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/afk/start", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as {
+        kind?: unknown;
+        templateId?: unknown;
+        durationMinutes?: unknown;
+        config?: unknown;
+      };
+      try {
+        return await afk.start(accountId, {
+          kind: body.kind === "study" || body.kind === "quest" ? body.kind : "",
+          templateId: typeof body.templateId === "string" ? body.templateId : undefined,
+          durationMinutes:
+            typeof body.durationMinutes === "number" ? body.durationMinutes : undefined,
+          config: (body.config ?? {}) as Record<string, unknown>,
+        });
+      } catch (err) {
+        if (err instanceof AfkError) {
+          const status =
+            err.code === "no_character" || err.code === "not_found"
+              ? 404
+              : err.code === "already_running"
+                ? 409
+                : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.post("/afk/stop", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await afk.stop(accountId);
+      } catch (err) {
+        if (err instanceof AfkError) {
+          const status = err.code === "no_character" ? 404 : err.code === "not_running" ? 409 : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.get("/afk/status", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        const view = await afk.status(accountId);
+        if (!view) return { active: false };
+        return view;
+      } catch (err) {
+        if (err instanceof AfkError && err.code === "no_character")
+          return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+        throw err;
+      }
+    });
+
+    app.get("/afk/reports", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await afk.reports(accountId);
+      } catch (err) {
+        if (err instanceof AfkError && err.code === "no_character")
+          return envelope(reply, 404, "no_character", "尚未立名闯江湖");
         throw err;
       }
     });

@@ -74,7 +74,7 @@ export function App(): JSX.Element {
         setBooting(false);
       }
     })();
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, api]);
 
   const onLoggedIn = (session: AuthSession): void => {
     localStorage.setItem(TOKEN_KEY, session.token);

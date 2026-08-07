@@ -53,6 +53,7 @@ export interface CharacterService {
   createCharacter(accountId: string, input: CreateCharacterInput): Promise<{ characterId: string }>;
   getCharacter(accountId: string): Promise<CharacterSummary | null>;
   discardCharacter(accountId: string): Promise<boolean>;
+  updateName(accountId: string, name: string): Promise<{ name: string }>;
 }
 
 export function createCharacterService(db: Db): CharacterService {
@@ -104,6 +105,33 @@ export function createCharacterService(db: Db): CharacterService {
         [accountId],
       );
       return rows.rows.length > 0;
+    },
+
+    async updateName(accountId, rawName) {
+      const name = rawName.trim();
+      if (!name || [...name].length > MAX_NAME_LENGTH) {
+        throw new CharacterError("invalid_name", `名号需为 1–${MAX_NAME_LENGTH} 字`);
+      }
+      const me = await db.query<{ id: string }>(
+        "SELECT id FROM characters WHERE account_id = $1 AND status = 'active'",
+        [accountId],
+      );
+      const myId = me.rows[0]?.id;
+      if (!myId) throw new CharacterError("no_character", "尚未立名闯江湖");
+
+      const taken = await db.query<{ id: string }>(
+        "SELECT id FROM characters WHERE name = $1 AND id <> $2",
+        [name, myId],
+      );
+      if (taken.rows[0]) throw new CharacterError("name_taken", "名号已被他人取用");
+
+      const updated = await db.query<{ name: string }>(
+        "UPDATE characters SET name = $1 WHERE id = $2 RETURNING name",
+        [name, myId],
+      );
+      const row = updated.rows[0];
+      if (!row) throw new CharacterError("no_character", "尚未立名闯江湖");
+      return { name: row.name };
     },
   };
 }

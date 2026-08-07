@@ -30,7 +30,12 @@ function mockDb() {
         });
         return { rows: [] as unknown as T[] };
       }
-      if (text.includes("FROM sessions WHERE token")) {
+      if (text.includes("DELETE FROM sessions")) {
+        const idx = state.sessions.findIndex((s) => s.token === params[0]);
+        if (idx >= 0) state.sessions.splice(idx, 1);
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("SELECT account_id, expires_at FROM sessions")) {
         const rows = state.sessions
           .filter((s) => s.token === params[0])
           .map((s) => ({ account_id: s.account_id, expires_at: s.expires_at }));
@@ -119,6 +124,20 @@ describe("app 集成（真实 login 路由 + 鉴权走会话表）", () => {
     });
     expect(authed.statusCode).toBe(200);
     expect(authed.json()).toHaveProperty("accountId");
+
+    // 登出后 token 失效
+    const logout = await app.inject({
+      method: "POST",
+      url: "/auth/logout",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(logout.statusCode).toBe(200);
+    const after = await app.inject({
+      method: "GET",
+      url: "/private",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(after.statusCode).toBe(401);
 
     await app.close();
   });

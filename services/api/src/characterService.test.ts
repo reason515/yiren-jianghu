@@ -101,6 +101,14 @@ function mockDb() {
         }
         return { rows: [] as unknown as T[] };
       }
+      if (text.includes("UPDATE characters SET name")) {
+        const target = state.characters.find((c) => c.id === params[1]);
+        if (target) {
+          target.name = String(params[0]);
+          return { rows: [{ name: target.name }] as unknown as T[] };
+        }
+        return { rows: [] as unknown as T[] };
+      }
       return { rows: [] as unknown as T[] };
     },
   };
@@ -174,6 +182,40 @@ describe("characterService.getCharacter / discardCharacter", () => {
     await svc.discardCharacter("acc_1");
     expect(await svc.getCharacter("acc_1")).toBeNull();
     expect(await svc.discardCharacter("acc_1")).toBe(false);
+  });
+});
+
+describe("characterService.updateName", () => {
+  it("改名成功；非法名号/重名/无角色拒绝", async () => {
+    const { db, state } = mockDb();
+    const svc = createCharacterService(db);
+    await svc.createCharacter("acc_1", INPUT);
+
+    await expect(svc.updateName("acc_x", "新名")).rejects.toMatchObject({
+      code: "no_character",
+    });
+    await expect(svc.updateName("acc_1", "")).rejects.toMatchObject({ code: "invalid_name" });
+    await expect(svc.updateName("acc_1", "一个特别特别长的名字")).rejects.toMatchObject({
+      code: "invalid_name",
+    });
+
+    // 重名（他人占用）
+    state.characters.push({
+      id: "char_other",
+      account_id: "acc_other",
+      name: "陆小风",
+      gender: "male",
+      attrs: "{}",
+      room_path: "village_start",
+      status: "active",
+    });
+    await expect(svc.updateName("acc_1", "陆小风")).rejects.toMatchObject({
+      code: "name_taken",
+    });
+
+    const res = await svc.updateName("acc_1", "风满楼");
+    expect(res).toEqual({ name: "风满楼" });
+    expect(state.characters[0]?.name).toBe("风满楼");
   });
 });
 

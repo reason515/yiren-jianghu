@@ -25,6 +25,8 @@ export interface AuthService {
   login(inviteCode: string): Promise<{ accountId: string; token: string }>;
   /** 校验 token → accountId（过期/不存在返回 null）。 */
   verifyToken(token: string): Promise<{ accountId: string } | null>;
+  /** 登出：吊销会话 token。 */
+  logout(token: string): Promise<void>;
 }
 
 export function createAuthService(opts: AuthServiceOptions): AuthService {
@@ -68,6 +70,10 @@ export function createAuthService(opts: AuthServiceOptions): AuthService {
       if (!row) return null;
       if (new Date(row.expires_at).getTime() < now()) return null;
       return { accountId: row.account_id };
+    },
+
+    async logout(token) {
+      await opts.db.query("DELETE FROM sessions WHERE token = $1", [token]);
     },
   };
 }

@@ -109,6 +109,15 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   // 健康检查
   app.get("/health", async () => ({ status: "ok", service: "api" }));
 
+  // 内容包版本（deps.content 注入时返回当前包）
+  if (deps.content) {
+    app.get("/content/version", async () => ({
+      version: deps.content!.manifest.version,
+      name: deps.content!.manifest.name,
+      description: deps.content!.manifest.description,
+    }));
+  }
+
   // 就绪检查
   app.get("/ready", async (_req, reply) => {
     const reasons = await (deps.readiness?.() ?? Promise.resolve([]));
@@ -140,6 +149,13 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         }
         throw err;
       }
+    });
+
+    app.post("/auth/logout", { preHandler: requireAuth(verifyToken) }, async (req) => {
+      const header = req.headers.authorization ?? "";
+      const token = header.replace(/^Bearer\s+/i, "");
+      await auth.logout(token);
+      return { ok: true };
     });
   }
 
@@ -189,6 +205,21 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         return { ok: true };
       },
     );
+
+    app.put("/characters/name", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { name?: unknown };
+      try {
+        return await characters.updateName(
+          accountId,
+          typeof body.name === "string" ? body.name : "",
+        );
+      } catch (err) {
+        if (err instanceof CharacterError)
+          return envelope(reply, err.code === "no_character" ? 404 : 409, err.code, err.message);
+        throw err;
+      }
+    });
   }
 
   // M2.5-scene/inventory：场景组装、移动、行囊；deps.db + deps.content 时启用
@@ -228,6 +259,66 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       const items = await scene.getInventory(accountId);
       if (!items) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
       return items;
+    });
+
+    app.post("/inventory/equip", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { itemId?: unknown };
+      if (typeof body.itemId !== "string" || !body.itemId) {
+        return envelope(reply, 400, "invalid_request", "缺少物品 id");
+      }
+      try {
+        return await scene.equip(accountId, body.itemId);
+      } catch (err) {
+        if (err instanceof SceneError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "item_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/inventory/unequip", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { itemId?: unknown };
+      if (typeof body.itemId !== "string" || !body.itemId) {
+        return envelope(reply, 400, "invalid_request", "缺少物品 id");
+      }
+      try {
+        return await scene.unequip(accountId, body.itemId);
+      } catch (err) {
+        if (err instanceof SceneError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "item_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/inventory/use", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { itemId?: unknown };
+      if (typeof body.itemId !== "string" || !body.itemId) {
+        return envelope(reply, 400, "invalid_request", "缺少物品 id");
+      }
+      try {
+        return await scene.useItem(accountId, body.itemId);
+      } catch (err) {
+        if (err instanceof SceneError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "item_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
     });
   }
 

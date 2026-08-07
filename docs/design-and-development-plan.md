@@ -461,6 +461,7 @@
 ### G3 邀请码与风控
 
 - 邀请码发放/校验/限额；频率限制；账号风控钩子
+- **✅ 已完成**：**Redis 分布式限流**（固定窗口 `rl:{ip}:{minute}` + EXPIRE 60s，多实例一致；无 redis 回退内存桶；`RATE_LIMIT_PER_MIN` env，默认 120；压测 `disableRateLimit` 保留）+ **frozen 账号风控钩子**（accounts.status=frozen 拒绝登录 account_frozen，401）；bootstrap 注入 redis（**又抓 1 个生产入口 bug：deps 整体赋值覆盖 redis**——已修 spread 合并）；邀请码限额语义=幂等单账号（现状）；生产验证 Redis key 落库；306 用例 + 16 e2e 全绿
 - **估时**：1 人日
 
 ### G4 封测执行与周复盘

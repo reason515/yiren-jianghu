@@ -13,6 +13,7 @@ import { SkillsError, createSkillsService } from "./skillsService.js";
 import { QuestsError, createQuestsService } from "./questsService.js";
 import { TemplatesError, createTemplatesService } from "./templatesService.js";
 import { AfkError, createAfkService } from "./afkService.js";
+import { PvpError, createPvpService } from "./pvpService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -64,6 +65,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const quests = db && deps.content ? createQuestsService(db, deps.content) : null;
   const templates = db && deps.content ? createTemplatesService(db, deps.content) : null;
   const afk = db && deps.content ? createAfkService(db, deps.content) : null;
+  const pvp = db && deps.content ? createPvpService(db, deps.content) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -491,6 +493,66 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         throw err;
       }
     });
+  }
+
+  // M2.5-pvp/leaderboard：赛季/对手/对战（快照模拟 + ELO）+ 榜单；deps.db + deps.content 时启用
+  if (pvp) {
+    app.get("/pvp/season", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await pvp.getSeason(accountId);
+      } catch (err) {
+        if (err instanceof PvpError)
+          return envelope(reply, err.code === "no_character" ? 404 : 409, err.code, err.message);
+        throw err;
+      }
+    });
+
+    app.get("/pvp/opponents", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await pvp.getOpponents(accountId);
+      } catch (err) {
+        if (err instanceof PvpError)
+          return envelope(reply, err.code === "no_character" ? 404 : 409, err.code, err.message);
+        throw err;
+      }
+    });
+
+    app.post("/pvp/match", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { defenderId?: unknown };
+      if (typeof body.defenderId !== "string" || !body.defenderId) {
+        return envelope(reply, 400, "invalid_request", "缺少对手 id");
+      }
+      try {
+        return await pvp.startMatch(accountId, body.defenderId);
+      } catch (err) {
+        if (err instanceof PvpError) {
+          const status =
+            err.code === "no_character" || err.code === "opponent_not_found" ? 404 : 409;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.get("/pvp/matches/:id", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const { id } = req.params as { id: string };
+      try {
+        const match = await pvp.getMatch(accountId, id);
+        if (!match) return envelope(reply, 404, "not_found", "此战不在你的剑谱里");
+        return match;
+      } catch (err) {
+        if (err instanceof PvpError)
+          return envelope(reply, err.code === "no_character" ? 404 : 409, err.code, err.message);
+        throw err;
+      }
+    });
+
+    app.get("/leaderboard/growth", async () => pvp.growthLeaderboard());
+    app.get("/leaderboard/season", async () => pvp.seasonLeaderboard());
   }
 
   // B2：按清单注册全量 API（已实现路由因 hasRoute 自动跳过）

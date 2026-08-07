@@ -74,6 +74,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - 单测用 vitest；根目录 `pnpm test` 一次跑全部包。
 - **跨包 workspace 依赖（如 game-core → @yjh/shared）在测试/类型检查前必须先 build**（exports 指向 dist）。改了被依赖包的源码后忘记 build，会出现"类型找不到/运行时 undefined"的假失败。
 - 规则引擎（game-core）的测试必须验证**确定性**：同输入同种子 → 同输出。
+- **结算自洽测试**：结算类逻辑（PVP 积分、任务奖励、挂机收益）的测试用**同一 game-core 规则重算**核对落库值，而不是只断言"有值"（如 M2.5-pvp：测试重跑 `computeScoreChanges` 验证 pvp_scores 与结果自洽）——捕获"服务端公式与规则引擎漂移"。
 - 新增/修改逻辑必须补单测；bug 修复按项目惯例补回归用例。
 
 ## 提交约定
@@ -145,6 +146,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - **校验分层**：结构校验（zod `safeParse`）→ 语义校验（引用完整性，如 `validateTacticTemplate` 的未知绝招/未知技能）两层；语义 error 拒绝、warning 放行（M2.5-templates）。
 - **查询接口的“常态空态”与“错误”分开**：`GET /afk/status` 无作业是正常态（返回 `{ active: false }`），404 只留给“无角色/资源不存在”；不要把“没内容”当 404（M2.5-afk）。
 - **服务端文案也是玩家文案**：错误消息、战报叙事（afk `narrative`）会直接进客户端 UI——动笔前按任务启动必读加载 `yjh-wuxia-copywriting`（短句、无数值、武侠调性），不能写成说明文。
+- **占位规则必须显式标注**：跨域规则未落地时，占位实现（如 PVP 快照构造用 C2 真公式 + 门类等级线性占位）要（a）代码注释标注"占位，待 X 域统一"（b）在计划文档登记待办——防止两套公式漂移、主域落地时漏替换（M2.5-pvp buildSnapshot 待 F 战斗域统一）。
 - 单测覆盖：成功路径、各错误分支、状态迁移；集成测试用 `createApp({ deps: { db } })` + `app.inject`（错误断言见常见坑 #20）。
 
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）

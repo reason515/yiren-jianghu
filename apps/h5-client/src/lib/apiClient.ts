@@ -4,6 +4,7 @@ import type { CharacterProfile, InvItemView, SkillRowView } from "./characterTyp
 import type { QuestOverviewResponse } from "./questTypes.js";
 import type { AfkJobData, AfkReportData, AfkStartConfig, AfkStatusResponse } from "./afkTypes.js";
 import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
+import type { PvpMatchDetail } from "./pvpTypes.js";
 
 /**
  * H5 API 客户端：统一 fetch + 错误信封解析（服务端权威，客户端只发意图）。
@@ -58,6 +59,7 @@ export interface ApiClient {
   getPvpSeason(): Promise<unknown>;
   getPvpOpponents(): Promise<unknown[]>;
   startPvpMatch(defenderId: string): Promise<unknown>;
+  getPvpMatch(matchId: string): Promise<PvpMatchDetail>;
 }
 
 export function createApiClient(baseUrl: string, tokenStore: { get(): string | null }): ApiClient {
@@ -130,5 +132,6 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     getPvpSeason: () => get("/pvp/season"),
     getPvpOpponents: () => get("/pvp/opponents"),
     startPvpMatch: (defenderId) => post("/pvp/match", { defenderId }),
+    getPvpMatch: (matchId) => get(`/pvp/matches/${matchId}`),
   };
 }

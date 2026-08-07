@@ -65,7 +65,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
-- 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
+- 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `PvpView`（论剑：赛季余日 + 对手列表 + 邀战）+ `PvpReplayView`（战报叙事回放，与 PVE 共用 `battleEventLine`）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
 - 数据模型：`lib/sceneTypes.ts` + `combatTypes.ts` + `characterTypes.ts` + `tacticTypes.ts` + `afkTypes.ts` + `questTypes.ts` + `forumTypes.ts` + `leaderboardTypes.ts`；客户端：`lib/authApi.ts` + `resumeClient.ts` + `reconnect.ts` + `sound.ts` + `effects.ts`（均 fetch/impl 可注入，Taro 可替换）
 - 新界面先检查此处是否有可复用组件；扩展时保持 token 驱动 + 44px 触控 + aria。
@@ -104,6 +104,13 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 打开行止面板时拉取 `GET /afk/status`、`GET /skills`、`GET /templates`、`GET /quests`；服务端状态、武功、战术与已接差事快照是唯一事实来源。启动/停止期间禁用重复操作；成功后用服务端返回作业更新横幅，不在客户端预扣精力、推算等级、伪造收益或预判胜负。
 - `GET /afk/status` 返回 `{ active: false }` 是常态空态；运行中用 `GrindBanner` 展示面向玩家的行止和预计时间，不能泄漏 `phase` 等内部状态。
 - resume 的 `pendingAfkReports` 只是未读 jobId 摘要；先保留这些 id，再用 `GET /afk/reports` 补拉完整叙事战报并按 id 打开 `AfkReportView`。服务端可能已在 resume 时标记已读，不能在后续请求中重新猜测“未读”。
+
+## 4.6 论剑（PVP）接线契约（E14.6）
+
+- 打开论剑面板时并发拉取 `GET /pvp/season` 与 `GET /pvp/opponents`；服务端赛季与对手快照是唯一事实来源。赛季信息只展示名 + 剩余日/状态，不泄漏内部时间戳。
+- 发起对战是高风险操作：必须 `ConfirmSheet` 二次确认，只提交 `POST /pvp/match { defenderId }` 意图；胜负、积分变动与战报全部由服务端结算，客户端不得本地模拟。
+- 匹配成功后拉取 `GET /pvp/matches/:id` 以事件流回放；叙事行与 PVE 共用 `battleEventLine`（combatTypes 导出），避免两套文案漂移。回放中 actor a=我方（挑战者）、b=对手（应战者）。
+- 归档战报（G2 archive.sh 后 report 为 NULL）显示“已归档”提示而非空白；400 错误（无角色/赛季未开/次数已尽）以 toast 展示服务端武侠文案。
 
 ## 5. 与已定项目决策的对齐
 

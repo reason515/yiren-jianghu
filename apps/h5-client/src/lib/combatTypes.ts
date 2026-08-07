@@ -77,7 +77,8 @@ export interface CombatStatusResponse {
   performs: PerformButton[];
 }
 
-function eventLine(
+/** 事件 → 叙事行（PVE 战斗与 PVP 回放共用，避免文案漂移）。 */
+export function battleEventLine(
   event: ServerCombatEvent,
   playerName: string,
   enemyName: string,
@@ -168,7 +169,7 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
     playerNeili: player.neili,
     playerMaxNeili: player.maxNeili,
     log: response.events
-      .map((event) => eventLine(event, player.name, enemy.name))
+      .map((event) => battleEventLine(event, player.name, enemy.name))
       .filter((line): line is CombatLine => line !== null),
     performs: response.performs,
     inCombat: response.status === "ongoing",

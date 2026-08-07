@@ -11,6 +11,7 @@ import "./styles/afk.css";
 import "./styles/quest.css";
 import "./styles/forum.css";
 import "./styles/leaderboard.css";
+import "./styles/pvp.css";
 import "./styles/map.css";
 import "./styles/reconnect.css";
 import "./styles/tactic.css";

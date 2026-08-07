@@ -1,0 +1,92 @@
+/* 论剑（PVP）面板与战报回放（tokens 驱动，见 tokens.css） */
+
+.pvp-season {
+  color: var(--gold);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+
+.pvp-lead {
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+.pvp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pvp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pvp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pvp-name {
+  color: var(--paper);
+  font-size: 16px;
+}
+
+.pvp-exp {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+
+.pvp-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+
+.pvp-replay-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.pvp-replay-names {
+  color: var(--paper);
+  font-size: 15px;
+}
+
+.pvp-replay-delta {
+  color: var(--paper-faint);
+  font-size: 13px;
+}
+
+.pvp-replay-result {
+  color: var(--cinnabar);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.pvp-replay-result.won {
+  color: var(--jade-bright);
+}
+
+.pvp-replay-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  line-height: 1.7;
+}

@@ -20,6 +20,8 @@ import { QuestPanel } from "./components/QuestPanel.js";
 import { GrindBanner } from "./components/GrindBanner.js";
 import { AfkSheet } from "./components/AfkSheet.js";
 import { AfkReportView } from "./components/AfkReportView.js";
+import { PvpView } from "./components/PvpView.js";
+import { PvpReplayView } from "./components/PvpReplayView.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
 import {
@@ -33,6 +35,7 @@ import {
   type AfkStatusView,
   type AfkTemplateOption,
 } from "./lib/afkTypes.js";
+import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./lib/pvpTypes.js";
 import type {
   SceneItem,
   SceneNpc,
@@ -50,7 +53,7 @@ import type {
 const BASE_URL = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 const TOKEN_KEY = "yjh.token";
 
-type Panel = "none" | "character" | "afk" | "quests" | "forum" | "leaderboard" | "map";
+type Panel = "none" | "character" | "afk" | "quests" | "forum" | "leaderboard" | "map" | "pvp";
 
 function loadToken(): string | null {
   try {
@@ -91,6 +94,12 @@ export function App(): JSX.Element {
   const [afkPending, setAfkPending] = useState(false);
   const [afkReport, setAfkReport] = useState<AfkReportData | null>(null);
   const [afkReportOpen, setAfkReportOpen] = useState(false);
+  const [pvpSeason, setPvpSeason] = useState<PvpSeason | null>(null);
+  const [pvpOpponents, setPvpOpponents] = useState<PvpOpponent[]>([]);
+  const [pvpPending, setPvpPending] = useState(false);
+  const [pvpChallenge, setPvpChallenge] = useState<PvpOpponent | null>(null);
+  const [pvpReplay, setPvpReplay] = useState<PvpMatchDetail | null>(null);
+  const [pvpReplayOpen, setPvpReplayOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
@@ -242,6 +251,47 @@ export function App(): JSX.Element {
   const openAfk = (): void => {
     setPanel("afk");
     void refreshAfk();
+  };
+
+  const refreshPvp = useCallback(async (): Promise<void> => {
+    try {
+      const [season, opponents] = await Promise.all([api.getPvpSeason(), api.getPvpOpponents()]);
+      setPvpSeason(season as PvpSeason);
+      setPvpOpponents(opponents as PvpOpponent[]);
+    } catch (e) {
+      notify(e);
+    }
+  }, [api]);
+
+  const openPvp = (): void => {
+    setPanel("pvp");
+    void refreshPvp();
+  };
+
+  const onChallenge = (opponent: PvpOpponent): void => {
+    setPvpChallenge(opponent);
+  };
+
+  const onConfirmMatch = (): void => {
+    if (!pvpChallenge) return;
+    setPvpPending(true);
+    void api
+      .startPvpMatch(pvpChallenge.characterId)
+      .then(async (result) => {
+        const match = result as PvpMatchResult;
+        setPvpChallenge(null);
+        setPvpReplay(await api.getPvpMatch(match.id));
+        setPvpReplayOpen(true);
+        setError(
+          match.result === "challenger_win"
+            ? "剑下见真章——这一场你赢了。"
+            : match.result === "defender_win"
+              ? "技不如人，来日再战。"
+              : "两下未分胜负，各自收剑。",
+        );
+      })
+      .catch(notify)
+      .finally(() => setPvpPending(false));
   };
 
   const onAfkStart = (config: AfkStartConfig): void => {
@@ -459,6 +509,12 @@ export function App(): JSX.Element {
     setAfkPending(false);
     setAfkReport(null);
     setAfkReportOpen(false);
+    setPvpSeason(null);
+    setPvpOpponents([]);
+    setPvpPending(false);
+    setPvpChallenge(null);
+    setPvpReplay(null);
+    setPvpReplayOpen(false);
     setPanel("none");
   };
 
@@ -521,6 +577,9 @@ export function App(): JSX.Element {
             <button className="app-nav-btn" onClick={() => setPanel("leaderboard")}>
               榜单
             </button>
+            <button className="app-nav-btn" onClick={openPvp}>
+              论剑
+            </button>
             <button className="app-nav-btn" onClick={() => setPanel("map")}>
               地图
             </button>
@@ -551,6 +610,35 @@ export function App(): JSX.Element {
         report={afkReport}
         onClose={() => setAfkReportOpen(false)}
       />
+
+      <PvpReplayView
+        open={pvpReplayOpen}
+        match={pvpReplay}
+        onClose={() => setPvpReplayOpen(false)}
+      />
+
+      {panel === "pvp" && (
+        <PvpView
+          open
+          season={pvpSeason}
+          opponents={pvpOpponents}
+          pending={pvpPending}
+          onChallenge={onChallenge}
+          onClose={() => setPanel("none")}
+        />
+      )}
+
+      {pvpChallenge && (
+        <ConfirmSheet
+          open
+          title="邀战"
+          message={`向 ${pvpChallenge.name} 发起论剑？胜负皆论剑分，且按你备下的路数迎敌。`}
+          confirmLabel="发起论剑"
+          busy={pvpPending}
+          onConfirm={onConfirmMatch}
+          onCancel={() => setPvpChallenge(null)}
+        />
+      )}
 
       {panel === "character" && characterView && (
         <CharacterSheet

@@ -85,6 +85,9 @@ importers:
       '@yjh/content':
         specifier: workspace:*
         version: link:../../packages/content
+      '@yjh/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@yjh/shared':
         specifier: workspace:*
         version: link:../../packages/shared

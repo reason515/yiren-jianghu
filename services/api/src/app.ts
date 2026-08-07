@@ -9,6 +9,8 @@ import {
   type CreateCharacterInput,
 } from "./characterService.js";
 import { SceneError, buildContentIndex, createSceneService } from "./sceneService.js";
+import { SkillsError, createSkillsService } from "./skillsService.js";
+import { QuestsError, createQuestsService } from "./questsService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -56,6 +58,8 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const auth = db ? createAuthService({ db, inviteCodes }) : null;
   const characters = db ? createCharacterService(db) : null;
   const scene = db && deps.content ? createSceneService(db, buildContentIndex(deps.content)) : null;
+  const skills = db && deps.content ? createSkillsService(db, deps.content) : null;
+  const quests = db && deps.content ? createQuestsService(db, deps.content) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -214,6 +218,133 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       const items = await scene.getInventory(accountId);
       if (!items) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
       return items;
+    });
+  }
+
+  // M2.5-skills/quests：武功学习/演练/参悟 + 任务接/交/查；deps.db + deps.content 时启用
+  if (skills && quests) {
+    app.get("/skills", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const list = await skills.getSkills(accountId);
+      if (!list) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return list;
+    });
+
+    app.post("/skills/learn", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { skillId?: unknown };
+      if (typeof body.skillId !== "string" || !body.skillId) {
+        return envelope(reply, 400, "invalid_request", "缺少武功 id");
+      }
+      try {
+        return await skills.learn(accountId, body.skillId);
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "no_character" ? 404 : err.code === "skill_not_found" ? 404 : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/skills/practice", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { skillId?: unknown; count?: unknown };
+      if (typeof body.skillId !== "string" || !body.skillId) {
+        return envelope(reply, 400, "invalid_request", "缺少武功 id");
+      }
+      const count = typeof body.count === "number" ? body.count : 1;
+      try {
+        return await skills.practice(accountId, body.skillId, count);
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "invalid_count"
+              ? 400
+              : err.code === "no_character" || err.code === "skill_not_found"
+                ? 404
+                : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/skills/study", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { skillId?: unknown; count?: unknown };
+      if (typeof body.skillId !== "string" || !body.skillId) {
+        return envelope(reply, 400, "invalid_request", "缺少武功 id");
+      }
+      const count = typeof body.count === "number" ? body.count : 1;
+      try {
+        return await skills.study(accountId, body.skillId, count);
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "invalid_count"
+              ? 400
+              : err.code === "no_character" || err.code === "skill_not_found"
+                ? 404
+                : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.get("/quests", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const list = await quests.getQuests(accountId);
+      if (!list) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return list;
+    });
+
+    app.post("/quests/accept", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { questId?: unknown };
+      if (typeof body.questId !== "string" || !body.questId) {
+        return envelope(reply, 400, "invalid_request", "缺少任务 id");
+      }
+      try {
+        return await quests.acceptQuest(accountId, body.questId);
+      } catch (err) {
+        if (err instanceof QuestsError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "quest_not_found" ? 404 : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/quests/report", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { questId?: unknown };
+      if (typeof body.questId !== "string" || !body.questId) {
+        return envelope(reply, 400, "invalid_request", "缺少任务 id");
+      }
+      try {
+        return await quests.reportQuest(accountId, body.questId);
+      } catch (err) {
+        if (err instanceof QuestsError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "quest_not_found" ? 404 : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
     });
   }
 

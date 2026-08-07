@@ -76,6 +76,7 @@ erDiagram
 | character_id | uuid | FK→characters CASCADE |
 | skill_id | text | 内容包技能 id |
 | level | integer | CHECK ≥ 0 |
+| practice_points | integer | NOT NULL DEFAULT 0，演练/参悟积累的进度点 |
 
 PK `(character_id, skill_id)`。
 
@@ -141,6 +142,19 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 
 - audit_events：account_id/character_id（可空）、action、payload jsonb——关键操作可追溯（创建/放弃角色、模板保存、挂机起停、PVP 结算、举报处理、货币变动）
 - content_versions：version（UNIQUE）、name、status（active/rolled_back）、loaded_at
+
+## 3.11 character_quests（角色任务进度）
+
+| 列 | 类型 | 约束 |
+|---|---|---|
+| character_id | uuid | FK→characters CASCADE |
+| quest_id | text | 内容包任务 id |
+| status | text | CHECK accepted/completed/reported |
+| progress | jsonb | NOT NULL `{ phase, counts }`：当前相位与各目标累计 |
+| accepted_at | timestamptz | NOT NULL DEFAULT now() |
+| completed_at / reported_at | timestamptz | NULL |
+
+PK `(character_id, quest_id)`。状态流转：`accepted` →（相位全满）`completed` →（交差）`reported`；可重复任务 `reported` 后可重接（进度重置回 `accepted`）。任务定义在内容包 `quests/`，本表只存角色侧进度。
 
 # 4. 关键状态机
 

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@yjh/content": "workspace:*",
+    "@yjh/game-core": "workspace:*",
     "@yjh/shared": "workspace:*",
     "fastify": "^5.11.2"
   },

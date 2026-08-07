@@ -70,6 +70,8 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 - **DB 轮询替代 Redis 延迟队列**：以 `last_tick_at` 为基准结算 `deltaHours`——离线期间照常推进，**崩溃恢复天然覆盖**（启动即跑一轮）。封测规模（<1k 作业）轮询足够；量大再上 Redis。
 - **并发幂等三件套**：每作业一个事务 + `SELECT ... FOR UPDATE` 行锁抢占（多实例不重复结算）+ 原子写回（作业状态/角色资源/技能在同事务提交）。
 - **结算粒度**：挂机频率参数进内容包 params（`afk.studyAttemptsPerHour`），worker 按时长换算次数并**封顶**（2000）防失控；精/气血耗尽即停（不报错）。
+- **能力闭环优先于 UI 暴露**：API 接受某个 `kind` 不等于 Worker 已能结算它。开放新的挂机入口前，确认 `run.ts` 的作业分发会进入对应结算分支、能落终态战报，并用真实库 E2E 验证资源/进度变化；未实现的种类不得在客户端伪装成可用。当前 Worker 已实际结算 `study` 与 `quest` 两类作业（行侠见下一条 DC-026）。
+- **行侠（quest）挂机结算（DC-026）**：启动仅接受「已接且当前相位为击杀」的任务（afkService 校验，`quest_unavailable`），战术模板必填并固化快照；Worker 每 tick 以固定种子（`jobId|killIndex|purpose` 派生，战斗/掉落分离）驱动一场目标战斗，胜利发放 NPC `battleRewards`/`drops`、推进任务，任务完成自动置 `reported` 并连同交差奖励在同一事务落库；败/逃/平局写 `failed` 并保留资源损耗；跨 tick 累计收益存 `config.gains`。确定性种子保证事务回滚重试结果不变。
 - **终态写战报**：`report` jsonb（含 wuxia 叙事）+ `read_at` 未读（resume 拉取后置已读）。
 - 集成验证：e2e 直接调用 `settleDueJobs({ pool, content, now })`（now 前移模拟时长），断言资源消耗信号而非精确成长值（成长细节归纯函数单测）。
 
@@ -115,7 +117,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
 7. **`index.ts` 的 `export *` 同名导出冲突**：game-core 各模块用 `export *` 汇总，若两个模块导出同名符号（如 growth 与 params 都有 `effectivePotential`）会报 "has already exported a member"。解决：后者只 `import` 使用、不 re-export（growth 的 effectivePotential 从 params 导入）。
 8. **game-core 规则模块地图（C1–C10 已落地，新增规则模块照此扩展并 export 到 index）**：
-   `params`（数值参数）→ `vitals`（动态上限）→ `combat`（战斗引擎+seeded RNG）→ `perform`（绝招）→ `growth`（成长）→ `tactic`（战术模板，zod）→ `afk`（挂机作业）→ `pvp`（快照/ELO/赛季）→ `economy`（账本/掉落/商店）→ `map`（房间图/导航）。game-core 带 zod 依赖（战术模板 Schema），仍是零 IO 纯函数包。
+   `params`（数值参数）→ `vitals`（动态上限）→ `combat`（战斗引擎+seeded RNG）→ `combatant`（战斗体构造，PVE/PVP/挂机共用，DC-026）→ `perform`（绝招）→ `growth`（成长）→ `tactic`（战术模板，zod）→ `afk`（挂机作业）→ `pvp`（快照/ELO/赛季）→ `economy`（账本/掉落/商店）→ `map`（房间图/导航）。game-core 带 zod 依赖（战术模板 Schema），仍是零 IO 纯函数包。
 9. **GitHub Actions**：
    - `secrets` **不能直接用于 `if` 条件**（工作流直接判无效、运行显示无 job 即失败）——先 `env: { X: ${{ secrets.X }} }` 再 `if: env.X != ''`；
    - 运行"无任何 job 直接失败" = 工作流 YAML/表达式解析错误；
@@ -143,7 +145,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - **happy-dom 的 SVG 元素（g/rect）没有 `.click()`**——DOM 测试用 `dispatchEvent(new MouseEvent("click", { bubbles: true }))`（E9 MapSheet）；
 - happy-dom 的 SVG 测量 API（`getTotalLength()` 等）可能未实现，测试勿依赖；用节点/边数量断言代替。
 
-15. **mock db SQL 分支顺序敏感**：内存 mock 按 `text.includes(...)` 匹配，**具体的 SELECT（带全列）要放在通用分支（如 `FROM characters WHERE account_id`）之前**，否则字段被吞成 undefined（M2.5-character 踩过）。新增查询前先确认分支顺序。
+15. **mock db SQL 分支顺序与片段敏感**：内存 mock 按 `text.includes(...)` 匹配，**具体的 SELECT（带全列）要放在通用分支（如 `FROM characters WHERE account_id`）之前**，否则字段被吞成 undefined（M2.5-character 踩过）。匹配片段必须取真实 SQL 中连续且稳定的字段前缀（如 `SELECT id, name, ..., attrs, exp`）；详情查询增删字段时同步更新 mock 分支与断言，否则会静默返回残缺行、导致 `undefined`/`NaN` 假失败。新增查询前先确认分支顺序与匹配片段。
 16. **本地 Docker 环境（一次性搭建坑，详见 `docs/docker-local-setup.md`）**：安装器下载判完成看 `Content-Length`（勿凭感觉估大小）；`install --quiet --accept-license` 必须 `Start-Process -Verb RunAs` 提权（UAC 超时会被取消）；**WSL2 未启用时 engine 起不来**（后端日志 `dialing 192.168.65.7 ... context canceled`）→ 管理员 `wsl --install --no-distribution` + 重启；Windows daemon.json 在 `%USERPROFILE%\.docker\daemon.json`，改后重启 Docker Desktop 生效；`pnpm migrate` 报 `SASL ... client password must be a string` = `.env` 未被加载（脚本已用 `--env-file-if-exists` 兜底）。
 17. **查询行类型必须用 `type` 别名而非 `interface`**：`db.query<T>` 的 T 受 `DbRow`（`{[key: string]: unknown}`）约束，**命名 interface 无索引签名不满足约束**（TS2344），inline 字面量或 `type` 别名可以（M2.5-skills/quests 踩过）。
 18. **`noUncheckedIndexedAccess` 下 Record/数组索引返回 `T | undefined`**：`result.skills[skillId]`、`quest.phases[phase]` 都可能是 undefined——成功分支用 `!` 断言（如 learn/practice 后的 `next`），遍历用 `if (!x) continue` 判空；别用 `?? 默认值` 掩盖逻辑错误。
@@ -155,6 +157,8 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 24. **生产容器入口必须显式接线 db/content（工厂测试通过 ≠ 入口接线）**：`createApp({ deps })` 只在测试/本地显式注入；**生产入口 `index.ts` 不读 DATABASE_URL 时全部路由走 501 stub**（G1 生产冒烟抓出：M2.5 全程本地注入测过但容器里全 stub）；Worker 同理需要独立 `main.ts` 进程入口（只导出函数会让容器 `Restarting (0)` 循环）。新增服务上线前：验证容器入口（非 build/单测）+ 生产冒烟脚本（登录→建角→场景→挂机→论坛等一条真实链路）。
 25. **vite SPA 工程（H5 组装阶段踩过）**：① `import.meta.env` 需 `tsconfig` `types` 加 `"vite/client"`（tsconfig.base 的 `types: ["node"]` 会挡住）；② **`eslint-disable` 注释引用未安装的插件规则 = eslint error "rule not found"**（App.tsx 曾 `// eslint-disable-line react-hooks/exhaustive-deps` 而项目未装 eslint-plugin-react-hooks——删注释而非留引用）；③ **package.json 重复 `devDependencies` 键**：后块覆盖前块（vite 被吞）——JSON 同名键不报错；④ vite `base: "./"` + `VITE_API_BASE=/api`（生产 nginx `location /api/ { proxy_pass http://127.0.0.1:3000/; }` 去前缀；`location /api`（无尾斜杠）会把 `/api/health` 变成 `//health`）。
 26. **浏览器自动化验证的干扰（G4/H5 实测）**：① **生产限流（120/分钟/IP）会被自动化高频请求触发**——连续 eval/curl 会让验证循环自己撞 429，App 按设计清 token 回登录页；验证要"静默窗口 + 低频率"，或测试期调大 `RATE_LIMIT_PER_MIN`；② **React 19 受控输入在 CDP eval 注入不触发 onChange**（原生 setter + input 事件无效）——真实用户打字正常；自动化验证优先走 API 层 + localStorage 塞 token 绕过登录页；③ 前端真机验证的边界：渲染/链路可自动化，交互留给真实用户低频率操作。
+27. **服务端逐回合战斗（F0）**：战斗会话持久化 `seed + state(rngCalls/nextSeq/performCooldowns/双方战斗体)`，事件独立按 `(session_id, seq)` 追加；**事件 payload 必须同时保存 `actor` 与 `data`**，否则前端无法区分双方动作。`perform` 事件还须带 `performId`，以供前端演出；冷却必须写入 `performCooldowns`，断线恢复不能重置。jsonb 读取仍按字符串/对象双保险。手动 action 只接收白名单意图、服务端续算 NPC 回合并写回角色资源；胜利按 NPC 内容包 `battleRewards`/`drops` 结算并调 `questsService.recordProgress(..., "kill", npcId)`。**同一 action 用 `Db.transaction` + `SELECT ... FOR UPDATE` 锁住会话行**，避免双击/重试重复掉落、成长或任务推进。首个 `battle_start` 固定 `seq=0`，其 SQL 参数形态与普通事件不同，mock 必须分别模拟。PVP 与 PVE 的角色战斗体必须复用同一工厂，避免门类/属性公式漂移；会话/action 覆盖开战→续算→绝招冷却→胜利结算→任务推进及拒绝分支的 service 测试，之后再进真库 e2e。
+28. **本地 E2E 环境变量**：`pnpm test:e2e` 已通过根 `package.json` 的 `node --env-file-if-exists=.env` 自动加载 `DATABASE_URL`；不要绕过该脚本直接运行 Vitest。先 `pnpm dev:infra`，再跑 E2E。若报缺少 `DATABASE_URL`，先检查根 `.env`，而非只确认 Docker 已启动。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 
@@ -162,6 +166,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - `db.ts` 的 `Db` 接口（`query<T extends DbRow>`）注入；单测用内存 mock db（见常见坑 #15/#19）。
 - 路由在 `app.ts` 中 **deps.db 存在时注册**（真实路由先注册，`registerApiStubs` 的 hasRoute 自动让位 stub）；错误统一 `envelope(reply, 400|401|404|409, err.code, err.message)`；需登录路由加 `preHandler: requireAuth(verifyToken)`，accountId 从 `authContexts.get(req)` 取。
 - 状态迁移写进 service（如 discard：active→discarded + discarded_at；任务 accepted→completed→reported）；DB 约束作兜底而非主校验。
+- **场景交互的在场校验与原子结算（E14.1）**：交谈、拾取、交易等目标型 action 必须由服务端从角色当前 `room_path` 验证目标属于该房间，客户端的 id 只作引用；涉及银两、行囊、一次性拾取标记、每日额度等多个状态的 action 用同一 `Db.transaction` 落库，并以唯一约束/条件更新抵御重试与并发。静态房间物品按角色记录已拾取状态，重复产出走 NPC drops，不从客户端或静态房间反复发放。
 - 跨包调用 game-core 规则（校验/结算）在 service 内引用，客户端不跑规则（服务端权威）；**api 首次依赖 game-core 时需 `pnpm install` + 先 `pnpm build`**（workspace 依赖指向 dist，未 build 会出现类型/运行时假失败）。
 - **跨域进度钩子**：域间推进不放路由——在 service 内暴露内部方法并单测（如 questsService.recordProgress 供战斗/挂机域驱动相位），待消费域落地后再决定是否开放路由。
 - **新增/调整路由必须三件套**：`apiManifest.ts` + `docs/protocol.md` + 契约测试（M2.5-skills 补过 `POST /skills/study`：计划写"三接口"但清单漏了 study）。注册真实路由前先在清单补行，stub 靠 hasRoute 让位。

@@ -70,6 +70,7 @@ function basePack(): ContentPack {
         kind: "battle",
         skills: [{ skillId: "basic_sword", level: 10 }],
         drops: [{ itemId: "iron_sword", chance: 0.2 }],
+        battleRewards: { exp: 10, potential: 3, silver: 2 },
       },
     ],
     items: [{ id: "iron_sword", name: "铁剑", kind: "weapon", stats: { attack: 5 } }],

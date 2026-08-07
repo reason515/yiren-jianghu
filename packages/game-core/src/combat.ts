@@ -68,7 +68,7 @@ export type BattleAction =
   | { type: "attack" }
   | { type: "recover" }
   | { type: "flee" }
-  | { type: "perform"; effect: PerformEffect; cost: PerformCost };
+  | { type: "perform"; performId?: string; effect: PerformEffect; cost: PerformCost };
 
 export type ActionSelector = (ctx: BattleContext, actor: ActorKey, rng: Rng) => BattleAction;
 
@@ -94,6 +94,8 @@ export interface BattleResult {
   fled?: ActorKey;
   events: BattleEvent[];
   turns: number;
+  /** 终局战斗体；PVE/挂机以它落库资源，PVP 只将其视为回放辅助。 */
+  combatants: Record<ActorKey, Combatant>;
 }
 
 // ---------- 命中三态与伤害（纯函数，可单测） ----------
@@ -255,11 +257,16 @@ export function runBattle(input: BattleInput): BattleResult {
               damage,
               type: action.effect.type,
               remainingNeili: c[actor].neili,
+              ...(action.performId ? { performId: action.performId } : {}),
             });
           } else {
             const healed = Math.min(action.effect.flat, c[actor].maxQi - c[actor].qi);
             c[actor].qi += healed;
-            push("perform", actor, { heal: healed, qi: c[actor].qi });
+            push("perform", actor, {
+              heal: healed,
+              qi: c[actor].qi,
+              ...(action.performId ? { performId: action.performId } : {}),
+            });
           }
           break;
         }
@@ -278,7 +285,186 @@ export function runBattle(input: BattleInput): BattleResult {
     push("draw", undefined, { turns });
   }
 
-  return { winner, fled, events, turns };
+  return {
+    winner,
+    ...(fled ? { fled } : {}),
+    events,
+    turns,
+    combatants: { a: { ...c.a }, b: { ...c.b } },
+  };
+}
+
+// ---------- 持久化逐回合推进（PVE 服务端） ----------
+
+/**
+ * 可序列化的战斗续算状态。seed 保存在调用方的会话记录中；rngCalls 让服务端
+ * 每次从同一个 seed 恢复随机序列，而不把 RNG 闭包交给客户端。
+ */
+export interface BattleState {
+  combatants: Record<ActorKey, Combatant>;
+  turn: number;
+  rngCalls: number;
+  nextSeq: number;
+  /** 已施展绝招的最近回合；由服务端持久化，断线恢复后仍遵守冷却。 */
+  performCooldowns: Record<string, number>;
+  winner?: ActorKey | "draw";
+  fled?: ActorKey;
+}
+
+export interface BattleRoundInput {
+  /** 会话建立即固定的随机种子。 */
+  seed: number;
+  params: GameParams;
+  /** 玩家（a）与 NPC（b）在本回合的动作；客户端只能提交 playerAction。 */
+  playerAction: BattleAction;
+  opponentAction: BattleAction;
+  maxTurns?: number;
+}
+
+export interface BattleRoundResult {
+  state: BattleState;
+  events: BattleEvent[];
+}
+
+/** 新开战斗的初始状态；battle_start 由调用方作为 seq=0 的首个事件持久化。 */
+export function createBattleState(a: Combatant, b: Combatant): BattleState {
+  return {
+    combatants: { a: { ...a, stats: { ...a.stats } }, b: { ...b, stats: { ...b.stats } } },
+    turn: 0,
+    rngCalls: 0,
+    nextSeq: 1,
+    performCooldowns: {},
+  };
+}
+
+/**
+ * 推进一个完整回合：先处理玩家动作，再处理 NPC 动作。函数不做 IO，且不修改
+ * 传入 state；同 state、seed 与动作输入必定得到同一状态与事件流。
+ */
+export function advanceBattleRound(state: BattleState, input: BattleRoundInput): BattleRoundResult {
+  if (state.winner !== undefined) return { state, events: [] };
+
+  const combatants: Record<ActorKey, Combatant> = {
+    a: { ...state.combatants.a, stats: { ...state.combatants.a.stats } },
+    b: { ...state.combatants.b, stats: { ...state.combatants.b.stats } },
+  };
+  const seeded = createSeededRng(input.seed);
+  for (let i = 0; i < state.rngCalls; i += 1) seeded();
+  let rngCalls = state.rngCalls;
+  const rng: Rng = () => {
+    rngCalls += 1;
+    return seeded();
+  };
+  const events: BattleEvent[] = [];
+  let nextSeq = state.nextSeq;
+  let winner: ActorKey | "draw" | undefined;
+  let fled: ActorKey | undefined;
+  const turn = state.turn + 1;
+
+  const push = (type: string, actor?: ActorKey, data: Json = {}): void => {
+    events.push({ seq: nextSeq++, type, actor, data });
+  };
+  const view = (actor: ActorKey): CombatantView => ({
+    qi: combatants[actor].qi,
+    maxQi: combatants[actor].maxQi,
+    jing: combatants[actor].jing,
+    maxJing: combatants[actor].maxJing,
+    neili: combatants[actor].neili,
+    maxNeili: combatants[actor].maxNeili,
+    stats: combatants[actor].stats,
+  });
+  const act = (actor: ActorKey, action: BattleAction): void => {
+    const foe: ActorKey = actor === "a" ? "b" : "a";
+    switch (action.type) {
+      case "attack": {
+        const outcome = resolveAttack(input.params, view(actor), view(foe), rng);
+        if (outcome.type === "damage" || outcome.type === "parry") {
+          combatants[foe].qi = Math.max(0, combatants[foe].qi - outcome.damage);
+        }
+        push(outcome.type, actor, { ...outcome });
+        break;
+      }
+      case "recover": {
+        const gained = input.params.combat.recoverNeiliPerTurn;
+        combatants[actor].neili = Math.min(
+          combatants[actor].maxNeili,
+          combatants[actor].neili + gained,
+        );
+        push("recover", actor, { gained, neili: combatants[actor].neili });
+        break;
+      }
+      case "flee": {
+        const success = chance(rng, input.params.combat.fleeBaseChance);
+        push("flee", actor, { success });
+        if (success) {
+          fled = actor;
+          winner = "draw";
+        }
+        break;
+      }
+      case "perform": {
+        const cost = action.cost;
+        const hasCost =
+          combatants[actor].neili >= (cost.neili ?? 0) &&
+          combatants[actor].jing >= (cost.jing ?? 0) &&
+          combatants[actor].qi >= (cost.qi ?? 0);
+        if (!hasCost) {
+          push("perform_failed", actor, { reason: "insufficient_cost" });
+          break;
+        }
+        combatants[actor].neili -= cost.neili ?? 0;
+        combatants[actor].jing -= cost.jing ?? 0;
+        combatants[actor].qi -= cost.qi ?? 0;
+        if (action.effect.kind === "damage") {
+          const damage = Math.max(1, Math.round(action.effect.flat));
+          combatants[foe].qi = Math.max(0, combatants[foe].qi - damage);
+          push("perform", actor, {
+            damage,
+            type: action.effect.type,
+            remainingNeili: combatants[actor].neili,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
+        } else {
+          const healed = Math.min(
+            action.effect.flat,
+            combatants[actor].maxQi - combatants[actor].qi,
+          );
+          combatants[actor].qi += healed;
+          push("perform", actor, {
+            heal: healed,
+            qi: combatants[actor].qi,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
+        }
+        break;
+      }
+    }
+    if (combatants[foe].qi <= 0) {
+      winner = actor;
+      push("victory", actor, { target: foe });
+    }
+  };
+
+  push("turn_start", undefined, { turn });
+  act("a", input.playerAction);
+  if (winner === undefined) act("b", input.opponentAction);
+  if (winner === undefined && turn >= (input.maxTurns ?? 100)) {
+    winner = "draw";
+    push("draw", undefined, { turns: turn });
+  }
+
+  return {
+    state: {
+      combatants,
+      turn,
+      rngCalls,
+      nextSeq,
+      performCooldowns: { ...state.performCooldowns },
+      ...(winner !== undefined ? { winner } : {}),
+      ...(fled ? { fled } : {}),
+    },
+    events,
+  };
 }
 
 // ---------- 内置选择器（测试与占位） ----------

@@ -29,9 +29,9 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ## Schema 要点（改 schema 前先读 schema.ts）
 
 - `id` 正则：`/^[a-z0-9][a-z0-9_-]*$/`。
-- 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体；`grid`（可选 `[col, row]`）为地图语义网格坐标（八向布局，见 yjh-map-design）。
+- 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体；`grid`（可选 `[col, row]`）为地图语义网格坐标（八向布局，见 yjh-map-design）。**`itemIds` 是静态场景物品**：当前实现按角色独立、每件仅可成功拾取一次，拾取后对该角色不再显示（DC-025）；不要用它放可重复刷取资源，重复产出应使用 battle NPC 的 `drops`，明确的刷新机制另行设计。
 - 物品 `items[]`：`kind` 决定装备槽位（weapon→weapon 槽、armor→armor 槽，**同槽替换**：新装自动卸下旧物；drug/food/misc 不可装备）；`usable`（消耗品效果，服务端结算）按 game-core 上限**钳制**——heal_qi/heal_jing/restore_neili 以 C2 动态上限为顶、feed/quench 以食物/饮水容量为顶，`amount` 是恢复量而非必达值；消耗后数量递减，最后一个删除（M2.5-inventory 实现）。
-- NPC 掉落 `drops[]`：`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）；`goods`（商店库存：itemId + buy/sell，kind=vendor 时生效）。**掉落表只引用物品 id；银两是账本货币（game-core/economy.ts），由经济系统发放，不要建 silver_coin 之类的货币物品**（D3 踩过）。
+- NPC 战斗收益：`battleRewards: { exp, potential, silver }` 定义战胜 `kind=battle` NPC 后的固定成长与银两（均为非负整数，未填默认 0）；`drops[]` 定义按会话种子掷出的物品，`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）。服务端在 PVE 胜利时一次性结算两者，并以 NPC id 推进当前任务的 kill 相位。`goods`（商店库存：itemId + buy/sell，kind=vendor 时生效）是商贩报价的唯一来源；`buy`/`sell` 为 0 表示不卖/不收，交易由服务端在当前房间校验并原子结算（DC-025）。**掉落表只引用物品 id；银两是账本货币，不要建 silver_coin 之类的货币物品**（D3 踩过）。
 - 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**；冷却字段为 `cooldownTurns`（回合制语义）；`effect.type="buff"` Schema 保留但 v1 引擎未实现（校验器发 warning）。
 - 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。**相位结算语义（服务端 questsService 已实现）**：相位按内容包顺序推进，**只推进当前相位**；`talk`/`goto` 命中 1 次即完成相位，`kill`/`deliver`/`collect` 按 `count` 计数；全部相位完成才可交差（`report`）。进度推进由**战斗/挂机域经 `recordProgress` 钩子驱动**（击杀 NPC id / 抵达房间 id / 交谈 NPC id），内容作者需保证 targetId 与战斗/挂机产出的 id 一致（NPC 用 npcs/ id，物品用 items/ id，房间用 rooms/ id）。
 - 技能 `skills[]`：`maxLevel` 同时约束 learn/practice/study；learn 还受 exp 门槛（`level^3/10 ≤ exp`，见 growth.expGateExponent/Divisor）与潜能/精限制，practice/study 无 exp 门槛但耗气血/精（practiceQiBase / studyJingBase 参数驱动）；`baseLevel` 为初始等级（服务端按 0 处理未建档技能）。

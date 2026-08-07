@@ -90,6 +90,14 @@ PK `(character_id, skill_id)`。
 | quantity | integer CHECK > 0 | 可堆叠数量 |
 | slot | text NULL | weapon/armor/…；NULL = 行囊 |
 
+### 3.4.1 character_room_items（角色已拾取的场景物品）
+
+PK `(character_id, room_id, item_def_id)`，另记 `taken_at`。房间内容包中的静态物品按角色独立可见；同一角色拾取成功后不再出现在该房间，防止重复领取（DC-025）。
+
+### 3.4.2 shop_cashflows（商贩每日回收额）
+
+PK `(vendor_id, day)`，`sell_received bigint CHECK >= 0`。向商贩卖出物品时在同一事务内累加；超过内容包 `economy.maxCashflowPerDay` 即拒绝，避免回收出金失控（DC-025）。
+
 ## 3.5 tactic_templates（战术模板）
 
 | 列 | 类型 | 说明 |
@@ -104,9 +112,9 @@ PK `(character_id, skill_id)`。
 
 ## 3.6 combat_sessions / combat_events（战斗与战报事件流）
 
-combat_sessions：id、character_id、kind（pve/pvp）、status（ongoing/finished/abandoned）、target_def_id、seed（确定性随机）、result（win/lose/escape）、started_at、finished_at。
+combat_sessions：id、character_id、kind（pve/pvp）、status（ongoing/finished/abandoned）、target_def_id、seed（确定性随机）、`state`（PVE 可重演战斗状态：双方战斗体、回合、随机调用计数、绝招冷却表）、result（win/lose/escape）、started_at、finished_at。
 
-combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、created_at；索引 `(session_id, seq)`。战报 = 该会话事件流的有序回放。
+combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、created_at；索引 `(session_id, seq)`。战报 = 该会话事件流的有序回放。手动 PVE 每次仅由客户端提交角色意图，服务端续算角色与 NPC 的回合并持久化状态；胜利时按 NPC 内容包 `battleRewards` 与 `drops` 结算，并写入 `reward` / `quest_progress` 事件（DC-023、DC-024）。
 
 ## 3.7 afk_jobs（挂机作业）
 

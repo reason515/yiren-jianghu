@@ -83,7 +83,10 @@ const PACK = {
       repeatable: false,
     },
   ],
-  story: [],
+  story: [
+    { id: "s_begin", title: "初入江湖", questId: "q_hunt", text: "", next: [] },
+    { id: "s_learn", title: "拜师学艺", text: "", next: [] },
+  ],
 } as unknown as ContentPack;
 
 interface CharState {
@@ -433,7 +436,13 @@ describe("app 集成（quests 路由）", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.statusCode).toBe(200);
-    expect((list.json() as unknown[]).length).toBe(3);
+    expect(list.json()).toMatchObject({
+      quests: expect.arrayContaining([expect.objectContaining({ id: "q_hunt" })]),
+      story: [
+        { id: "s_begin", done: false, current: true },
+        { id: "s_learn", done: false, current: false },
+      ],
+    });
 
     const accept = await app.inject({
       method: "POST",

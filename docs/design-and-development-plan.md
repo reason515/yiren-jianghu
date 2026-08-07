@@ -29,7 +29,7 @@
 | M0 工程基座 | ✅ 完成 | — | A1–A6 全部完成，本机全绿；Docker 运行验证待服务器/CI |
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
-| M3 H5 垂直闭环 | 🔄 进行中（骨架可玩，面板与战斗待做） | E 阶段客户端全量 + H5 SPA 生产上线（http://117.72.34.43/，登录→建角→场景）；**剩余**：F0 PVE 战斗域（服务端前置）+ E14 面板闭环 12 子任务（试玩完整可玩） |
+| M3 H5 垂直闭环 | 🔄 进行中（核心闭环已接入） | E 阶段客户端全量 + H5 SPA 生产上线（http://117.72.34.43/，登录→建角→场景）；**剩余**：E14.6 PVP 对战 UI、E14.7–E14.12 面板与试玩验收 |
 | M2.5 服务端业务 | ✅ 完成 | — | B2 缺口全部补齐：auth/character/scene/skills/quests/templates/afk/pvp/leaderboard/forum/session 十一域 + 收尾 6 stub（logout 吊销会话 / characters 改名 / inventory equip·unequip·use 装备与物品效果结算 / content 版本）——**协议清单 40 路由 100% 真实实现，0 stub**（迁移 0006–0008）；299 用例全绿 + 本地真库 e2e |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
@@ -397,20 +397,22 @@
 - 轻量插画占位、战斗演出动画、环境音占位
 - **估时**：2 人日（可延后）
 
-### E14 H5 应用组装与面板闭环（M3 收尾，⬜ 待办）
+### E14 H5 应用组装与面板闭环（M3 收尾，🔄 进行中）
 
 > **前置**：F0 PVE 战斗域（服务端）——战斗 UI 无可接 API 前无法验收；任务 kill 相位也依赖战斗。
 
-- **E14.1 场景交互完善**（依赖 F0）：NPC 对话/交易/请托（**交易面板借鉴 xkx ShopView**，见 docs/sibling-borrowings.md）、物品拾取、EntitySheet 接线（动作从世界中长出）；场景刷新与移动反馈
-  - 验收：村口广场 NPC 可对话、商店可交易、拾取入行囊
-- **E14.2 角色面板与学武**：CharacterSheet 数据加载（vitals/武功/装备/行囊）+ 装备卸装/使用（inventory 三接口）+ learn/practice/study 动作与数值反馈（**面板结构借鉴 xkx TrainSheet/buildPracticeOptions**）
-  - 验收：面板与 API 数据一致；学武耗精/升级即时反馈
-- **E14.3 任务面板**：QuestPanel 接/交/查 + 主线足迹 + 可前往（goto 相位）导航；进度推进靠 F0 战斗 kill
-  - 验收：接 q_newbie_trail → 战斗杀野狗 → 交差发奖闭环
-- **E14.4 挂机闭环**：GrindBanner（运行状态）+ AfkSheet（模板/时长/启停）+ AfkReportView（叙事战报 + 未读角标）
-  - 验收：启动→横幅→停止→战报叙事回响；重连后未读战报
-- **E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；TacticEditor 战术模板（条件/动作 chips）；**战斗中悬浮动作条交互借鉴 xkx FloatingPerfBar**
-  - 验收：手动战斗可打野狗/盗匪；模板影响自动行为
+- **✅ E14.1 场景交互完善**（依赖 F0）：NPC 对话/交易/请托（**交易面板借鉴 xkx ShopView**，见 docs/sibling-borrowings.md）、物品拾取、EntitySheet 接线（动作从世界中长出）；场景刷新与移动反馈。场景物品按角色一次性拾取，商贩报价/买卖由内容包定义并服务端事务结算（DC-025）。
+  - 验收：村口广场 NPC 可对话、商店可交易、拾取入行囊（已通过服务、H5 DOM 与真库 E2E）
+- **✅ E14.2 角色面板与学武**：CharacterSheet 数据加载（vitals/武功/装备/行囊）+ 装备卸装/使用（inventory 三接口）+ learn/practice/study 动作与数值反馈（**面板结构借鉴 xkx TrainSheet/buildPracticeOptions**）
+  - 验收：面板与 API 数据一致；学武耗精/升级即时反馈（已通过角色快照聚合、DOM 与服务单测）
+- **✅ E14.3 任务面板**：QuestPanel 接/交/查 + 主线足迹 + 可前往（goto 相位）导航；移动抵达与 F0 战斗结束分别推进 goto / kill 相位。
+  - 验收：接 q_newbie_trail → 战斗杀野狗 → 交差发奖闭环（已通过真库 E2E）
+- **✅ E14.4 挂机闭环**：GrindBanner（运行状态）+ AfkSheet（修炼武功/行侠差事+战术/时长/启停）+ AfkReportView（叙事战报 + 未读回响）；行侠挂机按已接悬赏逐次结算（DC-026）。
+  - **修炼挂机**：服务端快照驱动状态横幅；选择武功、时长后只提交 `study` 意图；手动停止立即展示服务端战报；resume 收到未读战报后补拉全文并打开回响。
+  - **行侠挂机**：`/afk/start` 仅接受已接且正处击杀相位的任务；Worker 以固定种子、已固化战术快照自动结算一场目标战斗，并在同一事务内推进任务、结算战利与自动交差（DC-026）。真库 E2E 已覆盖。
+  - 验收：启动→横幅→停止→战报叙事回响；重连后未读战报；行侠差事/战术选择只提交受控意图（已通过服务、H5 DOM 与真库 E2E）
+- **✅ E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；场景 NPC「较量」与断线 status 恢复均已接线。TacticEditor 的任务挂机绑定待 E14.4 行侠结算完成后开放；**战斗中悬浮动作条交互借鉴 xkx FloatingPerfBar**。
+  - 验收：手动战斗可打野狗/盗匪（已通过服务、H5 DOM 与真库 E2E）；模板影响自动行为待任务挂机
 - **E14.6 PVP 对战 UI**：对手列表/赛季信息/发起对战（二次确认）/战报回放（**依赖 F0：复用统一后的快照构造与战斗 UI 模式**）
   - 验收：与第二账号对战完整闭环
 - **E14.7 论坛完整交互**：ForumView 板块/帖子/详情 + PostComposer 发帖 + 评论/点赞/举报
@@ -441,9 +443,9 @@
 - M2.5-forum：forum 六接口（受控纯文本 + 审核状态）
 - M2.5-session：GET /session/resume（重连恢复点 + 未读结算）
 
-### F0 PVE 战斗域（服务端，试玩可玩前置，⬜ 待办）
+### F0 PVE 战斗域（服务端，试玩可玩前置，✅ 完成）
 
-- 战斗是武侠核心玩法；H5 CombatView 组件已就绪但无可接 API（M2.5 未做战斗域，POST /scene/action 非 move 501）。
+- 战斗是武侠核心玩法；H5 CombatView 组件已就绪但无可接 API（M2.5 未做战斗域，POST /scene/action 非 move 501）。手动 PVE 采用服务端逐回合持久化与可重演事件流（DC-023）。
 - **路由**（补 apiManifest + protocol.md 三件套）：POST /combat/start（对 NPC 开战：角色快照 + NPC 快照 + seed，建 combat_sessions + 首个回合事件）、POST /combat/action（回合动作 attack/recover/perform/flee——服务端权威，客户端只发意图，runBattle 逐步推进）、GET /combat/status（当前战斗）；结果：掉落（economy rollDrops）+ 经验/潜能 + **任务 kill 相位推进（调 questsService.recordProgress）**
 - **统一 PVP 快照构造**：把 pvpService.buildSnapshot 的门类等级占位公式替换为战斗域共享的 combatant 构造（F1 待办落地，战斗公式只留一处实现）
 - 事件流：combat_events（seq 有序回放）；战报复用 combat_sessions.result
@@ -461,7 +463,7 @@
 ### F2 集成测试
 
 - API + DB + Redis 集成；Worker 崩溃恢复；并发幂等
-- **✅ 已完成（worker 结算）**：`services/worker` 实现——`settlement.ts`（修炼挂机逐次参悟纯函数：耗精/攒点/升级，封顶 2000 次）+ `run.ts`（settleDueJobs：以 last_tick_at 为基准结算 deltaHours，**离线照常推进 = 崩溃恢复天然覆盖**；每作业事务 + `FOR UPDATE` 行锁 = 并发幂等）+ `index.ts`（startWorker 轮询，启动即跑一轮）；params 新增 `afk.studyAttemptsPerHour`（5 处同步）；e2e journey test 6 验证结算落库（精耗 + 技能成长）；quest 挂机待 PVE 战斗域（F1 待办）；302 用例 + 16 e2e 全绿
+- **✅ 已完成（worker 结算）**：`services/worker` 已实现修炼挂机（`settlement.ts` 逐次参悟；`run.ts` 以 last_tick_at 结算、事务 + `FOR UPDATE` 并发幂等；`index.ts` 启动即跑一轮）。行侠挂机以固定种子 + 固化战术快照自动结算一场已接击杀任务，在同一事务内写资源、掉落、任务推进、自动交差与终态战报（DC-026）；真库 E2E 已覆盖（journey 12 + smoke 5）。
 - **估时**：2 人日
 
 ### F3 端到端冒烟
@@ -586,8 +588,8 @@
 | E12 重连与状态恢复 | ✅ 完成 | — | 重连状态机（指数退避/最大次数/failed）+ ReconnectingOverlay（断线提示/倒计时/立即重连）+ resumeClient（GET /session/resume 对齐 shared 协议，错误信封映射）；199 用例 |
 | E13 视觉与演出 | ✅ 完成 | — | ArtPlaceholder（首字印章占位）+ sound 环境音占位（可注入/事件映射表）+ effects（绝招行高亮动画，动效克制）；204 用例 |
 | F1–F4 联调测试 | ✅ 完成 | — | F1 规则确定性（持续）+ F2 Worker 结算（settlement.ts 纯函数 + run.ts FOR UPDATE 幂等 + startWorker 崩溃恢复）+ F3 全链路 e2e（journey 11 步，抓出复合主键/jsonb 二次解析 2 真 bug）+ F4 性能基线（4354/2556/1839 RPS，worker 6.1ms/作业，docs/performance-baseline.md） |
-| F0 PVE 战斗域 | ⬜ | | 服务端前置：/combat start/action/status（NPC 快照 + runBattle 逐步 + 掉落/经验 + recordProgress kill 推进）+ 统一 PVP 快照构造；试玩可玩核心前置（E14.3/14.5/14.6/14.11 依赖） |
-| E14 H5 面板闭环 | ⬜ | | 12 子任务（E14.1 场景交互→E14.12 验收发布）；借鉴 xkx ShopView/TrainSheet/FloatingPerfBar/ChoiceRow + sanguo first-session-ux（见 docs/sibling-borrowings.md）；估时 5–7 人日 |
+| F0 PVE 战斗域 | ✅ 完成 | — | DC-023/024；逐回合可重演 state（RNG 调用计数 + 绝招冷却 + 有序事件）、迁移 0010 单场约束、PVE/PVP 共用角色战斗体。`/combat/start`、`/combat/action`、`/combat/status` 已接入 attack/recover/flee/perform；绝招按内容包校验，胜利按 NPC `battleRewards` / `drops` 结算并调用 `recordProgress` 推进 kill 任务。服务/规则/内容测试与真库 journey E2E（16 用例）均通过；E14.3/14.5/14.6/14.11 前置已解除。 |
+| E14 H5 面板闭环 | 🔄 进行中 | — | **E14.1 场景交互已接入**：交谈/请托/交易/拾取均从 EntitySheet 的结构化动作进入；ShopView 用服务端交易快照展示报价、银两与行囊，场景物品每角色仅可拾取一次（DC-025），真库 E2E 覆盖。**E14.2 角色面板与学武已接入**：`GET /characters/me` 提供角色四维、行止与有效潜能；客户端合并角色/武功/行囊快照，装备槽由已佩挂物品派生；请教/演练/参悟、佩上/卸下/使用均只提交服务端意图，结果刷新人物簿并反馈。**E14.3 任务面板已接入**：`GET /quests` 返回服务端组装的 `{ quests, story }`；QuestPanel 完成接/交/查、主线足迹、目标名与 goto 指向，移动抵达由服务端推进 goto 相位，战斗结束刷新 kill 进度；交差奖励即时回显。**E14.4 挂机闭环已接入**：`/afk/status`、`/afk/start`、`/afk/stop`、`/afk/reports` 与 resume 未读报告接入 GrindBanner/AfkSheet/AfkReportView；AfkSheet 以分段控件切换修炼/行侠，修炼选已学武功+时长，行侠选已接击杀差事+战术模板+时长，只提交受控意图（DC-026）。行侠作业由 Worker 固定种子自动结算，真库 E2E 覆盖。**E14.5 战斗 UI 已接入**：场景 NPC「较量」→ `/combat/start`，服务端状态/事件适配为 CombatView；受控 action（普攻/回气/逃跑/绝招）→ `/combat/action`，胜负横幅、收益摘要、断线 status 恢复均已接线。其余 7 子任务待办；借鉴 xkx ShopView/TrainSheet/FloatingPerfBar/ChoiceRow + sanguo first-session-ux（见 docs/sibling-borrowings.md）；估时 5–7 人日 |
 | G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 
@@ -603,6 +605,6 @@
 
 **开放问题**：美术插画来源（外包/占位/AI 辅助）、服务器迁移时间点、封测招募渠道——均不影响 A–F 阶段推进。
 
-# 6. 下一步（第一条任务）
+# 6. 下一步（当前任务）
 
-启动 **A1 初始化单仓**：创建 `pnpm-workspace.yaml`、根配置、包骨架与占位测试，验证 `pnpm install/typecheck/test` 全绿后提交。
+继续 **E14 H5 面板闭环**：E14.1 场景交互、E14.2 角色面板与学武、E14.3 任务面板、E14.4 挂机闭环（修炼+行侠）与 E14.5 战斗 UI 均已接入并验收。**下一步推进 E14.6 PVP 对战 UI**（对手列表/赛季信息/发起对战二次确认/战报回放，复用 F0 统一快照与战斗 UI 模式），随后按 E14.7–E14.12 完成面板、体验打磨与发布验收。

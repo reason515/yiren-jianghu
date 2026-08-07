@@ -9,7 +9,12 @@ import {
   createCharacterService,
   type CreateCharacterInput,
 } from "./characterService.js";
-import { SceneError, buildContentIndex, createSceneService } from "./sceneService.js";
+import {
+  SceneError,
+  buildContentIndex,
+  createSceneService,
+  type SceneActionInput,
+} from "./sceneService.js";
 import { SkillsError, createSkillsService } from "./skillsService.js";
 import { QuestsError, createQuestsService } from "./questsService.js";
 import { TemplatesError, createTemplatesService } from "./templatesService.js";
@@ -17,6 +22,7 @@ import { AfkError, createAfkService } from "./afkService.js";
 import { PvpError, createPvpService } from "./pvpService.js";
 import { ForumError, createForumService } from "./forumService.js";
 import { SessionError, createSessionService } from "./sessionService.js";
+import { CombatError, createCombatService } from "./combatService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -71,14 +77,19 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
     (db ? createAuthService({ db, inviteCodes, allowAnyInvite }).verifyToken : undefined);
   const auth = db ? createAuthService({ db, inviteCodes, allowAnyInvite }) : null;
   const characters = db ? createCharacterService(db) : null;
-  const scene = db && deps.content ? createSceneService(db, buildContentIndex(deps.content)) : null;
   const skills = db && deps.content ? createSkillsService(db, deps.content) : null;
   const quests = db && deps.content ? createQuestsService(db, deps.content) : null;
+  const scene =
+    db && deps.content
+      ? createSceneService(db, buildContentIndex(deps.content), quests ?? undefined)
+      : null;
   const templates = db && deps.content ? createTemplatesService(db, deps.content) : null;
   const afk = db && deps.content ? createAfkService(db, deps.content) : null;
   const pvp = db && deps.content ? createPvpService(db, deps.content) : null;
   const forum = db ? createForumService(db) : null;
   const session = db ? createSessionService(db) : null;
+  const combat =
+    db && deps.content ? createCombatService(db, deps.content, quests ?? undefined) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -258,16 +269,54 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
 
     app.post("/scene/action", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
-      const body = (req.body ?? {}) as { type?: string; dir?: string };
-      if (body.type !== "move") {
-        return envelope(reply, 501, "not_implemented", `动作 ${body.type ?? ""} 尚未实现`);
-      }
+      const body = (req.body ?? {}) as {
+        type?: unknown;
+        dir?: unknown;
+        targetId?: unknown;
+        itemId?: unknown;
+        count?: unknown;
+      };
+      const type = typeof body.type === "string" ? body.type : "";
       try {
-        const view = await scene.move(accountId, body.dir ?? "");
-        return view;
+        if (type === "move") {
+          return await scene.move(accountId, typeof body.dir === "string" ? body.dir : "");
+        }
+        if (type === "talk" || type === "take" || type === "trade") {
+          if (typeof body.targetId !== "string" || !body.targetId) {
+            return envelope(reply, 400, "invalid_request", "缺少场景目标");
+          }
+          return await scene.act(accountId, { type, targetId: body.targetId });
+        }
+        if (type === "buy" || type === "sell") {
+          if (
+            typeof body.targetId !== "string" ||
+            !body.targetId ||
+            typeof body.itemId !== "string" ||
+            !body.itemId
+          ) {
+            return envelope(reply, 400, "invalid_request", "缺少交易目标或物品");
+          }
+          const input: SceneActionInput = {
+            type,
+            targetId: body.targetId,
+            itemId: body.itemId,
+            count: typeof body.count === "number" ? body.count : 1,
+          };
+          return await scene.act(accountId, input);
+        }
+        return envelope(reply, 400, "invalid_action", "此举尚不能成行");
       } catch (err) {
         if (err instanceof SceneError) {
-          const status = err.code === "no_character" ? 404 : 400;
+          const status =
+            err.code === "no_character" ||
+            err.code === "npc_not_here" ||
+            err.code === "npc_not_found" ||
+            err.code === "item_not_here" ||
+            err.code === "item_not_found"
+              ? 404
+              : err.code === "item_already_taken" || err.code === "insufficient_silver"
+                ? 409
+                : 400;
           return envelope(reply, status, err.code, err.message);
         }
         throw err;
@@ -423,9 +472,9 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
 
     app.get("/quests", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
-      const list = await quests.getQuests(accountId);
-      if (!list) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
-      return list;
+      const overview = await quests.getOverview(accountId);
+      if (!overview) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return overview;
     });
 
     app.post("/quests/accept", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
@@ -464,6 +513,62 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
             err.code,
             err.message,
           );
+        throw err;
+      }
+    });
+  }
+
+  // F0 PVE：逐回合持久化；客户端只提交受控意图，绝招/奖励/任务推进均由服务端结算。
+  if (combat) {
+    app.post("/combat/start", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { targetId?: unknown };
+      if (typeof body.targetId !== "string" || !body.targetId) {
+        return envelope(reply, 400, "invalid_request", "缺少交手目标");
+      }
+      try {
+        return await combat.start(accountId, body.targetId);
+      } catch (err) {
+        if (err instanceof CombatError) {
+          const status =
+            err.code === "no_character" || err.code === "room_not_found"
+              ? 404
+              : err.code === "combat_in_progress"
+                ? 409
+                : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.post("/combat/action", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { action?: unknown; performId?: unknown };
+      try {
+        return await combat.action(accountId, {
+          action: typeof body.action === "string" ? body.action : "",
+          performId: typeof body.performId === "string" ? body.performId : undefined,
+        });
+      } catch (err) {
+        if (err instanceof CombatError) {
+          const status =
+            err.code === "no_character" ? 404 : err.code === "combat_not_found" ? 409 : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.get("/combat/status", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        const current = await combat.status(accountId);
+        return current ?? { active: false };
+      } catch (err) {
+        if (err instanceof CombatError && err.code === "no_character") {
+          return envelope(reply, 404, err.code, err.message);
+        }
         throw err;
       }
     });

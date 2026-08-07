@@ -31,8 +31,8 @@ const DATA: QuestPanelData = {
       kind: "bounty",
       briefing: "村外的野狗成了祸患……村长托你走一趟村外小径。",
       phases: [
-        { type: "goto", label: "village_trail", done: false },
-        { type: "kill", label: "野狗", done: false, progress: { cur: 0, need: 1 } },
+        { type: "goto", targetName: "村外小径", targetRoomId: "village_trail", done: false },
+        { type: "kill", targetName: "野狗", done: false, progress: { cur: 0, need: 1 } },
       ],
       rewards: { exp: 30, potential: 8, silver: 5 },
       state: "accepted",
@@ -42,7 +42,9 @@ const DATA: QuestPanelData = {
       name: "缉拿匪首",
       kind: "bounty",
       briefing: "沈捕头悬了赏格……",
-      phases: [{ type: "kill", label: "劫道匪徒", done: false, progress: { cur: 0, need: 1 } }],
+      phases: [
+        { type: "kill", targetName: "劫道匪徒", done: false, progress: { cur: 0, need: 1 } },
+      ],
       rewards: { exp: 60, potential: 15, silver: 20 },
       state: "available",
     },
@@ -106,8 +108,18 @@ describe("QuestPanel（任务与主线）", () => {
         {
           ...DATA.quests[0]!,
           phases: [
-            { type: "goto" as const, label: "village_trail", done: true },
-            { type: "kill" as const, label: "野狗", done: true, progress: { cur: 1, need: 1 } },
+            {
+              type: "goto" as const,
+              targetName: "村外小径",
+              targetRoomId: "village_trail",
+              done: true,
+            },
+            {
+              type: "kill" as const,
+              targetName: "野狗",
+              done: true,
+              progress: { cur: 1, need: 1 },
+            },
           ],
         },
       ],

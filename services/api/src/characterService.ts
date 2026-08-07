@@ -1,3 +1,4 @@
+import { effectivePotential } from "@yjh/game-core";
 import type { Db, DbRow } from "./db.js";
 
 /** 角色域错误（code 进入错误信封）。 */
@@ -22,6 +23,11 @@ export interface CharacterSummary {
   name: string;
   gender: string;
   status: string;
+  attrs: Record<"str" | "int" | "con" | "dex", { cur: number; base: number }>;
+  vitals: { qi: number; jing: number; jingli: number; neili: number; food: number; water: number };
+  exp: number;
+  effectivePotential: number;
+  silver: number;
 }
 
 export const ATTR_MIN = 10;
@@ -91,12 +97,62 @@ export function createCharacterService(db: Db): CharacterService {
     },
 
     async getCharacter(accountId) {
-      const rows = await db.query<{ id: string; name: string; gender: string; status: string }>(
-        "SELECT id, name, gender, status FROM characters WHERE account_id = $1 AND status = 'active'",
+      const rows = await db.query<{
+        id: string;
+        name: string;
+        gender: string;
+        status: string;
+        attrs: Record<string, unknown> | string | undefined;
+        exp: number | string;
+        potential: number | string;
+        learned_points: number | string;
+        silver: number | string;
+        qi: number;
+        jing: number;
+        jingli: number;
+        neili: number;
+        food: number;
+        water: number;
+      }>(
+        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0];
-      return row ? { id: row.id, name: row.name, gender: row.gender, status: row.status } : null;
+      if (!row) return null;
+      const rawAttrs =
+        typeof row.attrs === "string"
+          ? JSON.parse(row.attrs)
+          : (row.attrs ?? ({} as Record<string, unknown>));
+      const attribute = (key: "str" | "int" | "con" | "dex") => {
+        const value = Number(rawAttrs[key]);
+        return {
+          cur: Number.isFinite(value) ? value : 0,
+          base: Number.isFinite(value) ? value : 0,
+        };
+      };
+      return {
+        id: row.id,
+        name: row.name,
+        gender: row.gender,
+        status: row.status,
+        attrs: {
+          str: attribute("str"),
+          int: attribute("int"),
+          con: attribute("con"),
+          dex: attribute("dex"),
+        },
+        vitals: {
+          qi: row.qi,
+          jing: row.jing,
+          jingli: row.jingli,
+          neili: row.neili,
+          food: row.food,
+          water: row.water,
+        },
+        exp: Number(row.exp),
+        effectivePotential: effectivePotential(Number(row.potential), Number(row.learned_points)),
+        silver: Number(row.silver),
+      };
     },
 
     async discardCharacter(accountId) {

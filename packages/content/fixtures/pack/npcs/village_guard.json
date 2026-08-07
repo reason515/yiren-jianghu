@@ -5,6 +5,7 @@
   "level": 3,
   "skills": [{ "skillId": "basic_sword", "level": 10 }],
   "drops": [{ "itemId": "iron_sword", "chance": 0.2 }],
+  "battleRewards": { "exp": 8, "potential": 3, "silver": 3 },
   "aggressive": false,
   "respawnSec": 60,
   "dialogue": [

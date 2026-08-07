@@ -6,5 +6,6 @@
   "skills": [{ "skillId": "basic_sword", "level": 0 }],
   "aggressive": true,
   "respawnSec": 30,
-  "drops": [{ "itemId": "dry_food", "chance": 0.4 }]
+  "drops": [{ "itemId": "dry_food", "chance": 0.4 }],
+  "battleRewards": { "exp": 5, "potential": 2, "silver": 2 }
 }

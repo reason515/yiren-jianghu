@@ -102,6 +102,7 @@ function narrativeFor(kind: AfkJobKind, status: string): string {
 
 export function createAfkService(db: Db, content: ContentPack): AfkService {
   const skillsById = new Map(content.skills.map((s) => [s.id, s]));
+  const questsById = new Map(content.quests.map((quest) => [quest.id, quest]));
   const maxHours = content.params.afk.maxDurationHours;
   const maxMinutes = Math.floor(maxHours * 60);
 
@@ -188,6 +189,28 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
             : row.config;
       } else if (input.kind === "quest") {
         throw new AfkError("template_required", "行侠挂机须先备下一套战术");
+      }
+
+      if (input.kind === "quest") {
+        const questId = typeof config.questId === "string" ? config.questId : "";
+        const quest = questsById.get(questId);
+        if (!quest) throw new AfkError("invalid_config", "行侠挂机须择一桩已接差事");
+        const records = await db.query<{
+          status: "accepted" | "completed" | "reported";
+          progress: { phase: number; counts: Record<string, number> };
+        }>(
+          "SELECT status, progress FROM character_quests WHERE character_id = $1 AND quest_id = $2",
+          [ch.id, questId],
+        );
+        const record = records.rows[0];
+        const phase = record ? quest.phases[record.progress.phase] : undefined;
+        if (!record || record.status !== "accepted" || !phase || phase.type !== "kill") {
+          throw new AfkError("quest_unavailable", "这桩差事眼下不宜行侠");
+        }
+        const target = content.npcs.find((npc) => npc.id === phase.targetId);
+        if (!target || target.kind !== "battle") {
+          throw new AfkError("quest_unavailable", "所寻目标不宜以行侠之法应对");
+        }
       }
 
       const existing = await activeJobRow(ch.id);

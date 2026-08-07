@@ -17,6 +17,10 @@ export type QuestStatus = "locked" | "available" | "ongoing" | "reportable" | "c
 export interface QuestPhaseView {
   type: "goto" | "kill" | "talk" | "deliver" | "collect";
   targetId: string;
+  /** 内容包解析后的玩家可见目标名，客户端不展示内部 id。 */
+  targetName: string;
+  /** 目标所在房间；goto 相位即为目标房间本身，供客户端给出导航指向。 */
+  targetRoomId?: string;
   count: number;
   done: number;
 }
@@ -44,8 +48,21 @@ type QuestRecord = {
   progress: { phase: number; counts: Record<string, number> };
 };
 
+export interface QuestStoryNodeView {
+  id: string;
+  title: string;
+  done: boolean;
+  current: boolean;
+}
+
+export interface QuestOverview {
+  quests: QuestView[];
+  story: QuestStoryNodeView[];
+}
+
 export interface QuestsService {
   getQuests(accountId: string): Promise<QuestView[] | null>;
+  getOverview(accountId: string): Promise<QuestOverview | null>;
   acceptQuest(accountId: string, questId: string): Promise<QuestView>;
   reportQuest(
     accountId: string,
@@ -102,6 +119,26 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
     return new Map(rows.rows.map((r) => [r.quest_id, r]));
   };
 
+  const targetMeta = (targetId: string): { targetName: string; targetRoomId?: string } => {
+    const room = content.rooms.find((entry) => entry.id === targetId);
+    if (room) return { targetName: room.name, targetRoomId: room.id };
+    const npc = content.npcs.find((entry) => entry.id === targetId);
+    if (npc) {
+      return {
+        targetName: npc.name,
+        targetRoomId: content.rooms.find((roomEntry) => roomEntry.npcIds.includes(targetId))?.id,
+      };
+    }
+    const item = content.items.find((entry) => entry.id === targetId);
+    if (item) {
+      return {
+        targetName: item.name,
+        targetRoomId: content.rooms.find((roomEntry) => roomEntry.itemIds.includes(targetId))?.id,
+      };
+    }
+    return { targetName: targetId };
+  };
+
   const view = (quest: Quest, exp: number, record?: QuestRecord): QuestView => {
     let status: QuestStatus;
     if (!record) {
@@ -124,6 +161,7 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
       phases: quest.phases.map((p) => ({
         type: p.type,
         targetId: p.targetId,
+        ...targetMeta(p.targetId),
         count:
           p.type === "kill" || p.type === "deliver" || p.type === "collect"
             ? "count" in p
@@ -143,6 +181,22 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
       if (!ch) return null;
       const records = await recordsOf(ch.id);
       return content.quests.map((q) => view(q, ch.exp, records.get(q.id)));
+    },
+
+    async getOverview(accountId) {
+      const ch = await activeCharacter(accountId);
+      if (!ch) return null;
+      const records = await recordsOf(ch.id);
+      const quests = content.quests.map((quest) => view(quest, ch.exp, records.get(quest.id)));
+      let hasCurrent = false;
+      const story = content.story.map((node) => {
+        // 主线足迹只读取任务记录，不因可重复任务回到 available 而抹去已走过的节点。
+        const done = node.questId ? records.get(node.questId)?.status === "reported" : false;
+        const current = !done && !hasCurrent;
+        if (current) hasCurrent = true;
+        return { id: node.id, title: node.title, done, current };
+      });
+      return { quests, story };
     },
 
     async acceptQuest(accountId, questId) {

@@ -25,6 +25,7 @@ const CHARACTER: CharacterView = {
   exp: 1200,
   effectivePotential: 88,
   silver: 25,
+  vitals: { qi: 92, jing: 84, jingli: 70, neili: 20, food: 230, water: 260 },
   attrs: {
     str: { cur: 25, base: 20 },
     int: { cur: 20, base: 20 },
@@ -38,7 +39,7 @@ const CHARACTER: CharacterView = {
       category: "force",
       level: 12,
       maxLevel: 300,
-      equipped: true,
+      practicePoints: 4,
     },
     {
       id: "xuanmen_sword",
@@ -46,13 +47,14 @@ const CHARACTER: CharacterView = {
       category: "weapon",
       level: 9,
       maxLevel: 300,
-      equipped: true,
+      practicePoints: 2,
     },
   ],
   equipment: [{ slot: "weapon", item: { id: "iron_sword", name: "铁剑" } }, { slot: "armor" }],
   inventory: [
-    { id: "dry_food", name: "干粮", kind: "food", quantity: 3 },
-    { id: "jinchuang_yao", name: "金创药", kind: "drug", quantity: 1 },
+    { id: "cloth_armor", name: "粗布衣", kind: "armor", quantity: 1, equipped: false },
+    { id: "dry_food", name: "干粮", kind: "food", quantity: 3, equipped: false },
+    { id: "jinchuang_yao", name: "金创药", kind: "drug", quantity: 1, equipped: false },
   ],
 };
 
@@ -76,7 +78,7 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.textContent).toContain("当前 15 · 先天 20");
   });
 
-  it("武功行含门类色、精通 Lv 与已装备标记；装备槽与行囊分类渲染", () => {
+  it("武功行含门类色、精通 Lv；装备槽与行囊分类渲染", () => {
     const { host } = render(
       <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
     );
@@ -86,11 +88,38 @@ describe("CharacterSheet（角色面板）", () => {
     expect(skill.classList.length).toBeGreaterThan(0);
     expect(host.querySelector(".char-skill-name.skill-force")?.textContent).toContain("玄门内功");
     expect(host.textContent).toContain("Lv 12");
-    expect(host.textContent).toContain("□");
     expect(host.textContent).toContain("兵器");
     expect(host.textContent).toContain("铁剑");
     expect(host.textContent).toContain("×3");
     expect(host.querySelector(".char-inv-name.item-food")?.textContent).toContain("干粮");
+  });
+
+  it("行止带语义标签，学武与行囊动作只回传服务端意图", () => {
+    const skills: string[] = [];
+    const items: string[] = [];
+    const { host } = render(
+      <CharacterSheet
+        open
+        character={CHARACTER}
+        onClose={() => undefined}
+        onSkillAction={(action, id) => skills.push(`${action}:${id}`)}
+        onInventoryAction={(action, id) => items.push(`${action}:${id}`)}
+      />,
+    );
+    expect(host.textContent).toContain("气血92");
+    expect(host.textContent).toContain("精神84");
+    const click = (label: string) => {
+      const button = [...host.querySelectorAll<HTMLButtonElement>(".chip")].find(
+        (candidate) => candidate.textContent === label,
+      )!;
+      act(() => button.click());
+    };
+    click("请教");
+    click("演练");
+    click("佩上");
+    click("使用");
+    expect(skills).toEqual(["learn:xuanmen_force", "practice:xuanmen_force"]);
+    expect(items).toEqual(["equip:cloth_armor", "use:dry_food"]);
   });
 
   it("放弃角色入口为朱砂危险动作", () => {

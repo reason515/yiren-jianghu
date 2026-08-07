@@ -41,7 +41,7 @@ const STATE: CombatState = {
 
 describe("CombatView（手动战斗）", () => {
   it("渲染双方状态与战报，动作按钮发命令", () => {
-    const commands: string[] = [];
+    const commands: Array<{ action: string; performId?: string }> = [];
     const { host } = render(<CombatView state={STATE} onAction={(c) => commands.push(c)} />);
     expect(host.textContent).toContain("劫道匪徒");
     expect(host.textContent).toContain("气 180/200");
@@ -53,7 +53,11 @@ describe("CombatView（手动战斗）", () => {
     act(() => chips.find((c) => c.textContent === "普攻")!.click());
     act(() => chips.find((c) => c.textContent === "疾风斩")!.click());
     act(() => chips.find((c) => c.textContent === "逃跑")!.click());
-    expect(commands).toEqual(["attack", "perform swift_slash", "flee"]);
+    expect(commands).toEqual([
+      { action: "attack" },
+      { action: "perform", performId: "swift_slash" },
+      { action: "flee" },
+    ]);
   });
 
   it("绝招未就绪（冷却/消耗）禁用；逃跑为危险动作", () => {
@@ -69,10 +73,19 @@ describe("CombatView（手动战斗）", () => {
 
   it("结果横幅收束（wuxia 文案），不再显示动作按钮", () => {
     const { host } = render(
-      <CombatView state={{ ...STATE, result: "win" }} onAction={() => undefined} />,
+      <CombatView
+        state={{
+          ...STATE,
+          inCombat: false,
+          result: "win",
+          reward: { exp: 6, potential: 2, silver: 3, drops: [] },
+        }}
+        onAction={() => undefined}
+      />,
     );
     expect(host.querySelector("[data-testid=combat-result]")?.textContent).toContain("尘埃落定");
     expect(host.querySelector("[data-testid=combat-actions]")).toBeNull();
+    expect(host.querySelector("[data-testid=combat-reward]")?.textContent).toContain("阅历 6");
   });
 
   it("非战斗状态不渲染", () => {

@@ -47,6 +47,9 @@ POST /skills/study (auth)
 GET /quests (auth)
 POST /quests/accept (auth)
 POST /quests/report (auth)
+POST /combat/start (auth)
+POST /combat/action (auth)
+GET /combat/status (auth)
 GET /templates (auth)
 POST /templates (auth)
 PUT /templates/:id (auth)
@@ -102,3 +105,28 @@ pvp.report
 - 事件行格式：小写字母、数字、点、下划线、连字符。
 - 客户端/服务端共用类型与编解码以 `@yjh/shared` 为唯一来源（`codec.ts`：`eventEnvelopeSchema` / `sessionResumeSchema`）；本清单不得与 `EVENT_TYPES` 发散。
 - 未实现 API 返回 `501 { error: { code: "not_implemented" } }`，B/E 阶段按 `services/api/src/apiManifest.ts` 的 domain 逐个落地。
+
+# 5. PVE 战斗约定
+
+- `POST /combat/start` 请求 `{ targetId }`；目标必须位于角色当前房间且为 `battle` NPC。
+- `POST /combat/action` 仅接收 `{ action: "attack" | "recover" | "flee" }`，或 `{ action: "perform", performId }`。客户端不提交绝招效果、消耗、冷却或收益。
+- 服务端在会话 `state` 中保存 RNG 调用计数与绝招冷却；每次 action 返回完整有序事件流。`perform` 事件携带 `performId`，便于客户端演出。
+- 胜利时服务端按 NPC 内容包 `battleRewards` / `drops` 结算，并在事件流追加 `reward`；若命中当前任务 kill 相位，再追加 `quest_progress`（DC-023、DC-024）。
+
+# 6. 任务总览约定
+
+- `GET /quests` 返回 `{ quests, story }`：`quests` 是任务状态与相位进度，`story` 是服务端按内容包与任务记录组装的主线足迹；客户端不得自行推演任务状态。
+- 相位返回 `targetName`（玩家可见目标名）及可选 `targetRoomId`（导航指向）；客户端不得展示内部 `targetId`。
+- 移动抵达出口房间时，服务端调用任务进度钩子推进当前 `goto` 相位；击杀相位由战斗域推进。
+
+# 7. 场景交互约定
+
+`POST /scene/action` 按 `type` 接收受控意图：
+
+- `move { dir }`：移动；返回抵达后的场景。
+- `talk { targetId }`：仅可与当前房间 NPC 交谈；返回内容包对话，并由服务端推进当前 `talk` 任务相位。
+- `take { targetId }`：仅可拾取当前房间物品；每个角色对同一房间物品仅成功一次，返回所得物品。
+- `trade { targetId }`：仅可向当前房间商贩打开交易快照，返回服务端银两、内容包报价及行囊。
+- `buy` / `sell { targetId, itemId, count }`：商贩和物品均由服务端验证；扣款/入囊或扣物/入银两与每日回收额度在同一事务结算。
+
+客户端不得提交价格、银两余额、物品定义或结算结果；`targetId` / `itemId` 仅作服务端校验所需的内部引用，不在玩家界面展示（DC-025）。

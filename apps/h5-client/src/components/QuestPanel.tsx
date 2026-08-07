@@ -61,7 +61,9 @@ function QuestCard({
   onAccept: (questId: string) => void;
   onReport: (questId: string) => void;
 }): JSX.Element {
-  const pendingGoto = quest.phases.find((p) => p.type === "goto" && !p.done);
+  const pendingGoto = quest.phases.find(
+    (phase) => phase.type === "goto" && !phase.done && phase.targetRoomId,
+  );
   const allDone = quest.phases.length > 0 && quest.phases.every((p) => p.done);
 
   return (
@@ -74,7 +76,7 @@ function QuestCard({
       <ul className="quest-phases">
         {quest.phases.map((p, i) => (
           <li key={i} className={p.done ? "done" : ""}>
-            {PHASE_LABEL[p.type]} {p.label}
+            {PHASE_LABEL[p.type]} {p.targetName}
             {p.progress && `（${p.progress.cur}/${p.progress.need}）`}
           </li>
         ))}
@@ -87,7 +89,7 @@ function QuestCard({
           <Chip label="接受" variant="action" onClick={() => onAccept(quest.id)} />
         )}
         {quest.state === "accepted" && pendingGoto && (
-          <Chip label="前往" variant="action" onClick={() => onGoTo(pendingGoto.label)} />
+          <Chip label="前往" variant="action" onClick={() => onGoTo(pendingGoto.targetRoomId!)} />
         )}
         {quest.state === "accepted" && allDone && (
           <Chip label="交差" variant="action" onClick={() => onReport(quest.id)} />

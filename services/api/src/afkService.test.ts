@@ -43,11 +43,22 @@ const PACK = {
     economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
   },
   rooms: [],
-  npcs: [],
+  npcs: [{ id: "wild_dog", name: "野狗", kind: "battle", skills: [], battleRewards: {} }],
   items: [],
   skills: [{ id: "basic_sword", name: "基础剑法", category: "weapon", maxLevel: 100 }],
   performs: [],
-  quests: [],
+  quests: [
+    {
+      id: "q_hunt",
+      name: "试剑",
+      kind: "bounty",
+      minExp: 0,
+      briefing: "试剑",
+      phases: [{ type: "kill", targetId: "wild_dog", count: 1 }],
+      rewards: { exp: 0, potential: 0, silver: 0, items: [] },
+      repeatable: true,
+    },
+  ],
   story: [],
 } as unknown as ContentPack;
 
@@ -126,6 +137,14 @@ function mockDb() {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
             .map((c) => ({ id: c.id })) as unknown as T[],
+        };
+      }
+      if (text.includes("FROM character_quests WHERE character_id = $1 AND quest_id = $2")) {
+        return {
+          rows:
+            params[1] === "q_hunt"
+              ? ([{ status: "accepted", progress: { phase: 0, counts: {} } }] as unknown as T[])
+              : ([] as T[]),
         };
       }
       if (text.includes("SELECT id, config FROM tactic_templates")) {

@@ -1,4 +1,9 @@
 import { ApiError } from "./authApi.js";
+import type { CombatIntent, CombatStatusResponse } from "./combatTypes.js";
+import type { CharacterProfile, InvItemView, SkillRowView } from "./characterTypes.js";
+import type { QuestOverviewResponse } from "./questTypes.js";
+import type { AfkJobData, AfkReportData, AfkStartConfig, AfkStatusResponse } from "./afkTypes.js";
+import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
 
 /**
  * H5 API 客户端：统一 fetch + 错误信封解析（服务端权威，客户端只发意图）。
@@ -12,7 +17,7 @@ export interface ApiClient {
   resume(): Promise<{
     stateVersion: number;
     character: unknown;
-    pendingAfkReports: unknown[];
+    pendingAfkReports: Array<{ jobId: string; kind: string; status: string; stopReason?: string }>;
     pendingPvpReportIds: string[];
   }>;
   createCharacter(input: {
@@ -22,15 +27,27 @@ export interface ApiClient {
   }): Promise<{ characterId: string }>;
   getScene(): Promise<unknown>;
   move(dir: string): Promise<unknown>;
-  getInventory(): Promise<unknown[]>;
-  getSkills(): Promise<unknown[]>;
-  getQuests(): Promise<unknown[]>;
+  sceneAction(input: SceneActionInput): Promise<SceneActionResult>;
+  getCharacter(): Promise<CharacterProfile>;
+  getInventory(): Promise<InvItemView[]>;
+  getSkills(): Promise<SkillRowView[]>;
+  equipInventory(itemId: string): Promise<{ ok: true }>;
+  unequipInventory(itemId: string): Promise<{ ok: true }>;
+  useInventory(itemId: string): Promise<{ ok: true; effect: string }>;
+  learnSkill(skillId: string): Promise<unknown>;
+  practiceSkill(skillId: string, count?: number): Promise<unknown>;
+  studySkill(skillId: string, count?: number): Promise<unknown>;
+  getQuests(): Promise<QuestOverviewResponse>;
   acceptQuest(questId: string): Promise<unknown>;
   reportQuest(questId: string): Promise<unknown>;
-  getAfkStatus(): Promise<unknown>;
-  startAfk(config: unknown): Promise<unknown>;
-  stopAfk(): Promise<unknown>;
-  getAfkReports(): Promise<unknown[]>;
+  startCombat(targetId: string): Promise<CombatStatusResponse>;
+  combatAction(intent: CombatIntent): Promise<CombatStatusResponse>;
+  getCombatStatus(): Promise<CombatStatusResponse | { active: false }>;
+  getAfkStatus(): Promise<AfkStatusResponse>;
+  startAfk(config: AfkStartConfig): Promise<AfkJobData>;
+  stopAfk(): Promise<AfkReportData>;
+  getAfkReports(): Promise<AfkReportData[]>;
+  getTemplates(): Promise<Array<{ id: string; name: string }>>;
   getForumSections(): Promise<unknown[]>;
   getForumPosts(sectionId?: string): Promise<unknown[]>;
   getForumPost(postId: string): Promise<unknown>;
@@ -81,15 +98,27 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     createCharacter: (input) => post("/characters", input),
     getScene: () => get("/scene"),
     move: (dir) => post("/scene/action", { type: "move", dir }),
+    sceneAction: (input) => post("/scene/action", input),
+    getCharacter: () => get("/characters/me"),
     getInventory: () => get("/inventory"),
     getSkills: () => get("/skills"),
+    equipInventory: (itemId) => post("/inventory/equip", { itemId }),
+    unequipInventory: (itemId) => post("/inventory/unequip", { itemId }),
+    useInventory: (itemId) => post("/inventory/use", { itemId }),
+    learnSkill: (skillId) => post("/skills/learn", { skillId }),
+    practiceSkill: (skillId, count = 1) => post("/skills/practice", { skillId, count }),
+    studySkill: (skillId, count = 1) => post("/skills/study", { skillId, count }),
     getQuests: () => get("/quests"),
     acceptQuest: (questId) => post("/quests/accept", { questId }),
     reportQuest: (questId) => post("/quests/report", { questId }),
+    startCombat: (targetId) => post("/combat/start", { targetId }),
+    combatAction: (intent) => post("/combat/action", intent),
+    getCombatStatus: () => get("/combat/status"),
     getAfkStatus: () => get("/afk/status"),
     startAfk: (config) => post("/afk/start", config),
     stopAfk: () => post("/afk/stop", {}),
     getAfkReports: () => get("/afk/reports"),
+    getTemplates: () => get("/templates"),
     getForumSections: () => get("/forum/sections"),
     getForumPosts: (sectionId) =>
       get(sectionId ? `/forum/posts?sectionId=${sectionId}` : "/forum/posts"),

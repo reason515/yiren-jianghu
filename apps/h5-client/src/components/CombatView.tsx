@@ -5,7 +5,7 @@ import type { CombatViewProps } from "../lib/combatTypes.js";
 
 /** 手动战斗视图（mobile-ui：看局势→抓时机；服务端结算，客户端只发动作意图）。 */
 export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | null {
-  if (!state.inCombat) return null;
+  if (!state.inCombat && !state.result) return null;
 
   return (
     <div className="combat" data-testid="combat" role="region" aria-label="战局">
@@ -34,23 +34,31 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
       </div>
 
       {state.result ? (
-        <p className="combat-result" data-testid="combat-result">
-          {RESULT_TEXT[state.result]}
-        </p>
+        <>
+          <p className="combat-result" data-testid="combat-result">
+            {RESULT_TEXT[state.result]}
+          </p>
+          {state.reward && (
+            <p className="combat-reward" data-testid="combat-reward">
+              所得：阅历 {state.reward.exp} · 潜能 {state.reward.potential} · 银两{" "}
+              {state.reward.silver}
+            </p>
+          )}
+        </>
       ) : (
         <div className="combat-actions" data-testid="combat-actions">
-          <Chip label="普攻" variant="action" onClick={() => onAction("attack")} />
+          <Chip label="普攻" variant="action" onClick={() => onAction({ action: "attack" })} />
           {state.performs.map((p) => (
             <Chip
               key={p.id}
               label={p.name}
               variant="action"
               disabled={!p.ready}
-              onClick={() => onAction(`perform ${p.id}`)}
+              onClick={() => onAction({ action: "perform", performId: p.id })}
             />
           ))}
-          <Chip label="回气" variant="action" onClick={() => onAction("recover")} />
-          <Chip label="逃跑" variant="danger" onClick={() => onAction("flee")} />
+          <Chip label="回气" variant="action" onClick={() => onAction({ action: "recover" })} />
+          <Chip label="逃跑" variant="danger" onClick={() => onAction({ action: "flee" })} />
         </div>
       )}
     </div>

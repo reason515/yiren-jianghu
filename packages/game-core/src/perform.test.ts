@@ -159,6 +159,7 @@ describe("performToBattleAction", () => {
     const a = performToBattleAction(SWIFT);
     expect(a).toEqual({
       type: "perform",
+      performId: "swift_slash",
       cost: { qi: undefined, jing: 5, neili: 10 },
       effect: { kind: "damage", type: "physical", flat: 12 },
     });

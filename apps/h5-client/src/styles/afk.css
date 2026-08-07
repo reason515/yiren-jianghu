@@ -58,6 +58,12 @@
   line-height: 1.7;
   margin: 0;
 }
+.afk-empty {
+  color: var(--paper-faint);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
 .afk-report {
   display: flex;
   flex-direction: column;

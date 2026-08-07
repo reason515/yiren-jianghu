@@ -15,10 +15,9 @@ import type { FastifyInstance } from "fastify";
  *   PVP → 断线恢复（未读战报）→ 装备/使用 → 论坛 → 登出。
  * 真实注入 deps.db / deps.content / inviteCodes，40 路由协同走通。
  *
- * SQL 造数点（标注：待战斗/进度/商店域落地后可移除）：
- *   - UPDATE characters SET exp      —— learn 的 exp 门槛前置（无 PVE 战斗给经验）
- *   - UPDATE character_quests progress—— 模拟 recordProgress 钩子完成相位
- *   - INSERT INTO character_items    —— 拾取/商店未落地，直接造行囊
+ * SQL 造数点（标注：待商店/自然恢复域落地后可移除）：
+ *   - UPDATE characters SET exp/qi/jing/neili/silver —— 学武、首战与交易的教学准备（恢复/经济域完善后收敛）
+ *   - INSERT INTO character_items    —— 拾取/商店未落地时直接造行囊
  *
  * 每次运行用唯一邀请码 → 幂等可重跑（本地/CI 皆可）。
  */
@@ -164,6 +163,56 @@ describe("F3 全链路旅程", () => {
     expect(square.id).toBe("village_square");
     expect(square.npcs.length).toBeGreaterThan(0);
     expect(square.exits.length).toBeGreaterThan(0);
+
+    const talk = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "talk", targetId: "village_chief" },
+    });
+    expect(talk.statusCode).toBe(200);
+    expect((talk.json() as { kind: string; dialogue: string[] }).kind).toBe("talk");
+
+    const shop = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "move", dir: "east" },
+    });
+    expect((shop.json() as { id: string }).id).toBe("village_general");
+    const trade = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "trade", targetId: "general_shop" },
+    });
+    expect(trade.statusCode).toBe(200);
+    expect((trade.json() as { kind: string; goods: unknown[] }).kind).toBe("trade");
+    const take = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "take", targetId: "dry_food" },
+    });
+    expect(take.statusCode).toBe(200);
+    // SQL 造数：首轮战斗前尚无银两来源；交易域已落地后用其结算验证买入。
+    await pool.query("UPDATE characters SET silver = 10 WHERE id = $1", [characterA]);
+    const buy = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "buy", targetId: "general_shop", itemId: "dry_food", count: 1 },
+    });
+    expect(buy.statusCode).toBe(200);
+    expect((buy.json() as { kind: string; silver: number }).silver).toBe(9);
+
+    const back = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "move", dir: "west" },
+    });
+    expect((back.json() as { id: string }).id).toBe("village_square");
   });
 
   it("4. 学武：新角色 exp=0 → exp_gate；SQL 提经验后 learn/practice/study 走通", async () => {
@@ -208,10 +257,10 @@ describe("F3 全链路旅程", () => {
     expect(study.statusCode).toBe(200);
   });
 
-  it("5. 任务：接 q_newbie_trail → 未完成拒绝交差 → SQL 推进相位 → 交差发奖", async () => {
+  it("5. 任务：接 q_newbie_trail → 前往村外 → 战胜野狗 → 自动推进 → 交差发奖", async () => {
     const list = await app.inject({ method: "GET", url: "/quests", headers: auth(tokenA) });
     expect(list.statusCode).toBe(200);
-    const quests = list.json() as Array<{ id: string; status: string }>;
+    const quests = (list.json() as { quests: Array<{ id: string; status: string }> }).quests;
     questId = quests.find((q) => q.id === "q_newbie_trail")!.id;
     expect(quests.find((q) => q.id === questId)?.status).toBe("available");
 
@@ -224,20 +273,44 @@ describe("F3 全链路旅程", () => {
     expect(accept.statusCode).toBe(200);
     expect((accept.json() as { status: string }).status).toBe("ongoing");
 
-    const reportEarly = await app.inject({
-      method: "POST",
-      url: "/quests/report",
-      headers: auth(tokenA),
-      payload: { questId },
-    });
-    expect(reportEarly.statusCode).toBe(409);
-    expect((reportEarly.json() as { error: { code: string } }).error.code).toBe("not_complete");
+    for (const dir of ["east", "east"]) {
+      const move = await app.inject({
+        method: "POST",
+        url: "/scene/action",
+        headers: auth(tokenA),
+        payload: { type: "move", dir },
+      });
+      expect(move.statusCode).toBe(200);
+    }
 
-    // SQL 造数：模拟 recordProgress 完成 kill 相位（战斗域落地后移除）
-    await pool.query(
-      "UPDATE character_quests SET progress = $1, status = 'completed', completed_at = now() WHERE character_id = $2 AND quest_id = $3",
-      [JSON.stringify({ phase: 1, counts: { wild_dog: 1 } }), characterA, questId],
-    );
+    // SQL 造数：回精/回气机制尚未落地，避免此前学武消耗令首战教学随机落败；待休息域落地后移除。
+    await pool.query("UPDATE characters SET qi = 500, jing = 500, neili = 500 WHERE id = $1", [
+      characterA,
+    ]);
+
+    const start = await app.inject({
+      method: "POST",
+      url: "/combat/start",
+      headers: auth(tokenA),
+      payload: { targetId: "wild_dog" },
+    });
+    expect(start.statusCode).toBe(200);
+    let combat = start.json() as { status: string; events: Array<{ type: string }> };
+    expect(combat.status).toBe("ongoing");
+
+    for (let turn = 0; turn < 24 && combat.status === "ongoing"; turn += 1) {
+      const action = await app.inject({
+        method: "POST",
+        url: "/combat/action",
+        headers: auth(tokenA),
+        payload: { action: "attack" },
+      });
+      expect(action.statusCode).toBe(200);
+      combat = action.json() as { status: string; events: Array<{ type: string }> };
+    }
+    expect(combat.status).toBe("finished");
+    expect(combat.events.some((event) => event.type === "reward")).toBe(true);
+    expect(combat.events.some((event) => event.type === "quest_progress")).toBe(true);
 
     const report = await app.inject({
       method: "POST",
@@ -313,7 +386,70 @@ describe("F3 全链路旅程", () => {
     expect((reports.json() as unknown[]).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("7. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {
+  it("7. 行侠挂机：已接悬赏 + 战术快照 → Worker 自动战斗/交差/战报", async () => {
+    const template = await app.inject({
+      method: "POST",
+      url: "/templates",
+      headers: auth(tokenA),
+      payload: {
+        name: "行侠常式",
+        config: { version: 1, rules: [], defaultAction: { type: "attack" } },
+      },
+    });
+    expect(template.statusCode).toBe(200);
+    const templateId = (template.json() as { id: string }).id;
+
+    const accept = await app.inject({
+      method: "POST",
+      url: "/quests/accept",
+      headers: auth(tokenA),
+      payload: { questId: "q_newbie_trail" },
+    });
+    expect(accept.statusCode).toBe(200);
+    // SQL 造数：回精/回气机制待 rest 域落地，保证挂机战术仅验证作业结算而不因上次战斗资源耗尽失败。
+    await pool.query("UPDATE characters SET qi = 500, jing = 500, neili = 500 WHERE id = $1", [
+      characterA,
+    ]);
+    const before = await pool.query<{ exp: number; potential: number; silver: number }>(
+      "SELECT exp, potential, silver FROM characters WHERE id = $1",
+      [characterA],
+    );
+
+    const start = await app.inject({
+      method: "POST",
+      url: "/afk/start",
+      headers: auth(tokenA),
+      payload: {
+        kind: "quest",
+        templateId,
+        durationMinutes: 30,
+        config: { questId: "q_newbie_trail" },
+      },
+    });
+    expect(start.statusCode).toBe(200);
+    await settleDueJobs({ pool, content: pack, now: Date.now() + 60_000 });
+
+    const status = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
+    expect((status.json() as { active: boolean }).active).toBe(false);
+    const reports = await app.inject({ method: "GET", url: "/afk/reports", headers: auth(tokenA) });
+    const report = (
+      reports.json() as Array<{ kind: string; status: string; gains: { exp: number } }>
+    )[0]!;
+    expect(report).toMatchObject({ kind: "quest", status: "completed" });
+    expect(report.gains.exp).toBeGreaterThan(30);
+    const after = await pool.query<{ exp: number; potential: number; silver: number }>(
+      "SELECT exp, potential, silver FROM characters WHERE id = $1",
+      [characterA],
+    );
+    expect(Number(after.rows[0]!.exp)).toBeGreaterThan(Number(before.rows[0]!.exp));
+    const quest = await pool.query<{ status: string }>(
+      "SELECT status FROM character_quests WHERE character_id = $1 AND quest_id = $2",
+      [characterA, "q_newbie_trail"],
+    );
+    expect(quest.rows[0]?.status).toBe("reported");
+  });
+
+  it("8. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {
     const loginB = await app.inject({
       method: "POST",
       url: "/auth/login",
@@ -399,7 +535,8 @@ describe("F3 全链路旅程", () => {
     );
     const inv = await app.inject({ method: "GET", url: "/inventory", headers: auth(tokenA) });
     const items = inv.json() as Array<{ id: string; name: string; equipped: boolean }>;
-    expect(items).toHaveLength(2);
+    // 首战掉落可能已在行囊中；只断言本步骤造入的两件物品均可见。
+    expect(items.length).toBeGreaterThanOrEqual(2);
 
     const sword = items.find((i) => i.name === "铁剑")!;
     const equip = await app.inject({

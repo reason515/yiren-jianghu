@@ -58,6 +58,13 @@
   text-align: center;
   padding: 8px 0;
 }
+.combat-reward {
+  margin: -4px 0 4px;
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
 .combat-actions {
   display: flex;
   flex-wrap: wrap;

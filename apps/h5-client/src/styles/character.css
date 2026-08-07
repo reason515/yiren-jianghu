@@ -19,6 +19,48 @@
   letter-spacing: 2px;
   margin: 0;
 }
+.char-vitals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.char-vital {
+  border-left: 2px solid var(--paper-faint);
+  background: var(--ink-soft);
+  min-height: var(--touch-min);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.char-vital span {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+.char-vital strong {
+  color: var(--paper);
+  font-size: 16px;
+  font-weight: normal;
+}
+.char-vital.qi {
+  border-left-color: var(--stat-qi);
+}
+.char-vital.jing {
+  border-left-color: var(--stat-jing);
+}
+.char-vital.jingli {
+  border-left-color: var(--stat-jingli);
+}
+.char-vital.neili {
+  border-left-color: var(--stat-neili);
+}
+.char-vital.food {
+  border-left-color: var(--stat-food);
+}
+.char-vital.water {
+  border-left-color: var(--stat-water);
+}
 .char-attr-row {
   display: flex;
   justify-content: space-between;
@@ -99,6 +141,19 @@
   background: var(--jade);
   border-radius: 2px;
 }
+.char-row-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.char-row-actions .chip,
+.char-equip-row .chip,
+.char-inv-row .chip {
+  min-height: var(--touch-min);
+  padding: 0 10px;
+  font-size: 13px;
+}
 .char-equip-row {
   display: flex;
   gap: 10px;
@@ -113,12 +168,16 @@
 .char-equip-item {
   color: var(--item-armor);
   font-size: 14px;
+  flex: 1;
 }
 .char-inv-row {
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
   align-items: center;
   min-height: var(--touch-min);
+}
+.char-inv-row .char-inv-name {
+  flex: 1;
 }
 .char-inv-name {
   font-size: 14px;

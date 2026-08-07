@@ -64,7 +64,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage` / `CharacterCreateSheet`
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
-- 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（行止启动：模板/时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
+- 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
 - 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
 - 数据模型：`lib/sceneTypes.ts` + `combatTypes.ts` + `characterTypes.ts` + `tacticTypes.ts` + `afkTypes.ts` + `questTypes.ts` + `forumTypes.ts` + `leaderboardTypes.ts`；客户端：`lib/authApi.ts` + `resumeClient.ts` + `reconnect.ts` + `sound.ts` + `effects.ts`（均 fetch/impl 可注入，Taro 可替换）
@@ -83,11 +83,33 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **新手引导方法**（sanguo first-session-ux 思想）：首启引导走"登录→建角→第一条任务→学武→首次战斗"闭环；**首战为教学展示**（必胜、弱敌、时长短，目标是第一次完整感受战斗文本与气血回响而非挑战）；引导提示用轻量组件（GuideTip 式 text + onDismiss），不打断主流程。
 - **执行登记**：借鉴条目在 E14 各子任务执行记录登记来源（沿用 pkuxkx 登记纪律精神）。
 
+## 4.3 PVE 战斗接线契约（E14.5）
+
+- 开战用 `POST /combat/start { targetId }`；战斗内刷新/恢复用 `GET /combat/status`；每次玩家选择只发 `POST /combat/action` 的受控意图：`attack` / `recover` / `flee`，或 `{ action: "perform", performId }`。客户端不得计算绝招效果、消耗、冷却、胜负或掉落。
+- `CombatView` 以服务端返回的 `state` 和有序 `events` 为唯一事实来源：`perform` 的 `performId` 驱动绝招高亮，`reward` 驱动收益摘要，`quest_progress` 后刷新 QuestPanel。不要从按钮点击本地预扣资源或乐观判定胜负。
+- 战斗结束后先收束结果横幅，再在同一叙事回合展示收益/任务推进；逃跑和落败只给状态结果，不伪造奖励。断线恢复时优先请求 status，存在 ongoing 会话才重开战局浮层。
+- 绝招按钮的可用态是服务端最终裁决；客户端可基于最近 state 做弱提示，但 400 错误须以 toast 显示服务端武侠文案，并保留当前战局。
+
+## 4.4 人物簿接线契约（E14.2）
+
+- 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。
+- 行止、四维、经验、有效潜能、银两取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。
+- 请教/演练/参悟与佩上/卸下/使用均只提交受控意图；请求期间禁用重复操作，成功后重新拉取人物簿快照，再以一条 toast 告知结果。不得乐观扣减资源、改等级或改行囊数量。
+- 放弃角色属于不可逆操作：人物簿只能触发 `ConfirmSheet`，确认成功后清空旧角色快照并回到建角流程。
+
+## 4.5 挂机接线契约（E14.4）
+
+- **先核实结算能力，再做入口**：`POST /afk/start` 接受某个 `kind` 不代表该作业会被 Worker 结算。实现或开放一种挂机方式前，检查 `services/worker/src/run.ts` 的分发和终态战报；未实现的种类不得以占位 UI 暗示可用。当前已开放两类：`study`（已学武功 + 时长）与 `quest`（行侠，见下条 DC-026）。
+- **行侠（quest）接线**：差事选项只来自「已接且当前相位为击杀」的任务（客户端按首个未完成相位过滤，`toAfkQuestOptions`）；战术模板必填（服务端拒绝 `template_required` / `quest_unavailable`），启动时服务端固化模板快照，Worker 以固定种子自动结算（DC-026）。
+- 打开行止面板时拉取 `GET /afk/status`、`GET /skills`、`GET /templates`、`GET /quests`；服务端状态、武功、战术与已接差事快照是唯一事实来源。启动/停止期间禁用重复操作；成功后用服务端返回作业更新横幅，不在客户端预扣精力、推算等级、伪造收益或预判胜负。
+- `GET /afk/status` 返回 `{ active: false }` 是常态空态；运行中用 `GrindBanner` 展示面向玩家的行止和预计时间，不能泄漏 `phase` 等内部状态。
+- resume 的 `pendingAfkReports` 只是未读 jobId 摘要；先保留这些 id，再用 `GET /afk/reports` 补拉完整叙事战报并按 id 打开 `AfkReportView`。服务端可能已在 resume 时标记已读，不能在后续请求中重新猜测“未读”。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。
-- **战术模板**：挂机启动时选模板；模板编辑器用结构化"条件→动作→优先级"（对应 game-core/tactic.ts），不是自由脚本。
-- **挂机**：GrindBanner 式状态条展示例行状态与停止原因；战报叙事化。
+- **战术模板**：模板编辑器用结构化"条件→动作→优先级"（对应 game-core/tactic.ts），不是自由脚本；仅在对应挂机类型已被 Worker 真实结算后，才允许它参与挂机配置。
+- **挂机**：GrindBanner 式状态条展示例行状态与停止原因；战报叙事化；未实现的作业种类不展示为可选行动。
 - **单角色**：人物页展示角色成长/配置/行旅记录；放弃角色走二次确认。
 
 ## 6. 检查清单（E 阶段实现每屏自检）
@@ -100,3 +122,4 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - [ ] 高风险操作有二次确认。
 - [ ] 颜色全部来自 tokens；字体遵循字体栈。
 - [ ] 挂机战报与绝招演出按 wuxia 文案规范。
+- [ ] 每个可选挂机种类均已由 Worker 实际结算，并覆盖状态、停止、战报和 resume 未读回响。

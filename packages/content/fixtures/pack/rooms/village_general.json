@@ -9,5 +9,6 @@
     { "dir": "west", "roomId": "village_square" },
     { "dir": "east", "roomId": "village_trail" }
   ],
-  "npcIds": ["general_shop"]
+  "npcIds": ["general_shop"],
+  "itemIds": ["dry_food"]
 }

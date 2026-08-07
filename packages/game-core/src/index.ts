@@ -12,6 +12,7 @@ export * from "./params.js";
 export * from "./vitals.js";
 export * from "./random.js";
 export * from "./combat.js";
+export * from "./combatant.js";
 export * from "./perform.js";
 export * from "./growth.js";
 export * from "./tactic.js";

@@ -1,6 +1,5 @@
 import {
   canChallengeToday,
-  computeMaxVitals,
   computeScoreChanges,
   inSeason,
   seasonDurationMs,
@@ -10,6 +9,7 @@ import {
 } from "@yjh/game-core";
 import type { ContentPack, Perform } from "@yjh/content";
 import type { Db } from "./db.js";
+import { buildCharacterCombatant } from "./combatantFactory.js";
 
 /** PVP/榜单域错误（code 进入错误信封）。 */
 export class PvpError extends Error {
@@ -89,7 +89,6 @@ const DEFAULT_TEMPLATE: TacticTemplate = {
 
 export function createPvpService(db: Db, content: ContentPack): PvpService {
   const params = content.params;
-  const skillDefs = new Map(content.skills.map((s) => [s.id, s]));
 
   const activeCharacter = async (accountId: string): Promise<CharRow | null> => {
     const rows = await db.query<CharRow>(
@@ -181,53 +180,13 @@ export function createPvpService(db: Db, content: ContentPack): PvpService {
     return typeof row.config === "string" ? (JSON.parse(row.config) as TacticTemplate) : row.config;
   };
 
-  /**
-   * PVP 快照构造（占位公式，随 F 阶段战斗域统一）：
-   * 气血/精神/内力上限走 C2 computeMaxVitals（真公式）；攻击/防御/闪避/招架为
-   * 属性 + 对应门类武功等级的线性占位——双方同构，保证异步对战的公平基线。
-   */
+  /** PVP 与 PVE 共用同一角色战斗体构造；PVP 固化满状态快照（F0/F1）。 */
   const buildSnapshot = async (char: CharRow, template: TacticTemplate): Promise<PvpSnapshot> => {
     const skillLevels = await skillsOf(char.id);
-    const levelsByCategory = new Map<string, number>();
-    for (const [skillId, level] of skillLevels) {
-      const def = skillDefs.get(skillId);
-      if (!def) continue;
-      levelsByCategory.set(def.category, Math.max(levelsByCategory.get(def.category) ?? 0, level));
-    }
-    const weaponLevel = levelsByCategory.get("weapon") ?? 0;
-    const forceLevel = levelsByCategory.get("force") ?? 0;
-    const dodgeLevel = levelsByCategory.get("dodge") ?? 0;
-    const parryLevel = levelsByCategory.get("parry") ?? 0;
-
-    const maxVitals = computeMaxVitals(params, {
-      str: char.attrs.str,
-      int: char.attrs.int,
-      con: char.attrs.con,
-      dex: char.attrs.dex,
-      forceLevel,
-    });
-
     return {
       characterId: char.id,
       name: char.name,
-      combatant: {
-        id: char.id,
-        name: char.name,
-        qi: maxVitals.maxQi,
-        maxQi: maxVitals.maxQi,
-        jing: maxVitals.maxJing,
-        maxJing: maxVitals.maxJing,
-        neili: maxVitals.maxNeili,
-        maxNeili: maxVitals.maxNeili,
-        stats: {
-          attack: 10 + char.attrs.str + weaponLevel * 2,
-          defense: 10 + char.attrs.con,
-          dodge: 5 + char.attrs.dex + dodgeLevel,
-          parry: 5 + parryLevel,
-          weaponLevel,
-          forceLevel,
-        },
-      },
+      combatant: buildCharacterCombatant(content, char, skillLevels),
       template,
       skillLevels,
       performs: learnedPerformsOf(skillLevels),

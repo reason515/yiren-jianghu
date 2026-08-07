@@ -12,7 +12,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "vitest run -c vitest.e2e.config.ts",
+    "test:e2e": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run -c vitest.e2e.config.ts",
     "test:docs": "pnpm --filter @yjh/api test:docs",
     "lint": "eslint .",
     "format": "prettier --write .",

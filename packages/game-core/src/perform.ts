@@ -86,12 +86,18 @@ export function performToBattleAction(p: Perform): BattleAction | null {
   if (p.effect.type === "damage") {
     return {
       type: "perform",
+      performId: p.id,
       cost,
       effect: { kind: "damage", type: "physical", flat: p.effect.amount },
     };
   }
   if (p.effect.type === "heal") {
-    return { type: "perform", cost, effect: { kind: "heal", flat: p.effect.amount } };
+    return {
+      type: "perform",
+      performId: p.id,
+      cost,
+      effect: { kind: "heal", flat: p.effect.amount },
+    };
   }
   return null;
 }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
 import {
+  advanceBattleRound,
   attackOnly,
   attackOrRecover,
+  createBattleState,
   computeAttackDamage,
   dodgeRate,
   hitRate,
@@ -199,6 +201,52 @@ describe("runBattle（战斗循环）", () => {
   it("事件流含 battle_start（可重演依据）", () => {
     const result = battle({ seed: 7 });
     expect(result.events[0]).toMatchObject({ type: "battle_start" });
+  });
+});
+
+describe("advanceBattleRound（持久化逐回合）", () => {
+  it("不修改输入状态，并以 rngCalls 续算出确定性事件", () => {
+    const initial = createBattleState(fighter("a"), fighter("b"));
+    const input = {
+      seed: 42,
+      params: DEFAULT_PARAMS,
+      playerAction: { type: "attack" } as const,
+      opponentAction: { type: "attack" } as const,
+    };
+    const first = advanceBattleRound(initial, input);
+    const repeated = advanceBattleRound(initial, input);
+    expect(first).toEqual(repeated);
+    expect(initial).toMatchObject({ turn: 0, rngCalls: 0, nextSeq: 1 });
+    expect(first.events.map((event) => event.type)[0]).toBe("turn_start");
+    expect(first.state.turn).toBe(1);
+    expect(first.state.rngCalls).toBeGreaterThan(0);
+
+    const second = advanceBattleRound(first.state, input);
+    expect(second.state.turn).toBe(2);
+    expect(second.events[0]).toMatchObject({ seq: first.state.nextSeq, type: "turn_start" });
+  });
+
+  it("战斗结束后拒绝再次推进", () => {
+    const initial = createBattleState(fighter("a"), fighter("b", { qi: 1, maxQi: 1 }));
+    const ended = advanceBattleRound(initial, {
+      seed: 1,
+      params: DEFAULT_PARAMS,
+      playerAction: {
+        type: "perform",
+        effect: { kind: "damage", type: "physical", flat: 10 },
+        cost: {},
+      },
+      opponentAction: { type: "attack" },
+    });
+    expect(ended.state.winner).toBe("a");
+    expect(
+      advanceBattleRound(ended.state, {
+        seed: 1,
+        params: DEFAULT_PARAMS,
+        playerAction: { type: "attack" },
+        opponentAction: { type: "attack" },
+      }),
+    ).toEqual({ state: ended.state, events: [] });
   });
 });
 

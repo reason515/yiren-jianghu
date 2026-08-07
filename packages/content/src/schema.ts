@@ -123,6 +123,13 @@ const dropSchema = z.object({
   minExp: z.number().int().nonnegative().optional(),
 });
 
+/** 战胜 battle NPC 后由服务端一次性结算的成长与银两；物品另见 drops。 */
+const battleRewardSchema = z.object({
+  exp: z.number().int().nonnegative().default(0),
+  potential: z.number().int().nonnegative().default(0),
+  silver: z.number().int().nonnegative().default(0),
+});
+
 export const npcSchema = z.object({
   id,
   name: z.string().min(1),
@@ -134,6 +141,8 @@ export const npcSchema = z.object({
   skills: z.array(skillRefSchema).default([]),
   equipment: z.array(id).default([]),
   drops: z.array(dropSchema).default([]),
+  /** battle NPC 胜负结算奖励；数值随内容包版本调整。 */
+  battleRewards: battleRewardSchema.default({ exp: 0, potential: 0, silver: 0 }),
   /** 商店库存（kind=vendor 时生效）：物品 + 买卖价。 */
   goods: z
     .array(

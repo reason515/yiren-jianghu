@@ -119,3 +119,50 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* ---- 场景交互：对话与交易 ---- */
+.scene-dialogue {
+  color: var(--paper-dim);
+  line-height: 1.85;
+}
+.scene-dialogue p {
+  margin: 0 0 12px;
+}
+.shop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.shop-silver {
+  margin: 0;
+  color: var(--gold-muted);
+  font-size: 14px;
+}
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+.shop-row {
+  min-height: var(--touch-min);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shop-row > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shop-row strong {
+  color: var(--paper);
+  font-weight: 500;
+}
+.shop-row span {
+  color: var(--paper-faint);
+  font-size: 12px;
+}

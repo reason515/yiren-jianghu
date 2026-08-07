@@ -6,5 +6,6 @@
   "skills": [{ "skillId": "basic_sword", "level": 15 }],
   "aggressive": false,
   "respawnSec": 60,
-  "drops": [{ "itemId": "jinchuang_yao", "chance": 0.3 }]
+  "drops": [{ "itemId": "jinchuang_yao", "chance": 0.3 }],
+  "battleRewards": { "exp": 30, "potential": 10, "silver": 12 }
 }

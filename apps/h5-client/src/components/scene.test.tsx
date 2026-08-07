@@ -108,12 +108,18 @@ describe("EntitySheet（能力→动作）", () => {
   };
 
   it("商贩→交易；师父→交谈+拜师；任务→请托；战斗→较量；物品→拾取", () => {
-    expect(actions({ id: "general_shop", name: "杂货铺掌柜", kind: "vendor" })).toEqual(["交易"]);
+    expect(actions({ id: "general_shop", name: "杂货铺掌柜", kind: "vendor" })).toEqual([
+      "交谈",
+      "交易",
+    ]);
     expect(actions({ id: "master_wang", name: "王师傅", kind: "apprentice_master" })).toEqual([
       "交谈",
       "拜师",
     ]);
-    expect(actions({ id: "shen_buotou", name: "沈捕头", kind: "quest_giver" })).toEqual(["请托"]);
+    expect(actions({ id: "shen_buotou", name: "沈捕头", kind: "quest_giver" })).toEqual([
+      "交谈",
+      "请托",
+    ]);
     expect(actions({ id: "wild_dog", name: "野狗", kind: "battle" })).toEqual(["较量"]);
     expect(actions({ id: "iron_sword", name: "铁剑", kind: "weapon" })).toEqual(["拾取"]);
   });

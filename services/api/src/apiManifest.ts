@@ -22,7 +22,8 @@ export interface ApiRoute {
     | "leaderboard"
     | "forum"
     | "content"
-    | "session";
+    | "session"
+    | "combat";
 }
 
 export const API_MANIFEST: ApiRoute[] = [
@@ -53,6 +54,10 @@ export const API_MANIFEST: ApiRoute[] = [
   { method: "GET", path: "/quests", auth: true, domain: "quests" },
   { method: "POST", path: "/quests/accept", auth: true, domain: "quests" },
   { method: "POST", path: "/quests/report", auth: true, domain: "quests" },
+  // PVE 战斗
+  { method: "POST", path: "/combat/start", auth: true, domain: "combat" },
+  { method: "POST", path: "/combat/action", auth: true, domain: "combat" },
+  { method: "GET", path: "/combat/status", auth: true, domain: "combat" },
   // 战术模板
   { method: "GET", path: "/templates", auth: true, domain: "templates" },
   { method: "POST", path: "/templates", auth: true, domain: "templates" },

@@ -411,7 +411,7 @@
   - 验收：启动→横幅→停止→战报叙事回响；重连后未读战报
 - **E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；TacticEditor 战术模板（条件/动作 chips）；**战斗中悬浮动作条交互借鉴 xkx FloatingPerfBar**
   - 验收：手动战斗可打野狗/盗匪；模板影响自动行为
-- **E14.6 PVP 对战 UI**：对手列表/赛季信息/发起对战（二次确认）/战报回放
+- **E14.6 PVP 对战 UI**：对手列表/赛季信息/发起对战（二次确认）/战报回放（**依赖 F0：复用统一后的快照构造与战斗 UI 模式**）
   - 验收：与第二账号对战完整闭环
 - **E14.7 论坛完整交互**：ForumView 板块/帖子/详情 + PostComposer 发帖 + 评论/点赞/举报
   - 验收：发帖→他人可见→评论/点赞计数
@@ -585,8 +585,11 @@
 | E11 排行榜 | ✅ 完成 | — | LeaderboardView（成长榜/论剑榜双轨 seg + 赛季信息 + 排名/名/语义标签 + 我的行高亮）；193 用例 |
 | E12 重连与状态恢复 | ✅ 完成 | — | 重连状态机（指数退避/最大次数/failed）+ ReconnectingOverlay（断线提示/倒计时/立即重连）+ resumeClient（GET /session/resume 对齐 shared 协议，错误信封映射）；199 用例 |
 | E13 视觉与演出 | ✅ 完成 | — | ArtPlaceholder（首字印章占位）+ sound 环境音占位（可注入/事件映射表）+ effects（绝招行高亮动画，动效克制）；204 用例 |
-| F1–F4 联调测试 | ⬜ | | |
-| G1–G5 部署封测 | ⬜ | | |
+| F1–F4 联调测试 | ✅ 完成 | — | F1 规则确定性（持续）+ F2 Worker 结算（settlement.ts 纯函数 + run.ts FOR UPDATE 幂等 + startWorker 崩溃恢复）+ F3 全链路 e2e（journey 11 步，抓出复合主键/jsonb 二次解析 2 真 bug）+ F4 性能基线（4354/2556/1839 RPS，worker 6.1ms/作业，docs/performance-baseline.md） |
+| F0 PVE 战斗域 | ⬜ | | 服务端前置：/combat start/action/status（NPC 快照 + runBattle 逐步 + 掉落/经验 + recordProgress kill 推进）+ 统一 PVP 快照构造；试玩可玩核心前置（E14.3/14.5/14.6/14.11 依赖） |
+| E14 H5 面板闭环 | ⬜ | | 12 子任务（E14.1 场景交互→E14.12 验收发布）；借鉴 xkx ShopView/TrainSheet/FloatingPerfBar/ChoiceRow + sanguo first-session-ux（见 docs/sibling-borrowings.md）；估时 5–7 人日 |
+| G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
+| G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 
 # 5. 风险与开放问题
 

@@ -127,15 +127,21 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 
 15. **mock db SQL 分支顺序敏感**：内存 mock 按 `text.includes(...)` 匹配，**具体的 SELECT（带全列）要放在通用分支（如 `FROM characters WHERE account_id`）之前**，否则字段被吞成 undefined（M2.5-character 踩过）。新增查询前先确认分支顺序。
 16. **本地 Docker 环境（一次性搭建坑，详见 `docs/docker-local-setup.md`）**：安装器下载判完成看 `Content-Length`（勿凭感觉估大小）；`install --quiet --accept-license` 必须 `Start-Process -Verb RunAs` 提权（UAC 超时会被取消）；**WSL2 未启用时 engine 起不来**（后端日志 `dialing 192.168.65.7 ... context canceled`）→ 管理员 `wsl --install --no-distribution` + 重启；Windows daemon.json 在 `%USERPROFILE%\.docker\daemon.json`，改后重启 Docker Desktop 生效；`pnpm migrate` 报 `SASL ... client password must be a string` = `.env` 未被加载（脚本已用 `--env-file-if-exists` 兜底）。
+17. **查询行类型必须用 `type` 别名而非 `interface`**：`db.query<T>` 的 T 受 `DbRow`（`{[key: string]: unknown}`）约束，**命名 interface 无索引签名不满足约束**（TS2344），inline 字面量或 `type` 别名可以（M2.5-skills/quests 踩过）。
+18. **`noUncheckedIndexedAccess` 下 Record/数组索引返回 `T | undefined`**：`result.skills[skillId]`、`quest.phases[phase]` 都可能是 undefined——成功分支用 `!` 断言（如 learn/practice 后的 `next`），遍历用 `if (!x) continue` 判空；别用 `?? 默认值` 掩盖逻辑错误。
+19. **mock db 分支匹配“SET X”陷阱**：`text.includes` 匹配的必须是**连续子串**——`SET progress = $1, status = 'completed'` 不包含连续子串 `SET status`，匹配要用 `status = 'completed'`；新增 SQL 前确认分支模式与真实 SQL 的字符连续性能对上（M2.5-quests 踩过）。
+20. **路由集成测试错误断言在 `.json().error` 下**：错误信封为 `{ error: { code, message, requestId } }`，`app.inject` 后断言错误要 `(res.json() as { error: { code } }).error`（M2.5-skills/quests 集成测试踩过）；服务层直接 `rejects.toMatchObject({ code })` 不受影响。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 
 - 每域一个 `services/api/src/<domain>Service.ts`：`create<Domain>Service(db)` 工厂返回方法集；业务错误用 `<Domain>Error` 类（`code` 进错误信封）。
-- `db.ts` 的 `Db` 接口（`query<T extends DbRow>`）注入；单测用内存 mock db（见常见坑 #15）。
+- `db.ts` 的 `Db` 接口（`query<T extends DbRow>`）注入；单测用内存 mock db（见常见坑 #15/#19）。
 - 路由在 `app.ts` 中 **deps.db 存在时注册**（真实路由先注册，`registerApiStubs` 的 hasRoute 自动让位 stub）；错误统一 `envelope(reply, 400|401|404|409, err.code, err.message)`；需登录路由加 `preHandler: requireAuth(verifyToken)`，accountId 从 `authContexts.get(req)` 取。
-- 状态迁移写进 service（如 discard：active→discarded + discarded_at）；DB 约束（部分唯一索引等）作兜底而非主校验。
-- 跨包调用 game-core 规则（校验/结算）在 service 内引用，客户端不跑规则（服务端权威）。
-- 单测覆盖：成功路径、各错误分支、状态迁移；集成测试用 `createApp({ deps: { db } })` + `app.inject`。
+- 状态迁移写进 service（如 discard：active→discarded + discarded_at；任务 accepted→completed→reported）；DB 约束作兜底而非主校验。
+- 跨包调用 game-core 规则（校验/结算）在 service 内引用，客户端不跑规则（服务端权威）；**api 首次依赖 game-core 时需 `pnpm install` + 先 `pnpm build`**（workspace 依赖指向 dist，未 build 会出现类型/运行时假失败）。
+- **跨域进度钩子**：域间推进不放路由——在 service 内暴露内部方法并单测（如 questsService.recordProgress 供战斗/挂机域驱动相位），待消费域落地后再决定是否开放路由。
+- **新增/调整路由必须三件套**：`apiManifest.ts` + `docs/protocol.md` + 契约测试（M2.5-skills 补过 `POST /skills/study`：计划写"三接口"但清单漏了 study）。注册真实路由前先在清单补行，stub 靠 hasRoute 让位。
+- 单测覆盖：成功路径、各错误分支、状态迁移；集成测试用 `createApp({ deps: { db } })` + `app.inject`（错误断言见常见坑 #20）。
 
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 

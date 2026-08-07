@@ -32,7 +32,8 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 - 房间出口 `exits[].roomId`、`npcIds`、`itemIds` 都是**引用**，必须指向同包内已存在实体；`grid`（可选 `[col, row]`）为地图语义网格坐标（八向布局，见 yjh-map-design）。
 - NPC 掉落 `drops[]`：`chance ∈ [0,1]`、`min ≤ max`、可选 `minExp`（掉落按玩家经验分级）；`goods`（商店库存：itemId + buy/sell，kind=vendor 时生效）。**掉落表只引用物品 id；银两是账本货币（game-core/economy.ts），由经济系统发放，不要建 silver_coin 之类的货币物品**（D3 踩过）。
 - 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**；冷却字段为 `cooldownTurns`（回合制语义）；`effect.type="buff"` Schema 保留但 v1 引擎未实现（校验器发 warning）。
-- 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。
+- 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。**相位结算语义（服务端 questsService 已实现）**：相位按内容包顺序推进，**只推进当前相位**；`talk`/`goto` 命中 1 次即完成相位，`kill`/`deliver`/`collect` 按 `count` 计数；全部相位完成才可交差（`report`）。进度推进由**战斗/挂机域经 `recordProgress` 钩子驱动**（击杀 NPC id / 抵达房间 id / 交谈 NPC id），内容作者需保证 targetId 与战斗/挂机产出的 id 一致（NPC 用 npcs/ id，物品用 items/ id，房间用 rooms/ id）。
+- 技能 `skills[]`：`maxLevel` 同时约束 learn/practice/study；learn 还受 exp 门槛（`level^3/10 ≤ exp`，见 growth.expGateExponent/Divisor）与潜能/精限制，practice/study 无 exp 门槛但耗气血/精（practiceQiBase / studyJingBase 参数驱动）；`baseLevel` 为初始等级（服务端按 0 处理未建档技能）。
 - 数值参数 `params.json`：`afk.maxDurationHours ∈ [0.5, 24]`（校验器建议 1–12）、`dailyDiminishRate ∈ [0,1]`。
 
 ## CLI（packages/content）

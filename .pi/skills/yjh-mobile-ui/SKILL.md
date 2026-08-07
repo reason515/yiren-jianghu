@@ -138,6 +138,12 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **主界面底部导航与全局 toast 是真实缺口历史**：`.app-nav`（fixed 底部、`--safe-b` 内边距、44px 按钮）与 `.toast-host`（fixed、z-index 300、pointer-events 只放行 toast 本身）必须存在，新增主界面布局勿删；toast 只在 App 层出现，浮层内反馈也走全局 toast（z-index 高于 overlay 100）。
 - 触控/安全区：`--touch-min: 44px`、`--safe-b/--safe-t`（env(safe-area-inset-*)）；sheet-scroll 与 app-nav 均已接 safe-b。颜色一律来自 tokens，新颜色先补 token 再使用。
 
+## 4.11 新手引导接线契约（E14.11）
+
+- 引导是**轻提示**（`components/GuideTip.tsx`：text + 知道了），不打断主流程、不强制顺序；进度存 localStorage（`yjh.onboard`，纯函数在 `lib/onboarding.ts`）。
+- 事件驱动四步：进场景（欢迎）→ 接任务成功（提示学武）→ 学武成功（提示首战）→ 首战胜利（收尾完成）。`shouldShowGuide/advanceGuide` 保证乱序跳级、绝不回退；引导完成后不再打扰。
+- 首战为教学展示（弱敌/必胜），引导文案只指方向不剧透机制、不含数值（wuxia 短句）。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

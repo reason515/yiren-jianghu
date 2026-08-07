@@ -27,6 +27,7 @@ import { PostComposer } from "./components/PostComposer.js";
 import { MapSheet } from "./components/MapSheet.js";
 import { LeaderboardView } from "./components/LeaderboardView.js";
 import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
+import { GuideTip } from "./components/GuideTip.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
 import {
@@ -51,6 +52,14 @@ import {
   onRetryFailed,
   type ReconnectState,
 } from "./lib/reconnect.js";
+import {
+  advanceGuide,
+  GUIDE_DONE,
+  guideText,
+  isOnboarded,
+  shouldShowGuide,
+  type GuideEvent,
+} from "./lib/onboarding.js";
 import type {
   SceneItem,
   SceneNpc,
@@ -67,6 +76,7 @@ import type {
 
 const BASE_URL = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 const TOKEN_KEY = "yjh.token";
+const ONBOARD_KEY = "yjh.onboard";
 
 type Panel = "none" | "character" | "afk" | "quests" | "forum" | "leaderboard" | "map" | "pvp";
 
@@ -137,6 +147,14 @@ export function App(): JSX.Element {
   const reconnectRef = useRef<ReconnectState>(reconnect);
   reconnectRef.current = reconnect;
   const retryTimer = useRef<number | null>(null);
+  const [guideStep, setGuideStep] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem(ONBOARD_KEY) ?? 0) || 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [guideTipText, setGuideTipText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
@@ -287,6 +305,30 @@ export function App(): JSX.Element {
     }
     setError(e.message);
   };
+
+  // 首启引导：事件驱动轻提示（欢迎/接任务/学武/首战），乱序跳级、完成后不再打扰。
+  const triggerGuide = useCallback(
+    (event: GuideEvent): void => {
+      if (isOnboarded(guideStep)) return;
+      if (!shouldShowGuide(guideStep, event)) return;
+      const next = advanceGuide(guideStep, event);
+      const text = guideText(next);
+      if (!text) return;
+      setGuideStep(next);
+      setGuideTipText(text);
+      try {
+        localStorage.setItem(ONBOARD_KEY, String(next));
+      } catch {
+        // 隐私模式等场景忽略
+      }
+    },
+    [guideStep],
+  );
+
+  // 首次进入场景 → 欢迎引导。
+  useEffect(() => {
+    if (room && character && !isOnboarded(guideStep)) triggerGuide("enter_scene");
+  }, [room, character, guideStep, triggerGuide]);
 
   // 启动：token 有效则恢复（resume），并优先恢复未结束的战局；网络断则进重连，401 则回登录。
   useEffect(() => {
@@ -612,6 +654,7 @@ export function App(): JSX.Element {
     void request
       .then(async () => {
         await refreshCharacter();
+        triggerGuide("skill_learned");
         setError(
           `${name}${action === "learn" ? "已请教" : action === "practice" ? "已演练" : "已参悟"}。`,
         );
@@ -669,7 +712,13 @@ export function App(): JSX.Element {
   };
 
   const onQuestAccept = (questId: string): void => {
-    void api.acceptQuest(questId).then(refreshQuests).catch(notify);
+    void api
+      .acceptQuest(questId)
+      .then(() => {
+        triggerGuide("quest_accepted");
+        return refreshQuests();
+      })
+      .catch(notify);
   };
 
   const onQuestReport = (questId: string): void => {
@@ -746,7 +795,10 @@ export function App(): JSX.Element {
         const next = await api.combatAction(intent);
         const state = toCombatState(next);
         setCombat(state);
-        if (state.result) await Promise.all([refreshScene(), refreshQuests()]);
+        if (state.result) {
+          if (state.result === "win") triggerGuide("battle_won");
+          await Promise.all([refreshScene(), refreshQuests()]);
+        }
       } catch (e) {
         // 服务端拒绝绝招时保留当前战局，反馈其权威文案。
         notify(e);
@@ -804,6 +856,7 @@ export function App(): JSX.Element {
     setLbSeason(null);
     clearRetryTimer();
     setReconnect(initialReconnectState());
+    setGuideTipText(null);
     setPanel("none");
   };
 
@@ -823,6 +876,7 @@ export function App(): JSX.Element {
         nextRetryMs={reconnect.nextRetryMs}
         onRetryNow={() => void retryNow()}
       />
+      {guideTipText && <GuideTip text={guideTipText} onDismiss={() => setGuideTipText(null)} />}
       {needCreate && (
         <CharacterCreateSheet
           open

@@ -42,8 +42,8 @@ pnpm test            # vitest run（根扫描所有 *.test.ts）
 pnpm lint            # ESLint（flat config，typescript-eslint）
 pnpm format          # Prettier 写回（docs/ 与 pnpm-lock.yaml 已 ignore）
 pnpm format:check    # 格式门禁
-pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker）
-pnpm migrate / migrate:down / migrate:create / seed   # 数据库迁移（services/api）
+pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker；国内拉镜像先配 daemon.json）
+pnpm migrate / migrate:down / migrate:create / seed   # 数据库迁移（services/api；脚本经 --env-file-if-exists 自动读根 .env 的 DATABASE_URL，CI 无 .env 时回退环境变量）
 pnpm content:validate / content:preview / content:pack  # 内容包（见 yjh-content-pack）
 pnpm test:docs     # 协议一致性契约测试（docs/protocol.md ↔ 代码）
 pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev:infra，CI 服务容器）

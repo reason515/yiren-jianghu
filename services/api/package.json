@@ -28,9 +28,9 @@
     "test": "vitest run",
     "test:docs": "vitest run src/protocol.contract.test.ts",
     "test:e2e": "vitest run -c ../../vitest.e2e.config.ts",
-    "migrate:up": "node-pg-migrate up -m ./migrations",
-    "migrate:down": "node-pg-migrate down -m ./migrations -c 1",
-    "migrate:create": "node-pg-migrate create -m ./migrations",
+    "migrate:up": "node --env-file-if-exists=../../.env node_modules/node-pg-migrate/bin/node-pg-migrate up -m ./migrations",
+    "migrate:down": "node --env-file-if-exists=../../.env node_modules/node-pg-migrate/bin/node-pg-migrate down -m ./migrations -c 1",
+    "migrate:create": "node --env-file-if-exists=../../.env node_modules/node-pg-migrate/bin/node-pg-migrate create -m ./migrations",
     "seed": "node ./scripts/seed.mjs"
   }
 }

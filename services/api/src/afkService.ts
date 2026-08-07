@@ -273,7 +273,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       const out: AfkReportView[] = [];
       for (const row of rows.rows) {
         if (!row.report) continue;
-        const r = JSON.parse(row.report) as {
+        const r = (typeof row.report === "string" ? JSON.parse(row.report) : row.report) as {
           jobId?: string;
           status: "completed" | "failed" | "cancelled";
           reason?: string;

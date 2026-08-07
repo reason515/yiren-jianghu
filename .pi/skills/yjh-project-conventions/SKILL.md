@@ -93,7 +93,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 1. **pnpm 10 默认拦截依赖的 build 脚本**（如 esbuild）。已批准方式：根 `package.json` 的 `pnpm.onlyBuiltDependencies` 声明，勿用交互式 approve。
 2. **脚本名别叫 `pack`**：`pnpm --filter X pack` 会触发 npm pack 而不是你的脚本。内容包打版脚本名是 `bundle`。
 3. **Fastify v5**：`reply.locals` 不存在、`req.log` 是只读 getter。认证上下文用 `WeakMap<FastifyRequest, ...>`；requestId 用内置 `requestIdHeader`/`genReqId`。
-4. **node-pg-migrate**：`runner` 是**函数**不是类（`await runner({ dbClient, dir, direction, migrationsTable })`，`dir` 用绝对路径）；**SQL 迁移不支持独立 `.down.sql` 文件**（down 必须与 up 同文件用 `-- down migration` 注释段）——本项目统一用 JS/CJS 迁移（显式 `exports.up/down`）。**复合主键必须作为 createTable 第三参数 options 传入**（`{ primaryKey: [...] }`），放进列对象会被当成名为 `primaryKey` 的列、type 解析为 undefined → PG 报 `type "undefined" does not exist`（CI migrations 作业踩过）。**已发布的迁移只追加不修改**：本地/CI 已应用过 0001 之后发现表缺列/缺表，一律新增编号迁移（0006–0008 模式：加列/建表），绝不回改旧迁移（已应用环境会校验失败）。
+4. **node-pg-migrate**：`runner` 是**函数**不是类（`await runner({ dbClient, dir, direction, migrationsTable })`，`dir` 用绝对路径）；**SQL 迁移不支持独立 `.down.sql` 文件**（down 必须与 up 同文件用 `-- down migration` 注释段）——本项目统一用 JS/CJS 迁移（显式 `exports.up/down`）。**复合主键必须用 `pgm.addConstraint(table, name, { primaryKey: [...] })`**——`{ primaryKey: [...] }` 不是合法的 createTable 第三参选项，会被 node-pg-migrate **静默忽略**（不报错、不建约束），表照样建出来、ON CONFLICT 直到运行时才 42P10（F3 e2e 全链路抓出：character_skills/pvp_scores/forum_likes 三表都中招；单列 `primaryKey: true` 在列对象里是合法的）。**已发布的迁移只追加不修改**：本地/CI 已应用过 0001 之后发现表缺列/缺约束，一律新增编号迁移（0006–0009 模式）；修复既有库用 `pgm.sql` + `DO $$ ... IF NOT EXISTS` 条件补约束（幂等，新旧库皆可跑），同时修 0002/0004/0005 源码让新库直接建对。
 5. **内容包 CLI 路径**：`packages/content/bin/yjh-content.mjs` 显式目录参数按**包根（packages/content）相对**解析，默认 fixtures/pack。
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
 7. **`index.ts` 的 `export *` 同名导出冲突**：game-core 各模块用 `export *` 汇总，若两个模块导出同名符号（如 growth 与 params 都有 `effectivePotential`）会报 "has already exported a member"。解决：后者只 `import` 使用、不 re-export（growth 的 effectivePotential 从 params 导入）。
@@ -133,6 +133,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 19. **mock db 分支匹配“SET X”陷阱**：`text.includes` 匹配的必须是**连续子串**——`SET progress = $1, status = 'completed'` 不包含连续子串 `SET status`，匹配要用 `status = 'completed'`；新增 SQL 前确认分支模式与真实 SQL 的字符连续性能对上（M2.5-quests 踩过）。**同类：DELETE 的 FROM 子串陷阱**——`DELETE FROM sessions WHERE token` 包含 `FROM sessions WHERE token`，会被前面的 SELECT 分支抢先匹配导致删除不生效（M2.5 收尾 logout 踩过，登出后 token 仍有效，集成测试抓出）；SELECT 分支用完整列名（如 `SELECT account_id, expires_at FROM sessions`）或把 DELETE 分支放前面。
 20. **路由集成测试错误断言在 `.json().error` 下**：错误信封为 `{ error: { code, message, requestId } }`，`app.inject` 后断言错误要 `(res.json() as { error: { code } }).error`（M2.5-skills/quests 集成测试踩过）；服务层直接 `rejects.toMatchObject({ code })` 不受影响。
 21. **服务端运行时校验字段的类型用 `string` 而非字面量联合**：路由层收 `unknown` → 服务端 `if (kind !== "study" && kind !== "quest") throw invalid_kind`——若入参类型收窄成 `"study" | "quest"`，非法分支会变 TS 死代码（M2.5-afk 踩过：`AfkStartInput.kind` 一度收窄导致 `invalid_kind` 断言无法编译，放宽为 string 后校验分支才可测）。服务端权威：**类型收窄只做防御，业务校验始终以运行时为准**。
+22. **jsonb 列 SELECT 返回的是已解析对象（真库）**：pg 驱动对 jsonb 自动解析成对象，而 mock db 常存 JSON 字符串——读侧 `JSON.parse(value)` 在真库会抛 `"[object Object]" is not valid JSON`（F3 e2e 全链路抓出：afk/reports 与 pvp/matches 两处）；**读 jsonb 一律双保险** `typeof v === "string" ? JSON.parse(v) : v`（templatesService 早有此守卫）。写侧 `JSON.stringify` 不变。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

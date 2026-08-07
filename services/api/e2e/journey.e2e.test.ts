@@ -1,0 +1,445 @@
+import { fileURLToPath } from "node:url";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import pg from "pg";
+import { createClient, type RedisClientType } from "redis";
+import { runner } from "node-pg-migrate";
+import { loadContentDir } from "@yjh/content";
+import { createApp } from "../src/app.js";
+import { createPgDb } from "../src/db.js";
+import type { FastifyInstance } from "fastify";
+
+/**
+ * F3 端到端全链路（真实 PostgreSQL + Redis + dev-pack 内容包）：
+ *   登录 → 建角 → 恢复点 → 场景探索 → 学武/演练/参悟 → 任务 → 挂机 →
+ *   PVP → 断线恢复（未读战报）→ 装备/使用 → 论坛 → 登出。
+ * 真实注入 deps.db / deps.content / inviteCodes，40 路由协同走通。
+ *
+ * SQL 造数点（标注：待战斗/进度/商店域落地后可移除）：
+ *   - UPDATE characters SET exp      —— learn 的 exp 门槛前置（无 PVE 战斗给经验）
+ *   - UPDATE character_quests progress—— 模拟 recordProgress 钩子完成相位
+ *   - INSERT INTO character_items    —— 拾取/商店未落地，直接造行囊
+ *
+ * 每次运行用唯一邀请码 → 幂等可重跑（本地/CI 皆可）。
+ */
+
+const DATABASE_URL = process.env.DATABASE_URL;
+const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
+const MIGRATIONS_DIR = fileURLToPath(new URL("../migrations", import.meta.url));
+const DEV_PACK_DIR = fileURLToPath(
+  new URL("../../../packages/content/fixtures/pack", import.meta.url),
+);
+
+if (!DATABASE_URL) {
+  throw new Error(
+    "e2e 需要 DATABASE_URL。本地请先执行 pnpm dev:infra 起 PostgreSQL/Redis，再 pnpm test:e2e。",
+  );
+}
+
+const RUN_TAG = Date.now().toString(36);
+const INVITE_A = `e2e-journey-a-${RUN_TAG}`;
+const INVITE_B = `e2e-journey-b-${RUN_TAG}`;
+
+let app: FastifyInstance;
+let pool: pg.Pool;
+let redis: RedisClientType;
+
+async function migrate() {
+  const dbClient = new pg.Client({ connectionString: DATABASE_URL });
+  await dbClient.connect();
+  await runner({
+    dbClient,
+    dir: MIGRATIONS_DIR,
+    direction: "up",
+    migrationsTable: "pgmigrations",
+  });
+  await dbClient.end();
+}
+
+beforeAll(async () => {
+  await migrate();
+  pool = new pg.Pool({ connectionString: DATABASE_URL });
+  redis = createClient({ url: REDIS_URL });
+  await redis.connect();
+  const { pack } = await loadContentDir(DEV_PACK_DIR);
+  app = await createApp({
+    deps: {
+      db: createPgDb(pool),
+      content: pack,
+      readiness: async () => {
+        const reasons: string[] = [];
+        try {
+          await pool.query("SELECT 1");
+        } catch {
+          reasons.push("postgres down");
+        }
+        try {
+          await redis.ping();
+        } catch {
+          reasons.push("redis down");
+        }
+        return reasons;
+      },
+    },
+    inviteCodes: [INVITE_A, INVITE_B],
+  });
+  await app.ready();
+});
+
+afterAll(async () => {
+  await app?.close();
+  await redis?.quit();
+  await pool?.end();
+});
+
+const auth = (token: string) => ({ authorization: `Bearer ${token}` });
+
+describe("F3 全链路旅程", () => {
+  let tokenA = "";
+  let tokenB = "";
+  let characterA = "";
+  let characterB = "";
+  let questId = "";
+  let matchId = "";
+
+  it("1. 登录（邀请码）→ 恢复点（无角色）", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { inviteCode: INVITE_A },
+    });
+    expect(res.statusCode).toBe(200);
+    tokenA = (res.json() as { token: string }).token;
+
+    const resume = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    expect(resume.statusCode).toBe(200);
+    expect((resume.json() as { character: unknown }).character).toBeNull();
+  });
+
+  it("2. 建角 → 恢复点（角色快照）", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/characters",
+      headers: auth(tokenA),
+      payload: {
+        name: `风${RUN_TAG.slice(-4)}`,
+        gender: "male",
+        attrs: { str: 25, int: 20, con: 20, dex: 15 },
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    characterA = (res.json() as { characterId: string }).characterId;
+
+    const resume = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    const body = resume.json() as {
+      character: { id: string; roomPath: string; effectivePotential: number };
+    };
+    expect(body.character.id).toBe(characterA);
+    expect(body.character.roomPath).toBe("village_start");
+    expect(body.character.effectivePotential).toBe(0);
+  });
+
+  it("3. 场景探索：初始房间 → 向东到村口广场（含 NPC/物品/动作）", async () => {
+    const scene = await app.inject({ method: "GET", url: "/scene", headers: auth(tokenA) });
+    expect(scene.statusCode).toBe(200);
+    expect((scene.json() as { id: string }).id).toBe("village_start");
+
+    const move = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "move", dir: "east" },
+    });
+    expect(move.statusCode).toBe(200);
+    const square = move.json() as { id: string; npcs: unknown[]; exits: unknown[] };
+    expect(square.id).toBe("village_square");
+    expect(square.npcs.length).toBeGreaterThan(0);
+    expect(square.exits.length).toBeGreaterThan(0);
+  });
+
+  it("4. 学武：新角色 exp=0 → exp_gate；SQL 提经验后 learn/practice/study 走通", async () => {
+    const learn0 = await app.inject({
+      method: "POST",
+      url: "/skills/learn",
+      headers: auth(tokenA),
+      payload: { skillId: "basic_sword" },
+    });
+    expect(learn0.statusCode).toBe(409);
+    expect((learn0.json() as { error: { code: string } }).error.code).toBe("exp_gate");
+
+    // SQL 造数：PVE 战斗域未落地，先给经验与潜能（见文件头注释）
+    await pool.query("UPDATE characters SET exp = 1000, potential = 100 WHERE id = $1", [
+      characterA,
+    ]);
+
+    const learn = await app.inject({
+      method: "POST",
+      url: "/skills/learn",
+      headers: auth(tokenA),
+      payload: { skillId: "basic_sword" },
+    });
+    expect(learn.statusCode).toBe(200);
+    expect((learn.json() as { skill: { level: number } }).skill.level).toBe(1);
+
+    const practice = await app.inject({
+      method: "POST",
+      url: "/skills/practice",
+      headers: auth(tokenA),
+      payload: { skillId: "basic_sword", count: 3 },
+    });
+    expect(practice.statusCode).toBe(200);
+    expect((practice.json() as { skill: { level: number } }).skill.level).toBe(2);
+
+    const study = await app.inject({
+      method: "POST",
+      url: "/skills/study",
+      headers: auth(tokenA),
+      payload: { skillId: "basic_sword", count: 1 },
+    });
+    expect(study.statusCode).toBe(200);
+  });
+
+  it("5. 任务：接 q_newbie_trail → 未完成拒绝交差 → SQL 推进相位 → 交差发奖", async () => {
+    const list = await app.inject({ method: "GET", url: "/quests", headers: auth(tokenA) });
+    expect(list.statusCode).toBe(200);
+    const quests = list.json() as Array<{ id: string; status: string }>;
+    questId = quests.find((q) => q.id === "q_newbie_trail")!.id;
+    expect(quests.find((q) => q.id === questId)?.status).toBe("available");
+
+    const accept = await app.inject({
+      method: "POST",
+      url: "/quests/accept",
+      headers: auth(tokenA),
+      payload: { questId },
+    });
+    expect(accept.statusCode).toBe(200);
+    expect((accept.json() as { status: string }).status).toBe("ongoing");
+
+    const reportEarly = await app.inject({
+      method: "POST",
+      url: "/quests/report",
+      headers: auth(tokenA),
+      payload: { questId },
+    });
+    expect(reportEarly.statusCode).toBe(409);
+    expect((reportEarly.json() as { error: { code: string } }).error.code).toBe("not_complete");
+
+    // SQL 造数：模拟 recordProgress 完成 kill 相位（战斗域落地后移除）
+    await pool.query(
+      "UPDATE character_quests SET progress = $1, status = 'completed', completed_at = now() WHERE character_id = $2 AND quest_id = $3",
+      [JSON.stringify({ phase: 1, counts: { wild_dog: 1 } }), characterA, questId],
+    );
+
+    const report = await app.inject({
+      method: "POST",
+      url: "/quests/report",
+      headers: auth(tokenA),
+      payload: { questId },
+    });
+    expect(report.statusCode).toBe(200);
+    const reward = report.json() as { rewards: { exp: number; potential: number; silver: number } };
+    expect(reward.rewards).toMatchObject({ exp: 30, potential: 8, silver: 5 });
+  });
+
+  it("6. 挂机：start(study) → status → stop → reports", async () => {
+    const start = await app.inject({
+      method: "POST",
+      url: "/afk/start",
+      headers: auth(tokenA),
+      payload: { kind: "study", durationMinutes: 30, config: { skillId: "basic_sword" } },
+    });
+    expect(start.statusCode).toBe(200);
+    expect((start.json() as { kind: string }).kind).toBe("study");
+
+    const status = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
+    expect(status.statusCode).toBe(200);
+    expect((status.json() as { status: string }).status).toBe("running");
+
+    const stop = await app.inject({ method: "POST", url: "/afk/stop", headers: auth(tokenA) });
+    expect(stop.statusCode).toBe(200);
+    expect((stop.json() as { status: string }).status).toBe("cancelled");
+
+    const reports = await app.inject({
+      method: "GET",
+      url: "/afk/reports",
+      headers: auth(tokenA),
+    });
+    expect(reports.statusCode).toBe(200);
+    expect((reports.json() as unknown[]).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("7. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {
+    const loginB = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { inviteCode: INVITE_B },
+    });
+    tokenB = (loginB.json() as { token: string }).token;
+    const createB = await app.inject({
+      method: "POST",
+      url: "/characters",
+      headers: auth(tokenB),
+      payload: {
+        name: `云${RUN_TAG.slice(-4)}`,
+        gender: "female",
+        attrs: { str: 20, int: 25, con: 18, dex: 17 },
+      },
+    });
+    characterB = (createB.json() as { characterId: string }).characterId;
+    expect(characterB).toBeTruthy();
+
+    const season = await app.inject({ method: "GET", url: "/pvp/season", headers: auth(tokenA) });
+    expect(season.statusCode).toBe(200);
+
+    const opponents = await app.inject({
+      method: "GET",
+      url: "/pvp/opponents",
+      headers: auth(tokenA),
+    });
+    expect(opponents.statusCode).toBe(200);
+    const oppList = opponents.json() as Array<{ characterId: string }>;
+    expect(oppList.length).toBeGreaterThan(0);
+    // 自己不出现在对手列表（复用 dev 库时历史角色会占满 Top10，不断言包含新角色）
+    expect(oppList.some((o) => o.characterId === characterA)).toBe(false);
+
+    const match = await app.inject({
+      method: "POST",
+      url: "/pvp/match",
+      headers: auth(tokenA),
+      payload: { defenderId: characterB },
+    });
+    expect(match.statusCode).toBe(200);
+    const view = match.json() as { id: string; result: string; turns: number };
+    expect(["challenger_win", "defender_win", "draw"]).toContain(view.result);
+    matchId = view.id;
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/pvp/matches/${matchId}`,
+      headers: auth(tokenA),
+    });
+    expect(detail.statusCode).toBe(200);
+    expect(Array.isArray((detail.json() as { events: unknown[] }).events)).toBe(true);
+
+    const lb = await app.inject({ method: "GET", url: "/leaderboard/growth" });
+    expect(lb.statusCode).toBe(200);
+    expect((lb.json() as { entries: unknown[] }).entries.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("8. 断线恢复：resume 返回未读 PVP 战报 → 二次 resume 清空", async () => {
+    const resume = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    const body = resume.json() as { pendingPvpReportIds: string[] };
+    expect(body.pendingPvpReportIds).toContain(matchId);
+
+    const again = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    expect((again.json() as { pendingPvpReportIds: string[] }).pendingPvpReportIds).toHaveLength(0);
+  });
+
+  it("9. 装备/使用：SQL 造行囊 → equip → unequip → use（气血恢复）", async () => {
+    await pool.query(
+      "INSERT INTO character_items (id, character_id, item_def_id, quantity) VALUES (gen_random_uuid(), $1, 'iron_sword', 1)",
+      [characterA],
+    );
+    await pool.query(
+      "INSERT INTO character_items (id, character_id, item_def_id, quantity) VALUES (gen_random_uuid(), $1, 'jinchuang_yao', 1)",
+      [characterA],
+    );
+    const inv = await app.inject({ method: "GET", url: "/inventory", headers: auth(tokenA) });
+    const items = inv.json() as Array<{ id: string; name: string; equipped: boolean }>;
+    expect(items).toHaveLength(2);
+
+    const sword = items.find((i) => i.name === "铁剑")!;
+    const equip = await app.inject({
+      method: "POST",
+      url: "/inventory/equip",
+      headers: auth(tokenA),
+      payload: { itemId: sword.id },
+    });
+    expect(equip.statusCode).toBe(200);
+
+    const unequip = await app.inject({
+      method: "POST",
+      url: "/inventory/unequip",
+      headers: auth(tokenA),
+      payload: { itemId: sword.id },
+    });
+    expect(unequip.statusCode).toBe(200);
+
+    const yao = items.find((i) => i.name === "金创药")!;
+    const use = await app.inject({
+      method: "POST",
+      url: "/inventory/use",
+      headers: auth(tokenA),
+      payload: { itemId: yao.id },
+    });
+    expect(use.statusCode).toBe(200);
+    expect((use.json() as { effect: string }).effect).toBe("heal_qi");
+  });
+
+  it("10. 论坛：板块 → 发帖 → 列表/详情 → 评论 → 点赞 → 举报", async () => {
+    const sections = await app.inject({ method: "GET", url: "/forum/sections" });
+    expect(sections.statusCode).toBe(200);
+    const secList = sections.json() as Array<{ id: string }>;
+    expect(secList.length).toBeGreaterThan(0);
+
+    const create = await app.inject({
+      method: "POST",
+      url: "/forum/posts",
+      headers: auth(tokenA),
+      payload: { sectionId: secList[0]!.id, title: "论剑心得", body: "先练三年基本功。" },
+    });
+    expect(create.statusCode).toBe(200);
+    const post = create.json() as { id: string };
+
+    const posts = await app.inject({ method: "GET", url: "/forum/posts" });
+    expect((posts.json() as Array<{ id: string }>).some((p) => p.id === post.id)).toBe(true);
+
+    const comment = await app.inject({
+      method: "POST",
+      url: `/forum/posts/${post.id}/comments`,
+      headers: auth(tokenA),
+      payload: { body: "受教了" },
+    });
+    expect(comment.statusCode).toBe(200);
+
+    const like = await app.inject({
+      method: "POST",
+      url: "/forum/likes",
+      headers: auth(tokenA),
+      payload: { postId: post.id },
+    });
+    expect(like.statusCode).toBe(200);
+    expect((like.json() as { liked: boolean }).liked).toBe(true);
+
+    const report = await app.inject({
+      method: "POST",
+      url: "/forum/reports",
+      headers: auth(tokenA),
+      payload: { targetType: "post", targetId: post.id, reason: "请核" },
+    });
+    expect(report.statusCode).toBe(200);
+  });
+
+  it("11. 登出：会话吊销，原 token 失效", async () => {
+    const logout = await app.inject({ method: "POST", url: "/auth/logout", headers: auth(tokenA) });
+    expect(logout.statusCode).toBe(200);
+
+    const after = await app.inject({ method: "GET", url: "/scene", headers: auth(tokenA) });
+    expect(after.statusCode).toBe(401);
+  });
+});

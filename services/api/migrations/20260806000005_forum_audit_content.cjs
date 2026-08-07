@@ -43,20 +43,19 @@ exports.up = async (pgm) => {
   });
   pgm.createIndex("forum_comments", ["post_id", "status", "created_at"]);
 
-  pgm.createTable(
-    "forum_likes",
-    {
-      post_id: { type: "uuid", notNull: true, references: "forum_posts(id)", onDelete: "CASCADE" },
-      character_id: {
-        type: "uuid",
-        notNull: true,
-        references: "characters(id)",
-        onDelete: "CASCADE",
-      },
-      created_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
+  pgm.createTable("forum_likes", {
+    post_id: { type: "uuid", notNull: true, references: "forum_posts(id)", onDelete: "CASCADE" },
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
     },
-    { primaryKey: ["post_id", "character_id"] },
-  );
+    created_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
+  });
+  pgm.addConstraint("forum_likes", "forum_likes_pk", {
+    primaryKey: ["post_id", "character_id"],
+  });
 
   pgm.createTable("forum_reports", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },

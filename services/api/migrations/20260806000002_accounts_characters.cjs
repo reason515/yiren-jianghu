@@ -51,20 +51,19 @@ exports.up = async (pgm) => {
   });
   pgm.createIndex("characters", ["account_id"]);
 
-  pgm.createTable(
-    "character_skills",
-    {
-      character_id: {
-        type: "uuid",
-        notNull: true,
-        references: "characters(id)",
-        onDelete: "CASCADE",
-      },
-      skill_id: { type: "text", notNull: true },
-      level: { type: "integer", notNull: true, default: 0 },
+  pgm.createTable("character_skills", {
+    character_id: {
+      type: "uuid",
+      notNull: true,
+      references: "characters(id)",
+      onDelete: "CASCADE",
     },
-    { primaryKey: ["character_id", "skill_id"] },
-  );
+    skill_id: { type: "text", notNull: true },
+    level: { type: "integer", notNull: true, default: 0 },
+  });
+  pgm.addConstraint("character_skills", "character_skills_pk", {
+    primaryKey: ["character_id", "skill_id"],
+  });
   pgm.addConstraint("character_skills", "ck_character_skills_level", { check: "level >= 0" });
 
   pgm.createTable("character_items", {

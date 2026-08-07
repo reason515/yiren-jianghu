@@ -385,7 +385,11 @@ export function createPvpService(db: Db, content: ContentPack): PvpService {
       );
       const row = rows.rows[0];
       if (!row) return null;
-      const report = JSON.parse(row.report) as { events: unknown[]; turns: number; winner: string };
+      const report = (typeof row.report === "string" ? JSON.parse(row.report) : row.report) as {
+        events: unknown[];
+        turns: number;
+        winner: string;
+      };
       return {
         id: row.id,
         result: row.result,

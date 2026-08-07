@@ -22,7 +22,7 @@ function basePack(): ContentPack {
         recoverNeiliPerTurn: 20,
         fleeBaseChance: 0.7,
       },
-      afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
+      afk: { maxDurationHours: 8, dailyDiminishRate: 0.5, studyAttemptsPerHour: 12 },
       vitals: {
         qiBase: 100,
         jingBase: 100,

@@ -98,6 +98,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.0
         version: 8.20.4
+      '@yjh/worker':
+        specifier: workspace:*
+        version: link:../worker
       node-pg-migrate:
         specifier: ^7.6.0
         version: 7.9.1(@types/pg@8.20.4)(pg@8.22.0)
@@ -110,9 +113,25 @@ importers:
 
   services/worker:
     dependencies:
+      '@yjh/content':
+        specifier: workspace:*
+        version: link:../../packages/content
+      '@yjh/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@yjh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      pg:
+        specifier: ^8.13.0
+        version: 8.22.0
+      redis:
+        specifier: ^6.2.0
+        version: 6.2.0
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.20.4
 
 packages:
 

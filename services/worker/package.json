@@ -12,7 +12,14 @@
     }
   },
   "dependencies": {
-    "@yjh/shared": "workspace:*"
+    "@yjh/content": "workspace:*",
+    "@yjh/game-core": "workspace:*",
+    "@yjh/shared": "workspace:*",
+    "pg": "^8.13.0",
+    "redis": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

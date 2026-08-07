@@ -32,6 +32,8 @@ export const paramsSchema = z.object({
   afk: z.object({
     maxDurationHours: z.number().min(0.5).max(24),
     dailyDiminishRate: z.number().min(0).max(1),
+    /** 修炼挂机每小时的参悟/演练次数（F2 worker 结算频率）。 */
+    studyAttemptsPerHour: z.number().int().min(1).max(60).default(12),
   }),
   /** 状态（Vitals）公式系数：C2 动态上限（首版无年龄阶段，采用成年人常数，参照 pkuxkx 31–60 段公式） */
   vitals: z.object({

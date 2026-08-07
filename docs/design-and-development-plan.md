@@ -421,6 +421,7 @@
 ### F2 集成测试
 
 - API + DB + Redis 集成；Worker 崩溃恢复；并发幂等
+- **✅ 已完成（worker 结算）**：`services/worker` 实现——`settlement.ts`（修炼挂机逐次参悟纯函数：耗精/攒点/升级，封顶 2000 次）+ `run.ts`（settleDueJobs：以 last_tick_at 为基准结算 deltaHours，**离线照常推进 = 崩溃恢复天然覆盖**；每作业事务 + `FOR UPDATE` 行锁 = 并发幂等）+ `index.ts`（startWorker 轮询，启动即跑一轮）；params 新增 `afk.studyAttemptsPerHour`（5 处同步）；e2e journey test 6 验证结算落库（精耗 + 技能成长）；quest 挂机待 PVE 战斗域（F1 待办）；302 用例 + 16 e2e 全绿
 - **估时**：2 人日
 
 ### F3 端到端冒烟

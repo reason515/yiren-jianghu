@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.11.0",
+    "@yjh/worker": "workspace:*",
     "node-pg-migrate": "^7.6.0",
     "pg": "^8.13.0",
     "redis": "^6.2.0"

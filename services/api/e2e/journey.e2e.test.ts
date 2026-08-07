@@ -4,6 +4,7 @@ import pg from "pg";
 import { createClient, type RedisClientType } from "redis";
 import { runner } from "node-pg-migrate";
 import { loadContentDir } from "@yjh/content";
+import { settleDueJobs } from "@yjh/worker";
 import { createApp } from "../src/app.js";
 import { createPgDb } from "../src/db.js";
 import type { FastifyInstance } from "fastify";
@@ -42,6 +43,7 @@ const INVITE_B = `e2e-journey-b-${RUN_TAG}`;
 let app: FastifyInstance;
 let pool: pg.Pool;
 let redis: RedisClientType;
+let pack: Awaited<ReturnType<typeof loadContentDir>>["pack"];
 
 async function migrate() {
   const dbClient = new pg.Client({ connectionString: DATABASE_URL });
@@ -60,7 +62,7 @@ beforeAll(async () => {
   pool = new pg.Pool({ connectionString: DATABASE_URL });
   redis = createClient({ url: REDIS_URL });
   await redis.connect();
-  const { pack } = await loadContentDir(DEV_PACK_DIR);
+  pack = (await loadContentDir(DEV_PACK_DIR)).pack;
   app = await createApp({
     deps: {
       db: createPgDb(pool),
@@ -248,7 +250,7 @@ describe("F3 全链路旅程", () => {
     expect(reward.rewards).toMatchObject({ exp: 30, potential: 8, silver: 5 });
   });
 
-  it("6. 挂机：start(study) → status → stop → reports", async () => {
+  it("6. 挂机：start(study) → status → F2 结算（精耗 + 技能成长）→ stop → reports", async () => {
     const start = await app.inject({
       method: "POST",
       url: "/afk/start",
@@ -261,6 +263,42 @@ describe("F3 全链路旅程", () => {
     const status = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
     expect(status.statusCode).toBe(200);
     expect((status.json() as { status: string }).status).toBe("running");
+
+    // F2：模拟 worker 结算（now 前移 10 分钟 → deltaHours > 0），验证修炼收益落库
+    // SQL 造数：回精（回精/休息机制随 food/rest 域落地后移除）
+    await pool.query("UPDATE characters SET jing = 500 WHERE id = $1", [characterA]);
+    const resumeBefore = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    const jingBefore = (resumeBefore.json() as { character: { vitals: { jing: number } } })
+      .character.vitals.jing;
+    const skillsBefore = (await app
+      .inject({ method: "GET", url: "/skills", headers: auth(tokenA) })
+      .then((r) => r.json())) as Array<{ id: string; level: number; practicePoints: number }>;
+    const swordBefore = skillsBefore.find((s) => s.id === "basic_sword")!;
+    const sumBefore = swordBefore.level + swordBefore.practicePoints;
+    await settleDueJobs({ pool, content: pack, now: Date.now() + 10 * 60_000 });
+
+    // 结算信号：精显著消耗（修炼次数=时长×每小时次数 × 参悟耗精）
+    const resumeAfter = await app.inject({
+      method: "GET",
+      url: "/session/resume",
+      headers: auth(tokenA),
+    });
+    const jingAfter = (resumeAfter.json() as { character: { vitals: { jing: number } } }).character
+      .vitals.jing;
+    expect(jingAfter).toBeLessThan(jingBefore - 100);
+    // 技能进度不倒退（成长细节由 settlement 单测覆盖）
+    const skillsAfter = (await app
+      .inject({ method: "GET", url: "/skills", headers: auth(tokenA) })
+      .then((r) => r.json())) as Array<{ id: string; level: number; practicePoints: number }>;
+    const swordAfter = skillsAfter.find((s) => s.id === "basic_sword")!;
+    expect(swordAfter.level + swordAfter.practicePoints).toBeGreaterThanOrEqual(sumBefore);
+
+    const status2 = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
+    expect((status2.json() as { status: string }).status).toBe("running"); // 10 分钟 < 30 分钟，未到期
 
     const stop = await app.inject({ method: "POST", url: "/afk/stop", headers: auth(tokenA) });
     expect(stop.statusCode).toBe(200);

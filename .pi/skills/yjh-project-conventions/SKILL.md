@@ -153,6 +153,8 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 22. **jsonb 列 SELECT 返回的是已解析对象（真库）**：pg 驱动对 jsonb 自动解析成对象，而 mock db 常存 JSON 字符串——读侧 `JSON.parse(value)` 在真库会抛 `"[object Object]" is not valid JSON`（F3 e2e 全链路抓出：afk/reports 与 pvp/matches 两处）；**读 jsonb 一律双保险** `typeof v === "string" ? JSON.parse(v) : v`（templatesService 早有此守卫）。写侧 `JSON.stringify` 不变。
 23. **部署脚本的管道吞退出码（#11 的部署变体）**：`docker build ... | tail -1` 让 exit code 变 tail 的（0）——build 失败照样 `compose up` 旧镜像（G1 踩过：worker 镜像 build 失败但旧镜像被重启）。部署命令不要接管道，或用 `&&`/检查 `$?`（G1 用 `docker build ... > log && echo BUILD_OK` 模式）。
 24. **生产容器入口必须显式接线 db/content（工厂测试通过 ≠ 入口接线）**：`createApp({ deps })` 只在测试/本地显式注入；**生产入口 `index.ts` 不读 DATABASE_URL 时全部路由走 501 stub**（G1 生产冒烟抓出：M2.5 全程本地注入测过但容器里全 stub）；Worker 同理需要独立 `main.ts` 进程入口（只导出函数会让容器 `Restarting (0)` 循环）。新增服务上线前：验证容器入口（非 build/单测）+ 生产冒烟脚本（登录→建角→场景→挂机→论坛等一条真实链路）。
+25. **vite SPA 工程（H5 组装阶段踩过）**：① `import.meta.env` 需 `tsconfig` `types` 加 `"vite/client"`（tsconfig.base 的 `types: ["node"]` 会挡住）；② **`eslint-disable` 注释引用未安装的插件规则 = eslint error "rule not found"**（App.tsx 曾 `// eslint-disable-line react-hooks/exhaustive-deps` 而项目未装 eslint-plugin-react-hooks——删注释而非留引用）；③ **package.json 重复 `devDependencies` 键**：后块覆盖前块（vite 被吞）——JSON 同名键不报错；④ vite `base: "./"` + `VITE_API_BASE=/api`（生产 nginx `location /api/ { proxy_pass http://127.0.0.1:3000/; }` 去前缀；`location /api`（无尾斜杠）会把 `/api/health` 变成 `//health`）。
+26. **浏览器自动化验证的干扰（G4/H5 实测）**：① **生产限流（120/分钟/IP）会被自动化高频请求触发**——连续 eval/curl 会让验证循环自己撞 429，App 按设计清 token 回登录页；验证要"静默窗口 + 低频率"，或测试期调大 `RATE_LIMIT_PER_MIN`；② **React 19 受控输入在 CDP eval 注入不触发 onChange**（原生 setter + input 事件无效）——真实用户打字正常；自动化验证优先走 API 层 + localStorage 塞 token 绕过登录页；③ 前端真机验证的边界：渲染/链路可自动化，交互留给真实用户低频率操作。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

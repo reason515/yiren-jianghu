@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
-import { createAuthApi, type AuthApi, type AuthSession } from "./lib/authApi.js";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { ApiError, createAuthApi, type AuthApi, type AuthSession } from "./lib/authApi.js";
 import { createApiClient, type ApiClient } from "./lib/apiClient.js";
 import {
   toCombatState,
@@ -26,6 +26,7 @@ import { ForumSheet } from "./components/ForumView.js";
 import { PostComposer } from "./components/PostComposer.js";
 import { MapSheet } from "./components/MapSheet.js";
 import { LeaderboardView } from "./components/LeaderboardView.js";
+import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
 import {
@@ -43,6 +44,13 @@ import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./l
 import type { ForumComment, ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
 import type { LeaderboardData } from "./lib/leaderboardTypes.js";
 import type { MapData } from "./lib/mapTypes.js";
+import {
+  initialReconnectState,
+  onConnectSuccess,
+  onDisconnect,
+  onRetryFailed,
+  type ReconnectState,
+} from "./lib/reconnect.js";
 import type {
   SceneItem,
   SceneNpc,
@@ -125,11 +133,14 @@ export function App(): JSX.Element {
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [lbGrowth, setLbGrowth] = useState<LeaderboardData | null>(null);
   const [lbSeason, setLbSeason] = useState<LeaderboardData | null>(null);
+  const [reconnect, setReconnect] = useState<ReconnectState>(initialReconnectState());
+  const reconnectRef = useRef<ReconnectState>(reconnect);
+  reconnectRef.current = reconnect;
+  const retryTimer = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
   const authApi: AuthApi = useMemo(() => createAuthApi(BASE_URL), []);
-  const notify = (e: unknown): void => setError(e instanceof Error ? e.message : String(e));
 
   const refreshScene = useCallback(async (): Promise<void> => {
     try {
@@ -200,7 +211,84 @@ export function App(): JSX.Element {
     [api],
   );
 
-  // 启动：token 有效则恢复（resume），并优先恢复未结束的战局；否则回登录。
+  // 恢复点：resume + 刷新全量状态；成功 true，失败抛错（网络 TypeError 或 ApiError 由调用方裁决）。
+  const restoreSession = useCallback(async (): Promise<boolean> => {
+    const res = await api.resume();
+    if (res.character) {
+      setCharacter({
+        id: (res.character as { id: string }).id,
+        name: (res.character as { name: string }).name,
+      });
+      setNeedCreate(false);
+      await Promise.all([
+        refreshScene(),
+        refreshCombat(),
+        refreshQuests(),
+        refreshAfk(res.pendingAfkReports.map((report) => report.jobId)),
+      ]);
+      // 断线期间完成的论剑，重连后直接翻开战报回响。
+      const firstPvp = res.pendingPvpReportIds[0];
+      if (firstPvp) {
+        const detail = await api.getPvpMatch(firstPvp);
+        if (detail) {
+          setPvpReplay(detail);
+          setPvpReplayOpen(true);
+        }
+      }
+    } else {
+      setNeedCreate(true);
+    }
+    return true;
+  }, [api, refreshAfk, refreshCombat, refreshQuests, refreshScene]);
+
+  const clearRetryTimer = (): void => {
+    if (retryTimer.current) window.clearTimeout(retryTimer.current);
+    retryTimer.current = null;
+  };
+
+  const retryNow = useCallback(async (): Promise<void> => {
+    const state = reconnectRef.current;
+    if (state.phase !== "reconnecting") return;
+    try {
+      await restoreSession();
+      clearRetryTimer();
+      setReconnect(onConnectSuccess(state));
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "unauthorized") {
+        clearRetryTimer();
+        setToken(null);
+        localStorage.removeItem(TOKEN_KEY);
+        return;
+      }
+      const next = onRetryFailed(state);
+      setReconnect(next);
+      if (next.phase === "failed") {
+        clearRetryTimer();
+        setError("久唤不应，江湖暂别。稍后再来。");
+      } else {
+        retryTimer.current = window.setTimeout(() => void retryNow(), next.nextRetryMs);
+      }
+    }
+  }, [restoreSession]);
+
+  const beginReconnect = useCallback((): void => {
+    const state = reconnectRef.current;
+    if (state.phase === "reconnecting" || state.phase === "failed") return;
+    const next = onDisconnect(state);
+    setReconnect(next);
+    retryTimer.current = window.setTimeout(() => void retryNow(), next.nextRetryMs);
+  }, [retryNow]);
+
+  // 网络层失败（fetch 抛错、非业务信封）统一进入重连；业务错误仅 toast。
+  const notify = (e: unknown): void => {
+    if (!(e instanceof ApiError)) {
+      beginReconnect();
+      return;
+    }
+    setError(e.message);
+  };
+
+  // 启动：token 有效则恢复（resume），并优先恢复未结束的战局；网络断则进重连，401 则回登录。
   useEffect(() => {
     if (!token) {
       setBooting(false);
@@ -208,30 +296,20 @@ export function App(): JSX.Element {
     }
     void (async () => {
       try {
-        const res = await api.resume();
-        if (res.character) {
-          setCharacter({
-            id: (res.character as { id: string }).id,
-            name: (res.character as { name: string }).name,
-          });
-          setNeedCreate(false);
-          await Promise.all([
-            refreshScene(),
-            refreshCombat(),
-            refreshQuests(),
-            refreshAfk(res.pendingAfkReports.map((report) => report.jobId)),
-          ]);
+        await restoreSession();
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "unauthorized") {
+          setToken(null);
+          localStorage.removeItem(TOKEN_KEY);
         } else {
-          setNeedCreate(true);
+          beginReconnect();
         }
-      } catch {
-        setToken(null);
-        localStorage.removeItem(TOKEN_KEY);
       } finally {
         setBooting(false);
       }
     })();
-  }, [token, api, refreshAfk, refreshCombat, refreshQuests, refreshScene]);
+    return clearRetryTimer;
+  }, [token, api, beginReconnect, restoreSession]);
 
   const onLoggedIn = (session: AuthSession): void => {
     localStorage.setItem(TOKEN_KEY, session.token);
@@ -724,6 +802,8 @@ export function App(): JSX.Element {
     setMapData(null);
     setLbGrowth(null);
     setLbSeason(null);
+    clearRetryTimer();
+    setReconnect(initialReconnectState());
     setPanel("none");
   };
 
@@ -737,6 +817,12 @@ export function App(): JSX.Element {
 
   return (
     <div className="app">
+      <ReconnectingOverlay
+        visible={reconnect.phase === "reconnecting"}
+        attempt={reconnect.attempt}
+        nextRetryMs={reconnect.nextRetryMs}
+        onRetryNow={() => void retryNow()}
+      />
       {needCreate && (
         <CharacterCreateSheet
           open

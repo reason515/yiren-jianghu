@@ -125,6 +125,13 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 地图导航仅限相邻出口真实移动（当前房间 `exits` 命中目标房间才 `move`）；跨房间点击以 toast 提示“先循眼前的出口前行”，不做客户端寻路。
 - 榜单：`GET /leaderboard/growth` 与 `GET /leaderboard/season` 均为公开读（无鉴权、`isMe` 恒 false）；客户端按自己的角色 id 重新标记“我的行”高亮。apiClient 路径映射注意 `season_pvp → /leaderboard/season`（勿拼接）。
 
+## 4.9 断线重连接线契约（E14.9）
+
+- 断线判定：fetch 网络层失败（非业务错误信封）统一进入重连，业务错误（400/404/409/401 等）只 toast；401 直接清会话回登录，不重试。
+- 重连流程：复用 `lib/reconnect.ts` 状态机（指数退避、最多 5 次）；每次重试 = `GET /session/resume` + 刷新全量状态（场景/战局/任务/挂机/榜单），成功即 `connected` 关遮罩。
+- 未读回响：resume 的 `pendingAfkReports` 补拉全文并打开 `AfkReportView`；`pendingPvpReportIds` 首场拉取 `GET /pvp/matches/:id` 直接弹回响。战局按契约 4.3 优先 `GET /combat/status` 恢复。
+- 重连遮罩只覆盖 `reconnecting` 态；连超 5 次隐藏遮罩并以一条 toast 提示，不再自动打扰（后续操作恢复网络即正常）。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

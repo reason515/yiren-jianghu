@@ -29,7 +29,7 @@
 | M0 工程基座 | ✅ 完成 | — | A1–A6 全部完成，本机全绿；Docker 运行验证待服务器/CI |
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
-| M3 H5 垂直闭环 | ✅ 完成 | — | E 阶段客户端全量（20 组件 + 7 数据模型）+ **H5 SPA 可运行组装**（vite + App.tsx 登录→建角→场景+导航，apiClient /api 前缀）→ **生产部署**（/var/www/yiren Nginx 静态托管 + /api 代理 + /ws 预留，http://117.72.34.43/）；API 层 16 e2e 全绿；浏览器验证：页面渲染 ✓、API 链路 ✓（登录/resume 200）、登录页自动化注入受 React 受控输入+限流干扰，**真实用户手动验证收尾**（浏览器开 http://117.72.34.43/ 输邀请码 yjh2026） |
+| M3 H5 垂直闭环 | 🔄 进行中（主链可玩，面板待组装） | E 阶段客户端全量（20 组件 + 7 数据模型）+ **H5 SPA 可运行组装**（vite + App.tsx 登录→建角→场景+导航，apiClient /api 前缀）→ **生产部署**（/var/www/yiren Nginx 静态托管 + /api 代理 + /ws 预留，http://117.72.34.43/）；API 层 16 e2e 全绿；浏览器验证：页面渲染 ✓、API 链路 ✓、登录页自动化注入受 React 受控输入+限流干扰，**真实用户手动验证收尾**；**剩余：E14 面板组装闭环（⬜ 待办）** |
 | M2.5 服务端业务 | ✅ 完成 | — | B2 缺口全部补齐：auth/character/scene/skills/quests/templates/afk/pvp/leaderboard/forum/session 十一域 + 收尾 6 stub（logout 吊销会话 / characters 改名 / inventory equip·unequip·use 装备与物品效果结算 / content 版本）——**协议清单 40 路由 100% 真实实现，0 stub**（迁移 0006–0008）；299 用例全绿 + 本地真库 e2e |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
@@ -396,6 +396,19 @@
 
 - 轻量插画占位、战斗演出动画、环境音占位
 - **估时**：2 人日（可延后）
+
+### E14 H5 应用组装与面板闭环（M3 收尾，⬜ 待办）
+
+- SPA 骨架已上线（vite + App.tsx 登录→建角→场景+导航）；**本任务把 E1–E13 组件接入 App 形成完整可玩闭环**：
+  - 角色面板（CharacterSheet + 数据加载：vitals/武功/装备/行囊 + 装备卸装/使用）
+  - 挂机（GrindBanner + AfkSheet 启动/停止 + AfkReportView 战报；模板编辑器 TacticEditor）
+  - 任务（QuestPanel 接/交/查 + 主线足迹）
+  - 论坛（ForumView 板块/帖子/详情/发帖/评论/点赞/举报 + PostComposer）
+  - 战斗（CombatView 手动战斗接入；PVP 对战/战报）、地图（MapSheet）、榜单（LeaderboardView）
+  - 断线重连（ReconnectingOverlay + resume 恢复点）、触感/音效（effects/sound）
+- 每个面板：组件接线 + 数据流 + 空态/错误态 + DOM 单测；验收：**浏览器/真机走通 登录→建角→探索→学武→任务→挂机→PVP→论坛 全闭环**
+- **依赖**：E1–E13（已完成）、M2.5 API（已完成）
+- **估时**：3–4 人日
 
 ## 阶段 M2.5：服务端业务（API 真实实现，F 联调前置）
 

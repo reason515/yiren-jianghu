@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
+import type { RedisClientType } from "redis";
 import { authContexts, envelope, requireAuth, type TokenVerifier } from "./http.js";
 import { registerApiStubs } from "./routes.js";
 import { AuthError, createAuthService } from "./authService.js";
@@ -34,6 +35,8 @@ export interface AppDeps {
   db?: Db;
   /** 内容包（注入后启用场景/行囊组装；由部署加载 dev-pack 或线上包）。 */
   content?: ContentPack;
+  /** Redis（G3 分布式限流；不注入时回退每进程内存桶）。 */
+  redis?: RedisClientType;
 }
 
 export interface AppOptions {
@@ -45,9 +48,11 @@ export interface AppOptions {
   verifyToken?: TokenVerifier;
   /** 压测/测试专用：关闭每 IP 限流（F4 基线测量；生产限流策略随 G3 迁移 Redis 正式化）。 */
   disableRateLimit?: boolean;
+  /** 限流覆盖（默认 RATE_LIMIT_PER_MIN env，缺省 120/分钟/IP）。 */
+  rateLimit?: { perMinute?: number };
 }
 
-const RATE_LIMIT_MAX = 120; // 每分钟每 IP（占位）
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_PER_MIN ?? 120); // 每分钟每 IP（G3 起走 Redis 分布式）
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
 interface RateBucket {
@@ -78,15 +83,25 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
     genReqId: (req) => (req.headers["x-request-id"] as string | undefined) ?? randomUUID(),
   });
 
-  // 限流骨架：每 IP 令牌桶（占位）
+  // 限流：deps.redis 注入时走 Redis 固定窗口（多实例一致）；否则回退每进程内存桶
   const buckets = new Map<string, RateBucket>();
   app.addHook("onRequest", async (req, reply) => {
     if (opts.disableRateLimit) return;
     const ip = req.ip;
+    const limit = opts.rateLimit?.perMinute ?? RATE_LIMIT_MAX;
+    if (deps.redis) {
+      const key = `rl:${ip}:${Math.floor(Date.now() / 60_000)}`;
+      const n = await deps.redis.incr(key);
+      if (n === 1) await deps.redis.expire(key, 60);
+      if (n > limit) {
+        return envelope(reply, 429, "rate_limited", "请求过于频繁，请稍后再试");
+      }
+      return;
+    }
     const now = Date.now();
     let bucket = buckets.get(ip);
     if (!bucket || now > bucket.resetAt) {
-      bucket = { tokens: RATE_LIMIT_MAX, resetAt: now + RATE_LIMIT_WINDOW_MS };
+      bucket = { tokens: limit, resetAt: now + RATE_LIMIT_WINDOW_MS };
       buckets.set(ip, bucket);
     }
     if (bucket.tokens <= 0) {

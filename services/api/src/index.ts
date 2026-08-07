@@ -3,6 +3,7 @@
  * 无 DATABASE_URL（纯骨架/单测导入）时保持 stub 行为。
  */
 import pg from "pg";
+import { createClient, type RedisClientType } from "redis";
 import { loadContentDir } from "@yjh/content";
 import { createApp, type AppDeps } from "./app.js";
 import { createPgDb } from "./db.js";
@@ -16,6 +17,12 @@ const CONTENT_DIR = process.env.CONTENT_DIR ?? "/app/packages/content/fixtures/p
 
 let deps: AppDeps = {};
 let pool: pg.Pool | undefined;
+let redis: RedisClientType | undefined;
+if (process.env.REDIS_URL) {
+  redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  deps.redis = redis;
+}
 if (DATABASE_URL) {
   pool = new pg.Pool({ connectionString: DATABASE_URL, max: 20 });
   const { pack } = await loadContentDir(CONTENT_DIR);
@@ -40,6 +47,7 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
   process.on(sig, async () => {
     await app.close();
     await pool?.end();
+    await redis?.quit();
     process.exit(0);
   });
 }

@@ -6,7 +6,7 @@ import type { Db, DbRow } from "./db.js";
 /** 内存 mock DB：记录表状态并响应常见查询。 */
 function mockDb() {
   const state = {
-    accounts: [] as Array<{ id: string; invite_code?: string }>,
+    accounts: [] as Array<{ id: string; invite_code?: string; status?: string }>,
     sessions: [] as Array<{ token: string; account_id: string; expires_at: string }>,
   };
   const db: Db = {
@@ -14,7 +14,7 @@ function mockDb() {
       if (text.includes("FROM accounts WHERE invite_code")) {
         const rows = state.accounts
           .filter((a) => a.invite_code === params[0])
-          .map((a) => ({ id: a.id }));
+          .map((a) => ({ id: a.id, status: a.status }));
         return { rows: rows as unknown as T[] };
       }
       if (text.includes("INSERT INTO accounts")) {
@@ -140,5 +140,17 @@ describe("app 集成（真实 login 路由 + 鉴权走会话表）", () => {
     expect(after.statusCode).toBe(401);
 
     await app.close();
+  });
+
+  it("冻结账号拒绝登录（风控钩子）", async () => {
+    const { db, state } = mockDb();
+    const auth = createAuthService({ db, inviteCodes: ["frozen-1"], now: () => 1_000_000 });
+    // 首次登录建账号，再冻结
+    await auth.login("frozen-1");
+    const acc = state.accounts[0]!;
+    state.accounts[0] = { ...acc, status: "frozen" };
+    await expect(auth.login("frozen-1")).rejects.toMatchObject({
+      code: "account_frozen",
+    });
   });
 });

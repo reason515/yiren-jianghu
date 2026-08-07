@@ -39,10 +39,13 @@ export function createAuthService(opts: AuthServiceOptions): AuthService {
       const code = rawCode.trim();
       if (!codes.has(code)) throw new AuthError("invalid_invite", "邀请帖无效");
 
-      const existing = await opts.db.query<{ id: string }>(
-        "SELECT id FROM accounts WHERE invite_code = $1",
+      const existing = await opts.db.query<{ id: string; status?: string }>(
+        "SELECT id, status FROM accounts WHERE invite_code = $1",
         [code],
       );
+      if (existing.rows[0]?.status === "frozen") {
+        throw new AuthError("account_frozen", "此账号已冻结，请联系管理员");
+      }
       let accountId = existing.rows[0]?.id;
       if (!accountId) {
         const created = await opts.db.query<{ id: string }>(

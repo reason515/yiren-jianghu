@@ -441,6 +441,15 @@
 ### G1 服务器 Docker 部署（隔离）
 
 - 独立 compose 栈、子域名、与现 MUD 完全隔离；镜像版本化
+- **✅ 已完成（117.72.34.43 京东云 Ubuntu 22.04 / 2 核 2GB / 40GB）**：
+  - Docker 29.7.2（阿里云 docker-ce 源 + daocloud 镜像加速）+ compose v5
+  - 生产 compose 全栈：postgres/redis healthy、api/worker running；迁移 0001–0009 落生产库
+  - 镜像：服务器本地 docker build（git archive 源码包 → build；2GB 内存 OK，复用 buildkit 缓存）
+  - **G1 冒烟抓出 2 个生产入口 bug**：① API `index.ts` bootstrap 从未接 db/content（生产全 stub）→ 修复注入 db+内容包+readiness+优雅停机；② Worker 入口只导出函数（容器 Restarting 循环）→ 新增 `main.ts` 入口（加载内容+循环+信号停机）
+  - 生产冒烟 10 步全通（登录→建角→场景→移动→武功→挂机→论坛→榜单→resume）；worker 服务器结算正常
+  - Nginx 公网入口：`http://117.72.34.43/health` 通（server_name _，80→127.0.0.1:3000，WS 升级头预留）
+  - 生产 .env：随机 DB 密码 + 邀请码（yjh2026 等 5 个），容器内 host 用 compose 服务名；chmod 600
+- **待办**：正式域名+HTTPS（备案后配证书）；H5 客户端静态托管
 - **估时**：1–1.5 人日
 
 ### G2 备份/监控/日志

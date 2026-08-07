@@ -26,14 +26,17 @@ docker-compose.prod.yml      # 生产 compose（固定 project name: yiren-jiang
 1. **服务器准备**：
    ```bash
    mkdir -p /opt/yiren-jianghu && cd /opt/yiren-jianghu
-   # 上传 docker-compose.prod.yml；cp .env.example .env 并填真实值
+   # 上传 docker-compose.prod.yml；cp .env.example .env 并填真实值（容器内 DATABASE_URL/REDIS_URL 的 host 用 compose 服务名 postgres/redis，非 localhost）
    chmod 600 .env            # secrets 只在服务器，禁止入库/打印
    ```
-2. **仓库 secrets**（Settings → Secrets and variables → Actions）：
+2. **镜像构建**（2GB 小内存服务器也 OK）：服务器本地 `docker build`（上传源码包 git archive → build，复用 buildkit 缓存）或 CD 推 GHCR。自定义镜像 tag（如 yiren/api:main）不会被 daocloud 镜像加速代理（白名单外），需本地构建后 `API_IMAGE=yiren/api:main docker compose up`。
+3. **仓库 secrets**（Settings → Secrets and variables → Actions）：
    - `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY`
-3. **触发部署**：`Deploy` workflow（main 推送自动 / 手动 dispatch）。
+4. **触发部署**：`Deploy` workflow（main 推送自动 / 手动 dispatch）。
    未配置 secrets 时 SSH 步骤自动跳过，镜像构建与推送仍会执行。
-4. **首次上线前先演练回滚**（见下）。
+5. **首次上线前先演练回滚**（见下）。
+
+> 已落地验证（G1，117.72.34.43）：生产入口 `index.ts` 必须注入 db+内容包（bootstrap 接线缺失会让生产全走 501 stub）；worker 需独立 `main.ts` 入口（否则容器 Restarting 循环）。
 
 ## 数据库迁移
 

@@ -14,6 +14,7 @@ import { QuestsError, createQuestsService } from "./questsService.js";
 import { TemplatesError, createTemplatesService } from "./templatesService.js";
 import { AfkError, createAfkService } from "./afkService.js";
 import { PvpError, createPvpService } from "./pvpService.js";
+import { ForumError, createForumService } from "./forumService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
@@ -66,6 +67,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const templates = db && deps.content ? createTemplatesService(db, deps.content) : null;
   const afk = db && deps.content ? createAfkService(db, deps.content) : null;
   const pvp = db && deps.content ? createPvpService(db, deps.content) : null;
+  const forum = db ? createForumService(db) : null;
   const app = Fastify({
     logger: opts.logger ?? false,
     requestIdHeader: "x-request-id",
@@ -553,6 +555,113 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
 
     app.get("/leaderboard/growth", async () => pvp.growthLeaderboard());
     app.get("/leaderboard/season", async () => pvp.seasonLeaderboard());
+  }
+
+  // M2.5-forum：受控纯文本社区（板块/帖/评论/点赞/举报 + 审核状态）；deps.db 时启用（读公开，写需鉴权）
+  if (forum) {
+    app.get("/forum/sections", async () => forum.sections());
+    app.get("/forum/posts", async (req) => {
+      const { sectionId } = (req.query ?? {}) as { sectionId?: string };
+      return forum.listPosts(sectionId || undefined);
+    });
+    app.get("/forum/posts/:id", async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const detail = await forum.getPost(id);
+      if (!detail) return envelope(reply, 404, "post_not_found", "这帖子已随风而去");
+      return detail;
+    });
+
+    app.post("/forum/posts", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { sectionId?: unknown; title?: unknown; body?: unknown };
+      try {
+        return await forum.createPost(accountId, {
+          sectionId: typeof body.sectionId === "string" ? body.sectionId : "",
+          title: typeof body.title === "string" ? body.title : "",
+          body: typeof body.body === "string" ? body.body : "",
+        });
+      } catch (err) {
+        if (err instanceof ForumError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "section_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post(
+      "/forum/posts/:id/comments",
+      { preHandler: requireAuth(verifyToken) },
+      async (req, reply) => {
+        const accountId = authContexts.get(req)?.accountId ?? "";
+        const { id } = req.params as { id: string };
+        const body = (req.body ?? {}) as { body?: unknown };
+        try {
+          return await forum.addComment(
+            accountId,
+            id,
+            typeof body.body === "string" ? body.body : "",
+          );
+        } catch (err) {
+          if (err instanceof ForumError)
+            return envelope(
+              reply,
+              err.code === "no_character" || err.code === "post_not_found" ? 404 : 400,
+              err.code,
+              err.message,
+            );
+          throw err;
+        }
+      },
+    );
+
+    app.post("/forum/likes", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { postId?: unknown };
+      if (typeof body.postId !== "string" || !body.postId) {
+        return envelope(reply, 400, "invalid_request", "缺少帖子 id");
+      }
+      try {
+        return await forum.toggleLike(accountId, body.postId);
+      } catch (err) {
+        if (err instanceof ForumError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "post_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/forum/reports", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as {
+        targetType?: unknown;
+        targetId?: unknown;
+        reason?: unknown;
+      };
+      try {
+        return await forum.reportPost(accountId, {
+          targetType: body.targetType === "comment" ? "comment" : "post",
+          targetId: typeof body.targetId === "string" ? body.targetId : "",
+          reason: typeof body.reason === "string" ? body.reason : "",
+        });
+      } catch (err) {
+        if (err instanceof ForumError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "target_not_found" ? 404 : 400,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
   }
 
   // B2：按清单注册全量 API（已实现路由因 hasRoute 自动跳过）

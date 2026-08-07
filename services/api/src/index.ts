@@ -27,6 +27,7 @@ if (DATABASE_URL) {
   pool = new pg.Pool({ connectionString: DATABASE_URL, max: 20 });
   const { pack } = await loadContentDir(CONTENT_DIR);
   deps = {
+    ...deps, // 保留 redis（G3 分布式限流）等已注入依赖，勿整体覆盖
     db: createPgDb(pool),
     content: pack,
     readiness: async () => {

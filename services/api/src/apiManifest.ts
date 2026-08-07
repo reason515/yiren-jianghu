@@ -38,6 +38,7 @@ export const API_MANIFEST: ApiRoute[] = [
   { method: "POST", path: "/characters/discard", auth: true, domain: "character" },
   { method: "PUT", path: "/characters/name", auth: true, domain: "character" },
   // 场景与探索
+  { method: "GET", path: "/map", auth: true, domain: "scene" },
   { method: "GET", path: "/scene", auth: true, domain: "scene" },
   { method: "POST", path: "/scene/action", auth: true, domain: "scene" },
   // 物品与装备

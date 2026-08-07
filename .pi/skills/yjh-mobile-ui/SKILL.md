@@ -119,6 +119,12 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 点赞后以 `POST /forum/likes` 返回值更新本地 `likedByMe`/`likeCount`（公开读接口不携带个人态）；举报走 `POST /forum/reports { targetType, targetId, reason }`，反馈用一条 toast（“已递呈坊主处置”）。
 - 反馈（发帖/回帖/举报/点赞）统一用浮层内 toast；操作期间禁用重复提交。
 
+## 4.8 地图与榜单接线契约（E14.8）
+
+- 地图：`GET /map`（鉴权）返回内容包 `rooms.grid` 与 `exits` 去重无向边，`state` 由服务端按角色位置标记 `current`，其余 `visited`；客户端只渲染，不重算网格/可达性。
+- 地图导航仅限相邻出口真实移动（当前房间 `exits` 命中目标房间才 `move`）；跨房间点击以 toast 提示“先循眼前的出口前行”，不做客户端寻路。
+- 榜单：`GET /leaderboard/growth` 与 `GET /leaderboard/season` 均为公开读（无鉴权、`isMe` 恒 false）；客户端按自己的角色 id 重新标记“我的行”高亮。apiClient 路径映射注意 `season_pvp → /leaderboard/season`（勿拼接）。
+
 ## 5. 与已定项目决策的对齐
 
 - **无原始指令**：玩家只见结构化动作与面板，不提供命令输入（调试命令仅内部）。

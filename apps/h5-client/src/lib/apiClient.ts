@@ -6,6 +6,7 @@ import type { AfkJobData, AfkReportData, AfkStartConfig, AfkStatusResponse } fro
 import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
 import type { PvpMatchDetail } from "./pvpTypes.js";
 import type { ForumComment, ForumPost, ForumSection } from "./forumTypes.js";
+import type { MapData } from "./mapTypes.js";
 
 /**
  * H5 API 客户端：统一 fetch + 错误信封解析（服务端权威，客户端只发意图）。
@@ -30,6 +31,7 @@ export interface ApiClient {
   getScene(): Promise<unknown>;
   move(dir: string): Promise<unknown>;
   sceneAction(input: SceneActionInput): Promise<SceneActionResult>;
+  getMap(): Promise<MapData>;
   getCharacter(): Promise<CharacterProfile>;
   getInventory(): Promise<InvItemView[]>;
   getSkills(): Promise<SkillRowView[]>;
@@ -107,6 +109,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     getScene: () => get("/scene"),
     move: (dir) => post("/scene/action", { type: "move", dir }),
     sceneAction: (input) => post("/scene/action", input),
+    getMap: () => get("/map"),
     getCharacter: () => get("/characters/me"),
     getInventory: () => get("/inventory"),
     getSkills: () => get("/skills"),
@@ -135,7 +138,8 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     addForumComment: (postId, body) => post(`/forum/posts/${postId}/comments`, { body }),
     toggleForumLike: (postId) => post("/forum/likes", { postId }),
     reportForumPost: (input) => post("/forum/reports", input),
-    getLeaderboard: (kind) => get(`/leaderboard/${kind}`),
+    getLeaderboard: (kind) =>
+      get(kind === "growth" ? "/leaderboard/growth" : "/leaderboard/season"),
     getPvpSeason: () => get("/pvp/season"),
     getPvpOpponents: () => get("/pvp/opponents"),
     startPvpMatch: (defenderId) => post("/pvp/match", { defenderId }),

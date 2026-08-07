@@ -449,7 +449,20 @@ describe("F3 全链路旅程", () => {
     expect(quest.rows[0]?.status).toBe("reported");
   });
 
-  it("8. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {
+  it("8. 地图：GET /map 返回带网格舆图且当前房间被标记", async () => {
+    const map = await app.inject({ method: "GET", url: "/map", headers: auth(tokenA) });
+    expect(map.statusCode).toBe(200);
+    const data = map.json() as {
+      rooms: Array<{ id: string; grid: [number, number]; state: string }>;
+      edges: Array<{ from: string; to: string }>;
+    };
+    expect(data.rooms.length).toBeGreaterThan(0);
+    expect(data.rooms.every((r) => r.grid.length === 2)).toBe(true);
+    expect(data.rooms.some((r) => r.state === "current")).toBe(true);
+    expect(data.edges.length).toBeGreaterThan(0);
+  });
+
+  it("9. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {
     const loginB = await app.inject({
       method: "POST",
       url: "/auth/login",
@@ -507,7 +520,7 @@ describe("F3 全链路旅程", () => {
     expect((lb.json() as { entries: unknown[] }).entries.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("8. 断线恢复：resume 返回未读 PVP 战报 → 二次 resume 清空", async () => {
+  it("10. 断线恢复：resume 返回未读 PVP 战报 → 二次 resume 清空", async () => {
     const resume = await app.inject({
       method: "GET",
       url: "/session/resume",
@@ -524,7 +537,7 @@ describe("F3 全链路旅程", () => {
     expect((again.json() as { pendingPvpReportIds: string[] }).pendingPvpReportIds).toHaveLength(0);
   });
 
-  it("9. 装备/使用：SQL 造行囊 → equip → unequip → use（气血恢复）", async () => {
+  it("11. 装备/使用：SQL 造行囊 → equip → unequip → use（气血恢复）", async () => {
     await pool.query(
       "INSERT INTO character_items (id, character_id, item_def_id, quantity) VALUES (gen_random_uuid(), $1, 'iron_sword', 1)",
       [characterA],
@@ -566,7 +579,7 @@ describe("F3 全链路旅程", () => {
     expect((use.json() as { effect: string }).effect).toBe("heal_qi");
   });
 
-  it("10. 论坛：板块 → 发帖 → 列表/详情 → 评论 → 点赞 → 举报", async () => {
+  it("12. 论坛：板块 → 发帖 → 列表/详情 → 评论 → 点赞 → 举报", async () => {
     const sections = await app.inject({ method: "GET", url: "/forum/sections" });
     expect(sections.statusCode).toBe(200);
     const secList = sections.json() as Array<{ id: string }>;
@@ -610,7 +623,7 @@ describe("F3 全链路旅程", () => {
     expect(report.statusCode).toBe(200);
   });
 
-  it("11. 登出：会话吊销，原 token 失效", async () => {
+  it("13. 登出：会话吊销，原 token 失效", async () => {
     const logout = await app.inject({ method: "POST", url: "/auth/logout", headers: auth(tokenA) });
     expect(logout.statusCode).toBe(200);
 

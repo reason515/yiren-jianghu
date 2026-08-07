@@ -1,22 +1,11 @@
 import { useRef, useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
+import type { MapEdgeView, MapRoomView } from "../lib/mapTypes.js";
 
 /**
  * 区域地图（map-design：语义网格八向渲染、动态 viewBox、北标、缩放/拖拽/回到位置）。
- * 数据来自内容包 rooms.grid + exits（与 C10 导航共享出口真相；可前往节点点击真实移动）。
+ * 数据来自 GET /map（内容包 rooms.grid + exits；与 C10 导航共享出口真相；可前往节点点击真实移动）。
  */
-
-export interface MapRoomView {
-  id: string;
-  name: string;
-  grid: [number, number];
-  state: "current" | "visited" | "locked";
-}
-
-export interface MapEdgeView {
-  from: string;
-  to: string;
-}
 
 export interface MapSheetProps {
   open: boolean;
@@ -255,4 +244,4 @@ export function MapSheet({
   );
 }
 
-export type { Box };
+export type { MapRoomView, MapEdgeView };

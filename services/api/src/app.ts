@@ -255,6 +255,16 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
 
   // M2.5-scene/inventory：场景组装、移动、行囊；deps.db + deps.content 时启用
   if (scene) {
+    app.get("/map", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await scene.getMap(accountId);
+      } catch (err) {
+        if (err instanceof SceneError) return envelope(reply, 404, err.code, err.message);
+        throw err;
+      }
+    });
+
     app.get("/scene", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
       try {

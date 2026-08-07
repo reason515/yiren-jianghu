@@ -107,6 +107,25 @@ export interface SceneService {
   equip(accountId: string, itemId: string): Promise<{ ok: true }>;
   unequip(accountId: string, itemId: string): Promise<{ ok: true }>;
   useItem(accountId: string, itemId: string): Promise<{ ok: true; effect: string }>;
+  getMap(accountId: string): Promise<MapView>;
+}
+
+/** 区域舆图节点（内容包 rooms.grid + exits 驱动；current 由角色位置决定）。 */
+export interface MapRoomView {
+  id: string;
+  name: string;
+  grid: [number, number];
+  state: "current" | "visited" | "locked";
+}
+
+export interface MapEdgeView {
+  from: string;
+  to: string;
+}
+
+export interface MapView {
+  rooms: MapRoomView[];
+  edges: MapEdgeView[];
 }
 
 type CharacterLocation = { id: string; room_path: string };
@@ -261,6 +280,30 @@ export function createSceneService(
       const character = await activeCharacter(db, accountId);
       if (!character) return null;
       return roomView(db, character.id, roomFor(character.room_path));
+    },
+
+    async getMap(accountId) {
+      const character = await activeCharacter(db, accountId);
+      if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
+      const rooms: MapRoomView[] = [];
+      const seenEdges = new Set<string>();
+      const edges: MapEdgeView[] = [];
+      for (const room of content.rooms.values()) {
+        if (!room.grid) continue; // 无网格坐标的房间不入舆图
+        rooms.push({
+          id: room.id,
+          name: room.name,
+          grid: room.grid,
+          state: room.id === character.room_path ? "current" : "visited",
+        });
+        for (const exit of room.exits) {
+          const key = [room.id, exit.roomId].sort().join("|");
+          if (seenEdges.has(key)) continue;
+          seenEdges.add(key);
+          edges.push({ from: room.id, to: exit.roomId });
+        }
+      }
+      return { rooms, edges };
     },
 
     async move(accountId, dir) {

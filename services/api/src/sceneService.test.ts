@@ -51,6 +51,7 @@ const PACK = {
       name: "老屋·旧榻",
       shortDesc: "土墙斑驳",
       longDesc: "晨光里浮着微尘。",
+      grid: [0, 0],
       exits: [{ dir: "east", roomId: "village_square" }],
       npcIds: [],
       itemIds: [],
@@ -62,6 +63,7 @@ const PACK = {
       name: "村口广场",
       shortDesc: "晒谷场上稻香未散",
       longDesc: "青石被日头晒得发白。",
+      grid: [1, 0],
       exits: [
         { dir: "west", roomId: "village_start" },
         { dir: "east", roomId: "village_shop" },
@@ -362,6 +364,31 @@ describe("sceneService.getScene", () => {
   });
 });
 
+describe("sceneService.getMap", () => {
+  it("返回带网格的房间、去重无向边与当前所在标记", async () => {
+    const { scene } = await boot();
+    const map = await scene.getMap("acc_1");
+    expect(map.rooms.length).toBeGreaterThan(0);
+    expect(map.rooms.find((r) => r.state === "current")?.id).toBe("village_start");
+    expect(map.rooms.every((r) => r.grid.length === 2)).toBe(true);
+    // 双向出口只出一条无向边
+    const pairs = map.edges.filter(
+      (e) =>
+        (e.from === "village_start" && e.to === "village_square") ||
+        (e.from === "village_square" && e.to === "village_start"),
+    );
+    expect(pairs).toHaveLength(1);
+    await expect(scene.getMap("acc_x")).rejects.toMatchObject({ code: "no_character" });
+  });
+
+  it("移动后 current 跟随角色位置", async () => {
+    const { scene } = await boot();
+    await scene.move("acc_1", "east");
+    const map = await scene.getMap("acc_1");
+    expect(map.rooms.find((r) => r.state === "current")?.id).toBe("village_square");
+  });
+});
+
 describe("sceneService.move", () => {
   it("移动更新 room_path 并返回新场景；无效方向拒绝", async () => {
     const { scene, state } = await boot();
@@ -527,6 +554,19 @@ describe("app 集成（scene/inventory 路由）", () => {
     expect(inv.json()).toEqual([
       { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
     ]);
+
+    const map = await app.inject({
+      method: "GET",
+      url: "/map",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(map.statusCode).toBe(200);
+    expect(map.json()).toMatchObject({ rooms: expect.any(Array), edges: expect.any(Array) });
+    expect(
+      (map.json() as { rooms: Array<{ id: string; state: string }> }).rooms.some(
+        (r) => r.id === "village_square" && r.state === "current",
+      ),
+    ).toBe(true);
 
     await app.close();
   });

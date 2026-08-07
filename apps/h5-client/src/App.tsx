@@ -24,6 +24,8 @@ import { PvpView } from "./components/PvpView.js";
 import { PvpReplayView } from "./components/PvpReplayView.js";
 import { ForumSheet } from "./components/ForumView.js";
 import { PostComposer } from "./components/PostComposer.js";
+import { MapSheet } from "./components/MapSheet.js";
+import { LeaderboardView } from "./components/LeaderboardView.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
 import {
@@ -39,6 +41,8 @@ import {
 } from "./lib/afkTypes.js";
 import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./lib/pvpTypes.js";
 import type { ForumComment, ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
+import type { LeaderboardData } from "./lib/leaderboardTypes.js";
+import type { MapData } from "./lib/mapTypes.js";
 import type {
   SceneItem,
   SceneNpc,
@@ -118,6 +122,9 @@ export function App(): JSX.Element {
     | null
   >(null);
   const [forumPending, setForumPending] = useState(false);
+  const [mapData, setMapData] = useState<MapData | null>(null);
+  const [lbGrowth, setLbGrowth] = useState<LeaderboardData | null>(null);
+  const [lbSeason, setLbSeason] = useState<LeaderboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
@@ -438,6 +445,55 @@ export function App(): JSX.Element {
       .finally(() => setForumPending(false));
   };
 
+  const refreshMap = useCallback(async (): Promise<void> => {
+    try {
+      setMapData(await api.getMap());
+    } catch (e) {
+      notify(e);
+    }
+  }, [api]);
+
+  const openMap = (): void => {
+    setPanel("map");
+    void refreshMap();
+  };
+
+  const onMapNavigate = (roomId: string): void => {
+    const exit = room?.exits.find((candidate) => candidate.roomId === roomId);
+    if (!exit) {
+      setError("路途尚远，先循眼前的出口前行。");
+      return;
+    }
+    setPanel("none");
+    void onGo(exit.dir);
+  };
+
+  const refreshLeaderboard = useCallback(async (): Promise<void> => {
+    try {
+      const [growth, season] = await Promise.all([
+        api.getLeaderboard("growth"),
+        api.getLeaderboard("season_pvp"),
+      ]);
+      // 榜单为公开读（isMe 恒 false），客户端按自己的角色 id 标记“我的行”。
+      const markMe = (data: LeaderboardData): LeaderboardData => ({
+        ...data,
+        entries: data.entries.map((entry) => ({
+          ...entry,
+          isMe: entry.characterId === character?.id,
+        })),
+      });
+      setLbGrowth(markMe(growth as LeaderboardData));
+      setLbSeason(markMe(season as LeaderboardData));
+    } catch (e) {
+      notify(e);
+    }
+  }, [api, character]);
+
+  const openLeaderboard = (): void => {
+    setPanel("leaderboard");
+    void refreshLeaderboard();
+  };
+
   const onAfkStart = (config: AfkStartConfig): void => {
     setAfkPending(true);
     void api
@@ -665,6 +721,9 @@ export function App(): JSX.Element {
     setForumSectionId(null);
     setForumComposer(null);
     setForumPending(false);
+    setMapData(null);
+    setLbGrowth(null);
+    setLbSeason(null);
     setPanel("none");
   };
 
@@ -724,13 +783,13 @@ export function App(): JSX.Element {
             <button className="app-nav-btn" onClick={openForum}>
               论坛
             </button>
-            <button className="app-nav-btn" onClick={() => setPanel("leaderboard")}>
+            <button className="app-nav-btn" onClick={openLeaderboard}>
               榜单
             </button>
             <button className="app-nav-btn" onClick={openPvp}>
               论剑
             </button>
-            <button className="app-nav-btn" onClick={() => setPanel("map")}>
+            <button className="app-nav-btn" onClick={openMap}>
               地图
             </button>
             <button className="app-nav-btn" onClick={() => void onLogout()}>
@@ -819,6 +878,25 @@ export function App(): JSX.Element {
           }
           onSubmit={onForumComposerSubmit}
           onClose={() => setForumComposer(null)}
+        />
+      )}
+
+      {panel === "map" && mapData && (
+        <MapSheet
+          open
+          rooms={mapData.rooms}
+          edges={mapData.edges}
+          onNavigate={onMapNavigate}
+          onClose={() => setPanel("none")}
+        />
+      )}
+
+      {panel === "leaderboard" && lbGrowth && lbSeason && (
+        <LeaderboardView
+          open
+          growth={lbGrowth}
+          season={lbSeason}
+          onClose={() => setPanel("none")}
         />
       )}
 

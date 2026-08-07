@@ -29,7 +29,7 @@
 | M0 工程基座 | ✅ 完成 | — | A1–A6 全部完成，本机全绿；Docker 运行验证待服务器/CI |
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
-| M3 H5 垂直闭环 | 🔄 进行中（主链可玩，面板待组装） | E 阶段客户端全量（20 组件 + 7 数据模型）+ **H5 SPA 可运行组装**（vite + App.tsx 登录→建角→场景+导航，apiClient /api 前缀）→ **生产部署**（/var/www/yiren Nginx 静态托管 + /api 代理 + /ws 预留，http://117.72.34.43/）；API 层 16 e2e 全绿；浏览器验证：页面渲染 ✓、API 链路 ✓、登录页自动化注入受 React 受控输入+限流干扰，**真实用户手动验证收尾**；**剩余：E14 面板组装闭环（⬜ 待办）** |
+| M3 H5 垂直闭环 | 🔄 进行中（骨架可玩，面板与战斗待做） | E 阶段客户端全量 + H5 SPA 生产上线（http://117.72.34.43/，登录→建角→场景）；**剩余**：F0 PVE 战斗域（服务端前置）+ E14 面板闭环 12 子任务（试玩完整可玩） |
 | M2.5 服务端业务 | ✅ 完成 | — | B2 缺口全部补齐：auth/character/scene/skills/quests/templates/afk/pvp/leaderboard/forum/session 十一域 + 收尾 6 stub（logout 吊销会话 / characters 改名 / inventory equip·unequip·use 装备与物品效果结算 / content 版本）——**协议清单 40 路由 100% 真实实现，0 stub**（迁移 0006–0008）；299 用例全绿 + 本地真库 e2e |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
@@ -399,16 +399,34 @@
 
 ### E14 H5 应用组装与面板闭环（M3 收尾，⬜ 待办）
 
-- SPA 骨架已上线（vite + App.tsx 登录→建角→场景+导航）；**本任务把 E1–E13 组件接入 App 形成完整可玩闭环**：
-  - 角色面板（CharacterSheet + 数据加载：vitals/武功/装备/行囊 + 装备卸装/使用）
-  - 挂机（GrindBanner + AfkSheet 启动/停止 + AfkReportView 战报；模板编辑器 TacticEditor）
-  - 任务（QuestPanel 接/交/查 + 主线足迹）
-  - 论坛（ForumView 板块/帖子/详情/发帖/评论/点赞/举报 + PostComposer）
-  - 战斗（CombatView 手动战斗接入；PVP 对战/战报）、地图（MapSheet）、榜单（LeaderboardView）
-  - 断线重连（ReconnectingOverlay + resume 恢复点）、触感/音效（effects/sound）
-- 每个面板：组件接线 + 数据流 + 空态/错误态 + DOM 单测；验收：**浏览器/真机走通 登录→建角→探索→学武→任务→挂机→PVP→论坛 全闭环**
-- **依赖**：E1–E13（已完成）、M2.5 API（已完成）
-- **估时**：3–4 人日
+> **前置**：F0 PVE 战斗域（服务端）——战斗 UI 无可接 API 前无法验收；任务 kill 相位也依赖战斗。
+
+- **E14.1 场景交互完善**（依赖 F0）：NPC 对话/交易/请托、物品拾取、EntitySheet 接线（动作从世界中长出）；场景刷新与移动反馈
+  - 验收：村口广场 NPC 可对话、商店可交易、拾取入行囊
+- **E14.2 角色面板与学武**：CharacterSheet 数据加载（vitals/武功/装备/行囊）+ 装备卸装/使用（inventory 三接口）+ learn/practice/study 动作与数值反馈
+  - 验收：面板与 API 数据一致；学武耗精/升级即时反馈
+- **E14.3 任务面板**：QuestPanel 接/交/查 + 主线足迹 + 可前往（goto 相位）导航；进度推进靠 F0 战斗 kill
+  - 验收：接 q_newbie_trail → 战斗杀野狗 → 交差发奖闭环
+- **E14.4 挂机闭环**：GrindBanner（运行状态）+ AfkSheet（模板/时长/启停）+ AfkReportView（叙事战报 + 未读角标）
+  - 验收：启动→横幅→停止→战报叙事回响；重连后未读战报
+- **E14.5 战斗 UI**（依赖 F0）：CombatView 接入 PVE（双方状态 Bar + 动作按钮 + 战报演出 + 结果收束）；TacticEditor 战术模板（条件/动作 chips）
+  - 验收：手动战斗可打野狗/盗匪；模板影响自动行为
+- **E14.6 PVP 对战 UI**：对手列表/赛季信息/发起对战（二次确认）/战报回放
+  - 验收：与第二账号对战完整闭环
+- **E14.7 论坛完整交互**：ForumView 板块/帖子/详情 + PostComposer 发帖 + 评论/点赞/举报
+  - 验收：发帖→他人可见→评论/点赞计数
+- **E14.8 地图与榜单**：MapSheet（区域地图八向导航）+ LeaderboardView（成长/赛季双榜）
+  - 验收：地图可达区域可导航；榜单数据正确
+- **E14.9 断线重连体验**：ReconnectingOverlay + resume 恢复点 + 状态同步
+  - 验收：断线重连回到场景且未读战报提示
+- **E14.10 体验打磨（美观度+易用性）**：tokens.css 视觉一致性复核、页面过渡/按钮反馈动效、sound.ts 音效、空态/加载态/错误态、toast 反馈、44px 触控复核、375/390/430 断点与底部安全区
+  - 验收：mobile-ui 体验承诺——30 秒内知道"我在哪、有何变化、下一步"
+- **E14.11 新手引导**：首启引导（登录→建角→第一条任务→学武→首次战斗），文案遵循 yjh-wuxia-copywriting
+  - 验收：新玩家 30 秒内完成一次可理解行动
+- **E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环（登录→建角→探索→学武→任务→战斗→挂机→PVP→论坛）+ 生产部署更新（重新 build:web + 上传）
+  - 验收：试玩清单全绿（复用 beta-launch-checklist 门禁）
+- **依赖**：E1–E13、M2.5 API、F0 战斗域
+- **估时**：5–7 人日（E14.1–14.9 各 0.5 日，14.10–14.12 各 0.5–1 日）
 
 ## 阶段 M2.5：服务端业务（API 真实实现，F 联调前置）
 
@@ -422,6 +440,15 @@
 - M2.5-pvp/leaderboard：pvp 四接口（快照/种子/ELO）+ 榜单两接口（快照）
 - M2.5-forum：forum 六接口（受控纯文本 + 审核状态）
 - M2.5-session：GET /session/resume（重连恢复点 + 未读结算）
+
+### F0 PVE 战斗域（服务端，试玩可玩前置，⬜ 待办）
+
+- 战斗是武侠核心玩法；H5 CombatView 组件已就绪但无可接 API（M2.5 未做战斗域，POST /scene/action 非 move 501）。
+- **路由**（补 apiManifest + protocol.md 三件套）：POST /combat/start（对 NPC 开战：角色快照 + NPC 快照 + seed，建 combat_sessions + 首个回合事件）、POST /combat/action（回合动作 attack/recover/perform/flee——服务端权威，客户端只发意图，runBattle 逐步推进）、GET /combat/status（当前战斗）；结果：掉落（economy rollDrops）+ 经验/潜能 + **任务 kill 相位推进（调 questsService.recordProgress）**
+- **统一 PVP 快照构造**：把 pvpService.buildSnapshot 的门类等级占位公式替换为战斗域共享的 combatant 构造（F1 待办落地，战斗公式只留一处实现）
+- 事件流：combat_events（seq 有序回放）；战报复用 combat_sessions.result
+- **依赖**：C3 runBattle（已完成）、M2.5 各域、content NPC 定义
+- **估时**：2–3 人日
 
 ## 阶段 F：联调与测试
 

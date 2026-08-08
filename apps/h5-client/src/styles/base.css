@@ -245,17 +245,48 @@ body {
 }
 .app-nav-btn {
   min-height: var(--touch-min);
-  padding: 0 10px;
+  padding: 0 12px;
   background: none;
   border: none;
   border-radius: 6px;
   color: var(--paper-dim);
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 1px;
   transition: color 0.15s ease;
 }
 .app-nav-btn:active {
   color: var(--jade-bright);
+}
+
+/* ---- 更多抽屉（V2 批次4：低频项收纳） ---- */
+.more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.more-item {
+  min-height: var(--touch-min);
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-soft);
+  color: var(--paper);
+  font-size: 15px;
+  font-family: var(--font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
+}
+.more-item:active {
+  transform: translateY(1px);
+  filter: brightness(1.12);
+}
+.more-item.danger {
+  color: var(--cinnabar);
+  border-color: rgba(181, 74, 58, 0.5);
 }
 
 /* ---- 全局 toast 容器（App 层，浮于所有浮层之上） ---- */

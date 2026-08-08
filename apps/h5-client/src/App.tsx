@@ -101,6 +101,7 @@ export function App(): JSX.Element {
   const [needCreate, setNeedCreate] = useState(false);
   const [room, setRoom] = useState<SceneRoom | null>(null);
   const [panel, setPanel] = useState<Panel>("none");
+  const [moreOpen, setMoreOpen] = useState(false);
   const [characterView, setCharacterView] = useState<CharacterView | null>(null);
   const [characterPending, setCharacterPending] = useState<string | null>(null);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -920,22 +921,53 @@ export function App(): JSX.Element {
             <button className="app-nav-btn" onClick={openQuests}>
               任务
             </button>
-            <button className="app-nav-btn" onClick={openForum}>
-              论坛
-            </button>
-            <button className="app-nav-btn" onClick={openLeaderboard}>
-              榜单
-            </button>
             <button className="app-nav-btn" onClick={openPvp}>
               论剑
             </button>
-            <button className="app-nav-btn" onClick={openMap}>
-              地图
+            <button className="app-nav-btn" onClick={openForum}>
+              论坛
             </button>
-            <button className="app-nav-btn" onClick={() => void onLogout()}>
-              离开
+            <button className="app-nav-btn" onClick={() => setMoreOpen(true)}>
+              更多
             </button>
           </nav>
+
+          {moreOpen && (
+            <Sheet open title="更多" onClose={() => setMoreOpen(false)}>
+              <div className="more-list">
+                <button
+                  type="button"
+                  className="more-item"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    openLeaderboard();
+                  }}
+                >
+                  榜单
+                </button>
+                <button
+                  type="button"
+                  className="more-item"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    openMap();
+                  }}
+                >
+                  地图
+                </button>
+                <button
+                  type="button"
+                  className="more-item danger"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    void onLogout();
+                  }}
+                >
+                  离开
+                </button>
+              </div>
+            </Sheet>
+          )}
         </>
       )}
 

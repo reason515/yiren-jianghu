@@ -39,6 +39,7 @@
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.3.0",
+    "ssh2": "^1.17.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0"

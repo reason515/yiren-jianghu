@@ -90,6 +90,7 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 
 提交前必须全绿：`pnpm build` → `pnpm typecheck` → `pnpm test` → `pnpm lint` → `pnpm format:check`。
 CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（postgres 服务容器跑 migrate up/down）。
+**`.prettierignore` 只忽略 `docs/` 与 `pnpm-lock.yaml`——`.pi/` 下的 skill 文档/AGENTS.md 也受 format 门禁约束**，改过 `.pi/` 下 markdown 记得 `pnpm format`（见常见坑 #30）。
 
 ## 测试约定
 
@@ -125,7 +126,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
    - `secrets` **不能直接用于 `if` 条件**（工作流直接判无效、运行显示无 job 即失败）——先 `env: { X: ${{ secrets.X }} }` 再 `if: env.X != ''`；
    - 运行"无任何 job 直接失败" = 工作流 YAML/表达式解析错误；
    - Docker Hub/registry 返回 502 等瞬时故障（如拉 buildx 镜像）→ **直接 Re-run，不要改代码**；
-   - 弃用告警（Node20 actions）可通过升级 action 大版本消除（checkout@v5、setup-node@v5）。
+   - 弃用告警（Node20 actions）可通过升级 action 大版本消除（checkout@v5、setup-node@v5、pnpm/action-setup@v6）。
 10. **vitest 自定义 include 覆盖默认排除**：配置了 `include` 后必须同时把 `exclude` 写全，且模式要带 `**/` 前缀（如 `"**/node_modules/**"`），否则会误扫依赖自带测试（曾误跑 zod 的 2873 个测试）。
 11. **门禁管道吞退出码**：`pnpm lint 2>&1 | tail` 会让退出码变成 tail 的（0），坏状态照样继续 commit。跑门禁不要接管道过滤，或检查 `$?`。
 12. **React 19 + tsc 声明（h5-client 前端约定）**：
@@ -163,6 +164,10 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 27. **服务端逐回合战斗（F0）**：战斗会话持久化 `seed + state(rngCalls/nextSeq/performCooldowns/双方战斗体)`，事件独立按 `(session_id, seq)` 追加；**事件 payload 必须同时保存 `actor` 与 `data`**，否则前端无法区分双方动作。`perform` 事件还须带 `performId`，以供前端演出；冷却必须写入 `performCooldowns`，断线恢复不能重置。jsonb 读取仍按字符串/对象双保险。手动 action 只接收白名单意图、服务端续算 NPC 回合并写回角色资源；胜利按 NPC 内容包 `battleRewards`/`drops` 结算并调 `questsService.recordProgress(..., "kill", npcId)`。**同一 action 用 `Db.transaction` + `SELECT ... FOR UPDATE` 锁住会话行**，避免双击/重试重复掉落、成长或任务推进。首个 `battle_start` 固定 `seq=0`，其 SQL 参数形态与普通事件不同，mock 必须分别模拟。PVP 与 PVE 的角色战斗体必须复用同一工厂，避免门类/属性公式漂移；会话/action 覆盖开战→续算→绝招冷却→胜利结算→任务推进及拒绝分支的 service 测试，之后再进真库 e2e。
 28. **本地 E2E 环境变量**：`pnpm test:e2e` 已通过根 `package.json` 的 `node --env-file-if-exists=.env` 自动加载 `DATABASE_URL`；不要绕过该脚本直接运行 Vitest。先 `pnpm dev:infra`，再跑 E2E。若报缺少 `DATABASE_URL`，先检查根 `.env`，而非只确认 Docker 已启动。
 29. **App 主界面布局/toast 样式脱节（E14.10 踩过）**：`App.tsx` 用了 `.app-nav`（底部导航）与 `.toast-host`（全局 toast 容器）但 base.css 长期缺定义——导航/toast 实际不可见/无样式，E2E 断言不到视觉层所以一直没暴露。凡新增 App 级布局类，必须在 `base.css`（主界面骨架）同步定义并保留；toast 走全局 `.toast-host`（z-index 300 高于浮层），勿复用 base `.toast` 的隐藏默认（opacity:0 需 `.show`）。
+30. **质量门禁失败定位与 `.pi/` 文档格式化（E14 收口后 CI run 125 踩过）**：
+    - **GitHub 自动把 ESLint 输出解析成 annotations**，失败运行摘要“1 error and N warnings”里的 error 常常只是**步骤失败通用标注**（`Process completed with exit code 1`，指到 ci.yml 对应步骤行），不是 lint error——定位失败环节看 job 的 **step 结论**（哪个 step 标红），别数 annotations。
+    - **`.pi/` 下 markdown 参与 prettier 门禁**：`.prettierignore` 只忽略 `docs/` 与 `pnpm-lock.yaml`；新增/手改 skill 文档、AGENTS.md 后必须 `pnpm format`，否则 CI `format:check` 挂（run 125 就是新增 2 个 skill 文档 + 改 AGENTS.md 未格式化）。
+    - **ESLint warnings 不挂 CI 但污染 annotations**：`no-unused-vars` 是 warn 级（exit 0），会以 warnings 刷在 PR 页；提交前顺手清掉（删未用 import/变量，回调参数改 `_` 前缀），保持 annotations 干净。
 
 ## 服务端域实现模式（M2.5，新增域照此扩展）
 

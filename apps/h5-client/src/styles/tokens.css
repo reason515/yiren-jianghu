@@ -58,11 +58,12 @@
   --stat-potential: #c9a227;
   --stat-exp: #b07ab0;
 
-  /* 四维 */
-  --attr-str: #d08060;
-  --attr-int: #7a9ec8;
-  --attr-con: #8faf70;
-  --attr-dex: #c4b06a;
+  /* 四维（V2.4 水墨矿物色：低饱和、带墨感，色相隐喻——赭石·土铁厚重 / 黛蓝·文墨夜 / 松绿·竹木生机 / 琥珀·秋金轻灵）
+   * 颜色规范见 docs/design-system.md §2.4 文字颜色规范 */
+  --attr-str: #b06a42;
+  --attr-int: #6b88ac;
+  --attr-con: #76905f;
+  --attr-dex: #a38c50;
 
   /* 武功门类 */
   --skill-force: #8fbfa6;

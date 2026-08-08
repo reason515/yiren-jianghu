@@ -111,7 +111,7 @@ export function CharacterSheet({
                   {meta.label}
                 </span>
                 <span className="char-attr-value">
-                  当前 {attr.cur} · 先天 {attr.base}
+                  当前 <b>{attr.cur}</b> · 先天 <b className="base">{attr.base}</b>
                 </span>
               </div>
             );

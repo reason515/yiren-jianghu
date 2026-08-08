@@ -391,12 +391,15 @@
   font-size: 16px;
 }
 .attr-hint {
-  color: var(--paper-faint);
+  color: var(--paper-dim);
   font-size: 12px;
 }
 .attr-value {
   text-align: right;
-  font-size: 18px;
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
 }
 .attr-btns {
   display: flex;
@@ -406,7 +409,7 @@
   width: var(--touch-min);
   height: var(--touch-min);
   border-radius: 6px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(232, 223, 208, 0.3);
   background: var(--ink-soft);
   color: var(--paper);
   font-size: 18px;

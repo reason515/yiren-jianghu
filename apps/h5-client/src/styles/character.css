@@ -132,8 +132,29 @@
   font-size: 16px;
 }
 .char-attr-value {
-  color: var(--paper);
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--paper-dim);
+  letter-spacing: 0.5px;
+}
+/* 读数分色：当前值着领域色（与属性名呼应），先天值弱化 */
+.char-attr-value b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.char-attr-row[data-attr="str"] .char-attr-value b {
+  color: var(--attr-str);
+}
+.char-attr-row[data-attr="int"] .char-attr-value b {
+  color: var(--attr-int);
+}
+.char-attr-row[data-attr="con"] .char-attr-value b {
+  color: var(--attr-con);
+}
+.char-attr-row[data-attr="dex"] .char-attr-value b {
+  color: var(--attr-dex);
+}
+.char-attr-value .base {
+  color: var(--paper-faint);
 }
 .char-skill-row {
   display: grid;

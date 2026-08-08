@@ -31,6 +31,29 @@
 | `--gold` / `--gold-muted` | #c9a869 / #8d7040 | 铜金：次级强调 |
 | `--line` / `--line-strong` | 纸色 12%/22% | 细线/强线 |
 
+## 2.2 字体体系（V2.11：三字体用途矩阵 + button 继承）
+
+| Token | 字体 | 子集 | 用途 |
+|---|---|---|---|
+| `--font-display` | ZCOOL XiaoWei | 全 GB2312（2.6MB） | 标题/印章/方向字/底部导航：书法体，**数字不等宽（305–584）勿用于数值列** |
+| `--font-body` | Noto Serif SC | 全 GB2312（400/600，2.6MB） | 正文/界面/按钮：印刷宋体，可读性主力 |
+| `--font-digit` | **LXGW WenKai 数字子集**（V2.11 新增，4.6KB） | 仅 `0123456789/.,:%+-×·` | **数值专用**：楷体笔意 + 全数字等宽 600（对齐天然成立），配武侠账本气质；状态栏/银两/经验潜能/见闻数字 |
+
+**字号层级（正文不放大原则 §2.4 的延伸）**：
+
+| 场景 | 字体 | 字号 | 字重 | 颜色 |
+|---|---|---|---|---|
+| 场景标题 | display | 22px | 400 | `--paper` |
+| 章节头（此刻可往等） | display | 14px | 400 | `--paper-dim` |
+| 正文（场景描述/见闻） | body | 15px | 400 | `--paper-dim`，行高 1.85 |
+| 交互项（Tab/chip） | body | 14–15px | 400 | 语义色（见 §2.4） |
+| 生存状态标签 | body | 12px | 400 | `--paper-dim` |
+| **生存状态数值** | **digit** | 13px | 400 | `--paper`（银两 `--gold`） |
+| 见闻关键字：人名 / 数字 | body 前缀 / digit | 13px | 500 / 400 | `--jade-bright` / `--gold` |
+| 辅助小字 | body | 11–12px | 400 | `--paper-faint` |
+
+**button 字体继承（V2.11 根治，勿忘）**：`<button>` 不继承 body 字体（浏览器 UA 默认 Arial）——base.css 已加全局 `button, input, select, textarea { font-family: inherit }`；新增按钮类若需 display/digit 字体必须显式覆盖。**新增 UI 元素后探针检查 `getComputedStyle().fontFamily` 防 Arial 回退**（V2.10 见闻/Tab 曾静默变 Arial）。
+
 ## 2.2 意境原语 token（V2.2 新增）
 
 | Token | 值 | 用途 |
@@ -157,6 +180,19 @@
 | `.v-col` | 竖排列 | `writing-mode: vertical-rl` + `text-orientation: upright`；入场动画 stagger |
 
 不支持 writing-mode 的端自动退化为横排诗句，仍可读。
+
+## 3.4 按钮与 chip 规范（V2.11：统一质感基线）
+
+移动端所有可点区域 **≥44px 触控**（`--touch-min`），但**视觉**上紧凑精致、不过度占宽：
+
+| 元素 | 尺寸 | 边框 | 底 | 按压态 |
+|---|---|---|---|---|
+| `.chip`（人物/物品/动作） | min-height 44px，padding 0 14px | 1px 分类色 40–55% | 分类 tint 径向 + 线性渐变 + 内阴影 | 位移 1px + 亮度 1.18 |
+| `.exit-cell`（方向罗盘） | min-width **48px**，min-height 44px | 玉色 55% | 玉色渐变 + 内阴影 + 辉光 | 位移 1px + 亮度 1.1 |
+| `.exit-center`（当前房间） | min-width 88px | 铜金 35% | 铜金渐变 + 内凹 | — |
+| `.scene-tabs button`（页签） | min-height 44px | 无边框，选中底 2px 玉色 | 透明 | 文字提亮 |
+
+- **分类 tint 统一做法**：`radial-gradient(120% 150% at 30% 0%, <色 12–18%>, transparent 55%)` + `linear-gradient(180deg, <色 8–14%>, <色 3–6%>)`——比纯色更有层次，且与墨底融合不刺眼。
 
 # 4 动效基线
 

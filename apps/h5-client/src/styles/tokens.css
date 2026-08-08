@@ -26,11 +26,21 @@
   font-style: normal;
   font-display: swap;
 }
+/* 数字字体（V2.11：霞鹜文楷数字子集 4.6KB——楷体笔意 + 全数字等宽 600，
+ * 适配武侠账本气质；ZCOOL 数字不等宽（305–584）对齐差，Noto 数字无楷韵） */
+@font-face {
+  font-family: "LXGW WenKai";
+  src: url("fonts/lxgw-wenkai-digits-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   /* 字体 */
   --font-body: "Noto Serif SC", serif;
   --font-display: "ZCOOL XiaoWei", serif;
+  --font-digit: "LXGW WenKai", "Noto Serif SC", serif;
   --font-mono: ui-monospace, "Cascadia Code", monospace;
 
   /* 基础色板（墨色武侠） */

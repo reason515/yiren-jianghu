@@ -21,6 +21,15 @@ body {
   padding: 0;
   font-family: var(--font-body);
 }
+/* V2.11 根治：`<button>` 不继承 body 字体（浏览器 UA 默认 Arial）——
+ * 全局继承后各按钮字体统一；需 display 字体的按钮各自显式覆盖。 */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
 *,
 *::before,
 *::after {
@@ -115,22 +124,29 @@ body {
   animation: sheet-up 0.2s var(--ease-out);
 }
 
-/* ---- Chip 动作 ---- */
+/* ---- Chip 动作（V2.11 统一质感：分类 tint 渐变 + 内阴影 + 紧凑内边距） ---- */
 .chip {
   min-height: var(--touch-min);
-  padding: 0 16px;
+  padding: 0 14px;
   border-radius: 6px;
   border: 1px solid var(--line-strong);
-  background: var(--ink-lift);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(232, 223, 208, 0.05), transparent 55%),
+    linear-gradient(180deg, var(--ink-lift), var(--ink));
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 14px;
+  letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 6px rgba(0, 0, 0, 0.3);
   transition:
     transform 0.06s ease,
-    filter 0.06s ease;
+    filter 0.06s ease,
+    border-color 0.15s ease;
 }
 .chip:active:not(:disabled) {
   transform: translateY(1px);
@@ -139,25 +155,37 @@ body {
 .chip.action {
   color: var(--jade-bright);
   border-color: rgba(143, 191, 166, 0.55);
-  background: rgba(95, 143, 120, 0.14);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(95, 143, 120, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(95, 143, 120, 0.12), rgba(95, 143, 120, 0.05));
 }
 .chip.perform {
   color: var(--gold);
   border-color: rgba(201, 168, 105, 0.55);
-  background: rgba(201, 168, 105, 0.14);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(201, 168, 105, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(201, 168, 105, 0.12), rgba(201, 168, 105, 0.05));
 }
 .chip.npc {
   color: #e8c4bc;
   border-color: rgba(181, 74, 58, 0.4);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(181, 74, 58, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(181, 74, 58, 0.09), rgba(181, 74, 58, 0.03));
 }
 .chip.item {
   color: #c5d7e0;
   border-color: rgba(106, 143, 158, 0.45);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(106, 143, 158, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(106, 143, 158, 0.09), rgba(106, 143, 158, 0.03));
 }
 .chip.danger {
   color: #f0d4ce;
   border-color: rgba(181, 74, 58, 0.55);
-  background: rgba(181, 74, 58, 0.16);
+  background:
+    radial-gradient(120% 150% at 30% 0%, rgba(181, 74, 58, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(181, 74, 58, 0.14), rgba(181, 74, 58, 0.06));
 }
 .chip:disabled {
   opacity: 0.4;
@@ -299,10 +327,11 @@ body {
 }
 .status-item b {
   color: var(--paper);
-  font-weight: 600;
-  font-size: 12.5px;
+  font-weight: 400;
+  font-family: var(--font-digit);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   white-space: nowrap;
 }
 /* 银两：货币非生存状态——独立金色徽章区，视觉与状态组明显区分 */
@@ -328,8 +357,9 @@ body {
 }
 .status-silver b {
   color: var(--gold);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 400;
+  font-family: var(--font-digit);
+  font-size: 13.5px;
   font-variant-numeric: tabular-nums;
 }
 .silver-dot {

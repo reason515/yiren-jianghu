@@ -33,8 +33,20 @@
   color: var(--gold-muted);
   font-family: var(--font-display);
 }
-.lb-row:nth-child(-n + 3) .lb-rank {
+/* 前三名金银铜（V2 批次3） */
+.lb-row:nth-child(1) .lb-rank {
   color: var(--gold);
+}
+.lb-row:nth-child(2) .lb-rank {
+  color: #c9cdd4;
+}
+.lb-row:nth-child(3) .lb-rank {
+  color: #b08a5a;
+}
+.lb-me {
+  color: var(--jade-bright);
+  font-size: 12px;
+  margin-left: 4px;
 }
 .lb-value {
   color: var(--paper-faint);
@@ -44,14 +56,12 @@
   gap: 5px;
 }
 .lb-value::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--stat-exp);
+  content: "◆";
+  font-size: 8px;
+  color: var(--stat-exp);
 }
 .lb-list[data-kind="season_pvp"] .lb-value::before {
-  background: var(--gold);
+  color: var(--gold);
 }
 .lb-row.me .lb-value {
   color: var(--jade-bright);

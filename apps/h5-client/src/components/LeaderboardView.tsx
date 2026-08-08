@@ -46,7 +46,10 @@ export function LeaderboardView({
           {data.entries.map((e) => (
             <li key={e.characterId} className={`lb-row${e.isMe ? " me" : ""}`}>
               <span className="lb-rank">{e.rank}</span>
-              <span className="lb-name">{e.name}</span>
+              <span className="lb-name">
+                {e.name}
+                {e.isMe && <span className="lb-me">（我）</span>}
+              </span>
               <span className="lb-value">
                 {kind === "growth" ? "经验" : "积分"} {e.value}
               </span>

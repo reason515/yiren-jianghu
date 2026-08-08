@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Bar } from "./base/Bar.js";
 import { Chip } from "./base/Chip.js";
-import type { CombatViewProps } from "../lib/combatTypes.js";
+import type { CombatResult, CombatViewProps } from "../lib/combatTypes.js";
 
 /** 手动战斗视图（mobile-ui：看局势→抓时机；服务端结算，客户端只发动作意图）。 */
 export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | null {
@@ -70,9 +70,10 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
   );
 }
 
-const RESULT_TEXT: Record<"win" | "lose" | "escape" | "draw", string> = {
+const RESULT_TEXT: Record<CombatResult, string> = {
   win: "尘埃落定——你赢了这一场。",
   lose: "力竭而退，来日再战。",
   escape: "全身而退，江湖路长。",
   draw: "未分胜负，各自散去。",
 };
+export { RESULT_TEXT };

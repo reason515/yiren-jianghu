@@ -246,19 +246,16 @@ body {
 .status-vitals {
   flex: 1;
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 10px;
   align-items: center;
 }
 .status-item {
-  flex: 1;
   min-width: 0;
   display: flex;
   align-items: baseline;
-  justify-content: center;
   gap: 5px;
-}
-.status-item + .status-item {
-  border-left: 1px solid rgba(232, 223, 208, 0.14);
 }
 .status-dot {
   width: 7px;
@@ -296,14 +293,14 @@ body {
 .status-item em {
   font-style: normal;
   color: var(--paper-dim);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 1px;
   flex-shrink: 0;
 }
 .status-item b {
   color: var(--paper);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.3px;
   white-space: nowrap;
@@ -311,10 +308,11 @@ body {
 /* 银两：货币非生存状态——独立金色徽章区，视觉与状态组明显区分 */
 .status-silver {
   flex-shrink: 0;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid rgba(201, 168, 105, 0.4);
   background:

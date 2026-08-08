@@ -13,6 +13,7 @@ export * from "./components/AttributeAllocator.js";
 export * from "./components/LoginPage.js";
 export * from "./components/CharacterCreateSheet.js";
 export * from "./components/SceneView.js";
+export * from "./components/JournalFeed.js";
 export * from "./components/ExitPad.js";
 export * from "./components/EntitySheet.js";
 export * from "./components/CombatView.js";

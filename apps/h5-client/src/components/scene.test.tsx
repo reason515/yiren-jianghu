@@ -71,12 +71,13 @@ describe("ExitPad（方位罗盘）", () => {
   });
 });
 
-describe("SceneView（叙事优先 + 见闻 Tab）", () => {
+describe("SceneView（叙事优先 + 见闻动态流 + 交互 Tab）", () => {
   it("渲染标题与叙事长文，出口与人物可交互", () => {
     let selected = "";
     const { host } = render(
       <SceneView
         room={ROOM}
+        journal={[{ id: 1, text: "村口守卫：站住，你从哪里来？" }]}
         onGo={() => undefined}
         onSelectNpc={(n) => (selected = n.name)}
         onSelectItem={() => undefined}
@@ -85,13 +86,37 @@ describe("SceneView（叙事优先 + 见闻 Tab）", () => {
     );
     expect(host.querySelector(".scene-title")?.textContent).toBe("村口广场");
     expect(host.textContent).toContain("稻香未散");
-    expect(host.textContent).toContain("此地人物");
+    expect(host.textContent).toContain("见闻");
+    expect(host.textContent).toContain("村口守卫：站住，你从哪里来？");
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
         .find((c) => c.textContent === "王师傅")!
         .click(),
     );
     expect(selected).toBe("王师傅");
+  });
+
+  it("人物/物品/动作以页签呈现：选中页签高亮、内容在面板内", () => {
+    const { host } = render(
+      <SceneView
+        room={ROOM}
+        journal={[]}
+        onGo={() => undefined}
+        onSelectNpc={() => undefined}
+        onSelectItem={() => undefined}
+        onAction={() => undefined}
+      />,
+    );
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>(".scene-tabs button")];
+    expect(tabs.map((t) => t.textContent?.replace(/\d+/g, "").trim())).toEqual([
+      "人物",
+      "物品",
+      "动作",
+    ]);
+    expect(tabs.find((t) => t.classList.contains("on"))?.textContent).toContain("人物");
+    expect(host.querySelector(".tab-panel")?.textContent).toContain("王师傅");
+    act(() => host.querySelector<HTMLButtonElement>(".scene-tabs button:nth-child(2)")!.click());
+    expect(host.querySelector(".tab-panel")?.textContent).toContain("铁剑");
   });
 });
 

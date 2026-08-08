@@ -2,9 +2,9 @@ import type { JSX } from "react";
 import type { VitalKey } from "../lib/characterTypes.js";
 
 /**
- * 主界面顶栏生存状态条（V2.7 生存项；V2.9 双值 + 货币区分）。
- * - 生存状态（气/精/精力/内力）：stat 色点 + 语义标签 + 「当前/上限」双值（tabular-nums）；
- * - 银两：与生存状态概念不同（货币非状态），右侧独立金色徽章区，视觉明显区分。
+ * 主界面顶栏生存状态条（V2.9 双值；V2.10 两行网格，参照 xkx vitals 2×2）。
+ * - 生存状态（气/精/精力/内力）：「当前/上限」双值，2×2 网格两行排布，不再单行拥挤；
+ * - 银两：货币非状态，右侧独立金色胶囊徽章，与状态组视觉隔离。
  * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {

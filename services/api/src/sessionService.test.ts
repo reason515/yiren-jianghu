@@ -244,7 +244,7 @@ describe("sessionService.resume", () => {
   });
 
   it("返回生存资源上限（与当前值成对，供顶栏展示）", async () => {
-    const { db, state, session } = boot();
+    const { db, state } = boot();
     // 无 attrs 时按 0 计算：maxQi = 100 + 0 + 0 = 100；
     // 再给角色补 attrs 与内功等级验证公式生效
     state.characters[0]!.attrs = { str: 25, int: 20, con: 20, dex: 15 };

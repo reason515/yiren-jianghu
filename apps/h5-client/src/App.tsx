@@ -12,9 +12,11 @@ import { DepartureOverlay } from "./components/DepartureOverlay.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { CharacterCreateSheet } from "./components/CharacterCreateSheet.js";
 import { SceneView } from "./components/SceneView.js";
+import type { JournalEntry } from "./components/JournalFeed.js";
+import { DIR_LABEL } from "./components/ExitPad.js";
 import { EntitySheet } from "./components/EntitySheet.js";
 import { ShopView } from "./components/ShopView.js";
-import { CombatView } from "./components/CombatView.js";
+import { CombatView, RESULT_TEXT } from "./components/CombatView.js";
 import { CharacterSheet } from "./components/CharacterSheet.js";
 import { ConfirmSheet } from "./components/ConfirmSheet.js";
 import { Sheet } from "./components/base/Sheet.js";
@@ -162,6 +164,14 @@ export function App(): JSX.Element {
   });
   const [guideTipText, setGuideTipText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const journalIdRef = useRef(0);
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
+
+  /** 见闻（V2.10 动态文字流）：互动事件追加，与静态场景描述分离。 */
+  const addJournal = useCallback((text: string, kind?: JournalEntry["kind"]): void => {
+    journalIdRef.current += 1;
+    setJournal((prev) => [...prev, { id: journalIdRef.current, text, kind }]);
+  }, []);
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
   const authApi: AuthApi = useMemo(() => createAuthApi(BASE_URL), []);
@@ -391,7 +401,9 @@ export function App(): JSX.Element {
 
   const onGo = async (dir: string): Promise<void> => {
     try {
-      setRoom((await api.move(dir)) as SceneRoom);
+      const next = (await api.move(dir)) as SceneRoom;
+      setRoom(next);
+      addJournal(`你向${DIR_LABEL[dir] ?? ""}行去，来到${next.name}。`);
       await refreshQuests();
     } catch (e) {
       notify(e);
@@ -639,6 +651,7 @@ export function App(): JSX.Element {
         setAfkStatus(toAfkStatusView(job));
         setPanel("none");
         setError("气息渐定，行止已安排妥当。");
+        addJournal("气息渐定，行止已安排妥当。");
       })
       .catch(notify)
       .finally(() => setAfkPending(false));
@@ -653,6 +666,7 @@ export function App(): JSX.Element {
         setAfkReport(report);
         setAfkReportOpen(true);
         setPanel("none");
+        addJournal(report.reason ?? "行止已收。");
       })
       .catch(notify)
       .finally(() => setAfkPending(false));
@@ -743,9 +757,9 @@ export function App(): JSX.Element {
       .reportQuest(questId)
       .then((result) => {
         const rewards = (result as { rewards: QuestRewardView }).rewards;
-        setError(
-          `交差已毕：经验 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`,
-        );
+        const text = `交差已毕：经验 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
+        setError(text);
+        addJournal(text);
         return refreshQuests();
       })
       .catch(notify);
@@ -778,8 +792,16 @@ export function App(): JSX.Element {
         .sceneAction({ type: action, targetId })
         .then((result) => {
           setSelectedEntity(null);
-          if (result.kind === "talk") setDialogue(result);
-          if (result.kind === "trade") setTrade(result);
+          if (result.kind === "talk") {
+            setDialogue(result);
+            result.dialogue.forEach((line, index) =>
+              addJournal(index === 0 ? `${result.npc.name}：${line}` : line),
+            );
+          }
+          if (result.kind === "trade") {
+            setTrade(result);
+            addJournal(`你向${result.vendor.name}打听货物。`);
+          }
         })
         .catch(notify);
       return;
@@ -789,7 +811,9 @@ export function App(): JSX.Element {
         .sceneAction({ type: "take", targetId })
         .then((result) => {
           setSelectedEntity(null);
-          setError(result.kind === "take" ? `拾得：${result.item.name}` : "此物已收入行囊。");
+          const text = result.kind === "take" ? `拾得：${result.item.name}` : "此物已收入行囊。";
+          setError(text);
+          addJournal(text);
           return refreshScene();
         })
         .catch(notify);
@@ -801,7 +825,16 @@ export function App(): JSX.Element {
     void api
       .sceneAction({ type, targetId: trade.vendor.id, itemId, count: 1 })
       .then((result) => {
-        if (result.kind === "trade") setTrade(result);
+        if (result.kind === "trade") {
+          setTrade(result);
+          const good = trade.goods.find((candidate) => candidate.itemId === itemId);
+          const price = good ? (type === "buy" ? good.buy : good.sell) : 0;
+          addJournal(
+            type === "buy"
+              ? `以${price}两购得${good?.name ?? "此物"}。`
+              : `售出${good?.name ?? "此物"}，得${price}两。`,
+          );
+        }
       })
       .catch(notify);
   };
@@ -814,6 +847,7 @@ export function App(): JSX.Element {
         setCombat(state);
         if (state.result) {
           if (state.result === "win") triggerGuide("battle_won");
+          addJournal(RESULT_TEXT[state.result] ?? "此战已了。", "combat");
           await Promise.all([refreshScene(), refreshQuests()]);
         }
       } catch (e) {
@@ -877,6 +911,8 @@ export function App(): JSX.Element {
     clearRetryTimer();
     setReconnect(initialReconnectState());
     setGuideTipText(null);
+    setJournal([]);
+    journalIdRef.current = 0;
     setPanel("none");
   };
 
@@ -929,6 +965,7 @@ export function App(): JSX.Element {
           <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={silver} />
           <SceneView
             room={room}
+            journal={journal}
             onGo={(d) => void onGo(d)}
             onSelectNpc={setSelectedEntity}
             onSelectItem={(itemId) => {

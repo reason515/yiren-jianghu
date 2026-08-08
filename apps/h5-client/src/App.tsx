@@ -9,6 +9,7 @@ import {
 } from "./lib/combatTypes.js";
 import { LoginPage } from "./components/LoginPage.js";
 import { DepartureOverlay } from "./components/DepartureOverlay.js";
+import { StatusBar } from "./components/StatusBar.js";
 import { CharacterCreateSheet } from "./components/CharacterCreateSheet.js";
 import { SceneView } from "./components/SceneView.js";
 import { EntitySheet } from "./components/EntitySheet.js";
@@ -30,7 +31,7 @@ import { LeaderboardView } from "./components/LeaderboardView.js";
 import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
 import { GuideTip } from "./components/GuideTip.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
-import { toCharacterView, type CharacterView } from "./lib/characterTypes.js";
+import { toCharacterView, type CharacterView, type VitalKey } from "./lib/characterTypes.js";
 import {
   toAfkQuestOptions,
   toAfkSkillOptions,
@@ -100,6 +101,8 @@ export function App(): JSX.Element {
   const [character, setCharacter] = useState<{ id: string; name: string } | null>(null);
   const [needCreate, setNeedCreate] = useState(false);
   const [departure, setDeparture] = useState(false);
+  const [vitals, setVitals] = useState<Record<VitalKey, number> | null>(null);
+  const [silver, setSilver] = useState<number | null>(null);
   const [room, setRoom] = useState<SceneRoom | null>(null);
   const [panel, setPanel] = useState<Panel>("none");
   const [moreOpen, setMoreOpen] = useState(false);
@@ -200,6 +203,8 @@ export function App(): JSX.Element {
         api.getInventory(),
       ]);
       setCharacterView(toCharacterView(profile, skills, inventory));
+      setVitals(profile.vitals);
+      setSilver(profile.silver);
     } catch (e) {
       notify(e);
     }
@@ -239,6 +244,8 @@ export function App(): JSX.Element {
         id: (res.character as { id: string }).id,
         name: (res.character as { name: string }).name,
       });
+      setVitals((res.character as { vitals: Record<VitalKey, number> }).vitals);
+      setSilver((res.character as { silver: number }).silver);
       setNeedCreate(false);
       await Promise.all([
         refreshScene(),
@@ -369,6 +376,8 @@ export function App(): JSX.Element {
           id: (res.character as { id: string }).id,
           name: (res.character as { name: string }).name,
         });
+        setVitals((res.character as { vitals: Record<VitalKey, number> }).vitals);
+        setSilver((res.character as { silver: number }).silver);
       }
       await Promise.all([refreshScene(), refreshQuests(), refreshAfk()]);
       // 数据就绪后再进起程过场：过渡期间场景已在后台加载，起身推门即无缝进入
@@ -897,6 +906,7 @@ export function App(): JSX.Element {
 
       {room && !needCreate && (
         <>
+          <StatusBar vitals={vitals} silver={silver} />
           <SceneView
             room={room}
             quest={questData?.quests.find((q) => q.state === "accepted") ?? null}

@@ -229,6 +229,65 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ---- 主界面顶栏生存状态条（V2.7：气/精/精力/内力 + 银两；滚动吸顶） ---- */
+.status-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(18, 16, 14, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+.status-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--paper-faint);
+  flex-shrink: 0;
+}
+.status-item.qi .status-dot {
+  background: var(--stat-qi);
+}
+.status-item.jing .status-dot {
+  background: var(--stat-jing);
+}
+.status-item.jingli .status-dot {
+  background: var(--stat-jingli);
+}
+.status-item.neili .status-dot {
+  background: var(--stat-neili);
+}
+.status-item.silver .status-dot {
+  background: var(--gold);
+}
+.status-item em {
+  font-style: normal;
+  color: var(--paper-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.status-item b {
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+.status-item.silver b {
+  color: var(--gold);
+}
+
 /* ---- 主界面底部导航 ---- */
 .app-nav {
   position: fixed;

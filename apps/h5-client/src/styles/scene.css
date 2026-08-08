@@ -29,6 +29,22 @@
   font-size: 22px;
   letter-spacing: 2px;
 }
+/* 见闻引首：章回感小标签（V2.7） */
+.scene-journal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold-muted);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+.scene-journal::before {
+  content: "";
+  width: 16px;
+  height: 1px;
+  background: var(--gold-muted);
+}
 .scene-desc {
   color: var(--paper-dim);
   line-height: 1.85;
@@ -82,28 +98,28 @@
   letter-spacing: 2px;
 }
 
-/* ---- ExitPad 九宫格 ---- */
+/* ---- ExitPad 九宫格（V2.7 缩小美化：190px 网格，占用缩小 ~70px；交互语义不变） ---- */
 .exit-pad {
   position: relative;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: stretch;
 }
 .exit-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 5px;
   flex: 1;
   aspect-ratio: 1 / 1;
-  max-width: 260px;
+  max-width: 190px;
 }
 .exit-cell {
   min-height: 44px;
-  border-radius: 6px;
+  border-radius: 5px;
   border: 1px solid var(--line);
   background: var(--ink-lift);
   color: var(--paper-faint);
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -111,7 +127,10 @@
 .exit-cell.has {
   border-color: var(--jade);
   color: var(--jade-bright);
-  background: rgba(95, 143, 120, 0.14);
+  background: rgba(95, 143, 120, 0.16);
+}
+.exit-cell.has:active {
+  background: rgba(95, 143, 120, 0.3);
 }
 .exit-cell:disabled {
   cursor: default;
@@ -121,21 +140,22 @@
   border-color: var(--line-strong);
   color: var(--paper);
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 11px;
+  letter-spacing: 1px;
   text-align: center;
-  padding: 4px;
+  padding: 2px;
 }
 .exit-vertical {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 .exit-cell.vertical {
   min-width: 44px;
 }
 .exit-north {
   position: absolute;
-  top: -6px;
+  top: -8px;
   right: 0;
   color: var(--gold-muted);
   font-size: 11px;

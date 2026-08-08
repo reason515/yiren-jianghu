@@ -40,6 +40,9 @@ export function SceneView({
         <ArtPlaceholder text={room.name} tone="jade" size="sm" />
         <h1 className="scene-title">{room.name}</h1>
       </div>
+      <div className="scene-journal" aria-hidden="true">
+        见闻
+      </div>
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
       {pendingPhase && (
         <section className="scene-block scene-quest">

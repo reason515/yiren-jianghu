@@ -32,6 +32,7 @@
 ## 2.1 邀请发放
 - 邀请码在服务器 `.env` 的 `INVITE_CODES`（逗号分隔）；变更后 `docker compose up -d --force-recreate api`。
 - 单邀请码幂等绑定单账号；账号可放弃角色重开（30 天冻结后清理）。
+- **自用固定码**：测试期 `ALLOW_ANY_INVITE=1` 任意邀请码可登录，但账号幂等绑定邀请码——开发/运营自用请固定一个码（并加入 `INVITE_CODES`），客户端登录页会记住上次成功的邀请码并自动回填（localStorage `yjh.lastInvite`，见 LoginPage.tsx），同码即同账号；换设备/清缓存后输入同码即可回到原账号。
 - 建议：1 码 1 人，群发前先验证码未被误用（`accounts.invite_code` 可查）。
 
 ## 2.2 反馈通道

@@ -18,6 +18,7 @@ function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  localStorage.clear();
 });
 
 function buttons(host: HTMLDivElement, aria: string): HTMLButtonElement {
@@ -148,5 +149,35 @@ describe("LoginPage", () => {
     });
     expect(called).toBe(false);
     expect(host.textContent).toContain("请先填上邀请帖号");
+  });
+
+  it("登录成功后记住邀请码，重进登录页自动回填并提示", async () => {
+    const api: AuthApi = {
+      login: async () => ({ accountId: "acc_1", token: "tok" }),
+      createCharacter: async () => ({ characterId: "c" }),
+      discardCharacter: async () => ({ ok: true }),
+    };
+    const { host, root } = render(<LoginPage api={api} onLoggedIn={() => undefined} />);
+    const input = host.querySelector<HTMLInputElement>(".input")!;
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    )!.set!;
+    act(() => {
+      setter.call(input, "invite-keep");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      host
+        .querySelector<HTMLFormElement>(".form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(localStorage.getItem("yjh.lastInvite")).toBe("invite-keep");
+
+    // 重新挂载：输入框自动回填上次帖号，并显示记忆提示
+    act(() => root.unmount());
+    const { host: host2 } = render(<LoginPage api={api} onLoggedIn={() => undefined} />);
+    expect(host2.querySelector<HTMLInputElement>(".input")!.value).toBe("invite-keep");
+    expect(host2.textContent).toContain("上次的帖号已记下");
   });
 });

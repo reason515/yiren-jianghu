@@ -482,6 +482,71 @@
   border-color: var(--jade);
 }
 
+/* ================= 起程过场（V2.6：建角后进入场景前的剧情过渡） ================= */
+
+.depart-content {
+  gap: 16px;
+}
+.depart-card {
+  max-width: 320px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 22px 24px;
+  text-align: left;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(227, 213, 180, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  animation: scroll-rise 0.55s var(--ease-out) both;
+}
+.depart-seal {
+  margin: 0 0 2px;
+}
+.depart-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: 8px;
+  color: var(--paper-ink);
+  margin: 0;
+}
+.depart-body {
+  font-size: 14px;
+  line-height: 1.95;
+  color: var(--paper-ink);
+  margin: 0;
+}
+/* 名姓：纸上朱批（印章色） */
+.depart-name {
+  color: var(--cinnabar);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+/* 收束金句：display 字体 + 铜金 */
+.depart-close {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #8a6a3c;
+  margin: 2px 0 0;
+}
+.depart-btn {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 18px;
+  letter-spacing: 6px;
+  /* 宣纸卡上的墨锭按钮：与纸面成对比，不靠同色系 */
+  background: linear-gradient(180deg, #2e2720 0%, #191510 100%);
+  color: var(--paper);
+  border-color: rgba(232, 223, 208, 0.28);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
 .confirm-message {
   color: var(--paper-dim);
   line-height: 1.85;

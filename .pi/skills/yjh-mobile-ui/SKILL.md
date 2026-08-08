@@ -62,7 +62,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.1 已落地组件基线（apps/h5-client/src/，勿重复造轮子）
 
 - 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
-- 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`（全屏两步：序章引导 + 立名与根基，组合 ink-* 原语 + 卷轴 + 宣纸控件，见 §4.13）
+- 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`（全屏两步：序章引导 + 立名与根基，组合 ink-* 原语 + 卷轴 + 宣纸控件，见 §4.13）/ `DepartureOverlay`（起程过场：建角后进入场景前，水墨远景 + 宣纸卡横排叙事，对齐内容包初始房间与主线）
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
@@ -179,6 +179,13 @@ _*建角流程（V2.3：全屏两步，组合 ink-* + 卷轴 + 宣纸控件）_*
 - 建角从 Sheet 浮层升级为全屏两步（`CharacterCreateSheet.tsx`，`ink-screen` + `ink-backdrop` 远景）：①序章引导 → ②立名与根基。序章是"故事背景 + 引导"：卷轴竖排五句交待"一人一江湖"（江湖万里/只此一人/此去无人相送/名姓自取/恩怨自了），卷下引导句 + "立名闯荡"按钮；表单页 = 印章（闯）+ 标题（立名闯江湖）+ `.input.paper` 名号 + ChoiceRow 性别 + AttributeAllocator 四维 + `.btn.paper` 踏入江湖 + 回想序章返回。
 - 宣纸控件原语（auth.css）：`.input.paper`（输入框：更白 + 内阴影凹陷 + 左对齐 + 墨字）、`.btn.paper`（宣纸主 CTA：纸纹 + 暖光）；登录页表单是它们的等价手写实现（.auth-page 作用域）。
 - 文案要点：序章句短顿挫、点题"此后的每一步都是你一个人的"；表单沿用"江湖路远，先立名号"。
+
+**起程过场（V2.6：建角后→场景前的剧情过渡）**
+
+- 触发：建角成功后 App 置 `departure`（等 resume+场景数据就绪再显示，避免空白），"起身推门"后进场景（无缝，数据已后台加载）。
+- 形态：水墨远景 + 宣纸卡片（paper-card）横排叙事——标题（老屋晨光）+ 两段正文（对齐内容包：初始房间 village_start 醒来场景 + 村口布局 + 主线 q_newbie_trail 野狗）+ 收束金句（display 字体铜金）+ "起身推门"按钮。
+- **宣纸卡上的按钮用墨锭色**（深墨渐变 + 纸色字），不与纸面同色系（同色会对比不足——视觉模型实测）；角色名着朱砂（纸上朱批）。
+- 叙事纪律：过渡文案必须对齐内容包设定（服务端权威），不编造与地图/NPC/任务冲突的剧情。
 
 ## 4.11 新手引导接线契约（E14.11）
 

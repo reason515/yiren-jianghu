@@ -8,6 +8,7 @@ import {
   type CombatStatusResponse,
 } from "./lib/combatTypes.js";
 import { LoginPage } from "./components/LoginPage.js";
+import { DepartureOverlay } from "./components/DepartureOverlay.js";
 import { CharacterCreateSheet } from "./components/CharacterCreateSheet.js";
 import { SceneView } from "./components/SceneView.js";
 import { EntitySheet } from "./components/EntitySheet.js";
@@ -98,6 +99,7 @@ export function App(): JSX.Element {
   const [booting, setBooting] = useState<boolean>(true);
   const [character, setCharacter] = useState<{ id: string; name: string } | null>(null);
   const [needCreate, setNeedCreate] = useState(false);
+  const [departure, setDeparture] = useState(false);
   const [room, setRoom] = useState<SceneRoom | null>(null);
   const [panel, setPanel] = useState<Panel>("none");
   const [moreOpen, setMoreOpen] = useState(false);
@@ -369,6 +371,8 @@ export function App(): JSX.Element {
         });
       }
       await Promise.all([refreshScene(), refreshQuests(), refreshAfk()]);
+      // 数据就绪后再进起程过场：过渡期间场景已在后台加载，起身推门即无缝进入
+      setDeparture(true);
     })().catch(notify);
   };
 
@@ -885,6 +889,10 @@ export function App(): JSX.Element {
           onCreated={onCreated}
           onClose={() => undefined}
         />
+      )}
+
+      {departure && (
+        <DepartureOverlay name={character?.name ?? ""} onDone={() => setDeparture(false)} />
       )}
 
       {room && !needCreate && (

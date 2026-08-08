@@ -2,7 +2,7 @@ import { useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
 import { ExitPad } from "./ExitPad.js";
 import { ArtPlaceholder } from "./ArtPlaceholder.js";
-import type { QuestView } from "../lib/questTypes.js";
+import { PHASE_LABEL, type QuestView } from "../lib/questTypes.js";
 import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
 
 /**
@@ -28,6 +28,8 @@ export function SceneView({
   onAction,
 }: SceneViewProps): JSX.Element {
   const [tab, setTab] = useState<"npcs" | "items" | "actions">("npcs");
+  const pendingPhase =
+    quest?.state === "accepted" ? (quest.phases.find((p) => !p.done) ?? null) : null;
   const hasNpcs = room.npcs.length > 0;
   const hasItems = room.items.length > 0;
   const hasActions = room.actions.length > 0;
@@ -39,15 +41,17 @@ export function SceneView({
         <h1 className="scene-title">{room.name}</h1>
       </div>
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
-      {quest && quest.state === "accepted" && (
+      {pendingPhase && (
         <section className="scene-block scene-quest">
           <div className="scene-block-head">
             <h2>当前要事</h2>
           </div>
           <div className="quest-card">
             <div className="quest-card-info">
-              <strong>{quest.name}</strong>
-              <span>{quest.phases.find((p) => !p.done)?.type ?? "已成"}</span>
+              <strong>{quest!.name}</strong>
+              <span>
+                {PHASE_LABEL[pendingPhase.type]} {pendingPhase.targetName}
+              </span>
             </div>
             {onOpenQuests && <Chip label="查看" variant="action" onClick={onOpenQuests} />}
           </div>

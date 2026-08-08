@@ -138,6 +138,17 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **主界面底部导航与全局 toast 是真实缺口历史**：`.app-nav`（fixed 底部、`--safe-b` 内边距、44px 按钮）与 `.toast-host`（fixed、z-index 300、pointer-events 只放行 toast 本身）必须存在，新增主界面布局勿删；toast 只在 App 层出现，浮层内反馈也走全局 toast（z-index 高于 overlay 100）。
 - 触控/安全区：`--touch-min: 44px`、`--safe-b/--safe-t`（env(safe-area-inset-*)）；sheet-scroll 与 app-nav 均已接 safe-b。颜色一律来自 tokens，新颜色先补 token 再使用。
 
+## 4.12 视觉落地硬性项（DC-027 V2 实战验证，新增界面/样式必须遵守）
+
+- **墨底必须落在容器上**：`html, body, #root, .app` 要有背景规则（不能只靠页面自身背景）——否则主界面白底浅字（`--paper` 在白底上不可读），这是本项目最经典的 P0。
+- **字体必须自包 woff2**：`@font-face` 写在 tokens.css，字体文件放 `src/styles/fonts/`（相对 `url()`，vite 自动 hash）；禁 Google Fonts CDN（国内不可达）。子集化流程见 team skill `chinese-font-selfhost`。
+- **body 必须声明字体基线**：`html, body { font-family: var(--font-body) }`，否则正文落系统黑体。
+- **全局 `box-sizing: border-box`**：缺失会导致 `height:100dvh` + padding 溢出视口出现莫名滚动条。
+- **滚动条必须定制**：`::-webkit-scrollbar` 细墨样式，禁默认白/灰滚动条破坏沉浸。
+- **组件质感基线**：可点元素有 `:active` 按压态；chip 分类色 tint（action 玉色/perform 金色/npc/item/danger 朱砂）；Sheet 上滑动画挂载即播（@keyframes）。
+- **导航收敛**：底部导航 = 高频 5 项（角色/挂机/任务/论剑/论坛）+「更多」抽屉（榜单/地图/离开）；战局为情境按钮。
+- **场景首字印章**：场景标题旁接 `ArtPlaceholder`（DC-006 轻量插画边界）；已接任务的场景显示「当前要事」卡片（相位用 `PHASE_LABEL` 中文，不泄漏内部类型名）。
+
 ## 4.11 新手引导接线契约（E14.11）
 
 - 引导是**轻提示**（`components/GuideTip.tsx`：text + 知道了），不打断主流程、不强制顺序；进度存 localStorage（`yjh.onboard`，纯函数在 `lib/onboarding.ts`）。

@@ -54,6 +54,7 @@ export function LoginPage({ api, onLoggedIn }: LoginPageProps): JSX.Element {
 
   return (
     <div className="auth-page" data-testid="login-page">
+      <div className="auth-seal">江湖</div>
       <div className="auth-title">一人江湖</div>
       <p className="auth-sub">凭帖入门</p>
       <p className="auth-desc">江湖未开，非请莫入——得一张邀请帖，方可叩响这扇门。</p>

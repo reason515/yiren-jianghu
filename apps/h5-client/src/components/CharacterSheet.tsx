@@ -72,9 +72,20 @@ export function CharacterSheet({
 
   return (
     <Sheet open={open} title={character.name} onClose={onClose}>
-      <p className="char-summary">
-        经验 {character.exp} · 可用潜能 {character.effectivePotential} · 银两 {character.silver}
-      </p>
+      <div className="char-summary" aria-label="历练">
+        <span className="res exp">
+          <i className="dot" aria-hidden="true" />
+          经验 {character.exp}
+        </span>
+        <span className="res pot">
+          <i className="dot" aria-hidden="true" />
+          可用潜能 {character.effectivePotential}
+        </span>
+        <span className="res silver">
+          <i className="dot" aria-hidden="true" />
+          银两 {character.silver}
+        </span>
+      </div>
 
       <section className="char-section">
         <h4 className="char-section-title">行止</h4>

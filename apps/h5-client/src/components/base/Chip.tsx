@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
-/** 场景动作 / 人物 / 物品 chip（触控区 ≥44px；玉色=可做，朱砂=高风险）。 */
-export type ChipVariant = "action" | "npc" | "item" | "danger";
+/** 场景动作 / 人物 / 物品 chip（触控区 ≥44px；玉色=可做，金色=绝招，朱砂=高风险）。 */
+export type ChipVariant = "action" | "perform" | "npc" | "item" | "danger";
 
 export interface ChipProps {
   label: string;

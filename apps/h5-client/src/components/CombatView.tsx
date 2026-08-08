@@ -52,7 +52,7 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
             <Chip
               key={p.id}
               label={p.name}
-              variant="action"
+              variant="perform"
               disabled={!p.ready}
               onClick={() => onAction({ action: "perform", performId: p.id })}
             />

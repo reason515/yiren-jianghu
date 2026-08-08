@@ -99,4 +99,9 @@
   --touch-min: 44px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
+
+  /* 投影与缓动（DC-027 V2 批次2） */
+  --shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }

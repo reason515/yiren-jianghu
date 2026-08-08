@@ -18,6 +18,19 @@
   color: var(--paper);
   letter-spacing: 6px;
 }
+/* 首字印章（DC-027 V2 批次2：登录页氛围，ZCOOL 书法 + 朱砂方章） */
+.auth-seal {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--cinnabar);
+  border: 2px solid rgba(181, 74, 58, 0.75);
+  border-radius: 4px;
+  padding: 4px 10px;
+  letter-spacing: 3px;
+  transform: rotate(-3deg);
+  opacity: 0.85;
+  margin: 10px 0 2px;
+}
 .auth-sub {
   font-family: var(--font-display);
   color: var(--gold);
@@ -35,7 +48,7 @@
   max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 .input {
   min-height: var(--touch-min);
@@ -46,10 +59,14 @@
   padding: 0 14px;
   font-size: 16px;
   font-family: var(--font-body);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .input:focus {
   outline: none;
   border-color: var(--jade);
+  box-shadow: 0 0 0 3px rgba(95, 143, 120, 0.18);
 }
 .form-error {
   color: var(--cinnabar);
@@ -66,6 +83,14 @@
   font-size: 17px;
   letter-spacing: 2px;
   padding: 0 18px;
+  box-shadow: var(--shadow-btn);
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.92);
 }
 .btn.primary {
   background: var(--jade);

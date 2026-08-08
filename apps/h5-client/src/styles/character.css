@@ -1,9 +1,43 @@
 /* 角色面板样式（E5；全部 tokens，细线分栏） */
 
+/* 资源摘要行（V2 批次2：stat 色点 + 数值 + 语义标签，一眼可扫） */
 .char-summary {
-  color: var(--paper-dim);
-  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   margin: 0 0 10px;
+  font-size: 13px;
+}
+.char-summary .res {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--paper-dim);
+}
+.char-summary .res .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--paper-faint);
+  flex-shrink: 0;
+}
+.char-summary .res.exp .dot {
+  background: var(--stat-exp);
+}
+.char-summary .res.pot .dot {
+  background: var(--stat-potential);
+}
+.char-summary .res.silver .dot {
+  background: var(--gold);
+}
+.char-summary .res.exp {
+  color: var(--stat-exp);
+}
+.char-summary .res.pot {
+  color: var(--stat-potential);
+}
+.char-summary .res.silver {
+  color: var(--gold);
 }
 .char-section {
   border-top: 1px solid var(--line);
@@ -25,7 +59,7 @@
   gap: 6px;
 }
 .char-vital {
-  border-left: 2px solid var(--paper-faint);
+  border-left: 3px solid var(--paper-faint);
   background: var(--ink-soft);
   min-height: var(--touch-min);
   padding: 6px 8px;
@@ -33,6 +67,10 @@
   flex-direction: column;
   justify-content: center;
   gap: 2px;
+  border-radius: 0 6px 6px 0;
+}
+.char-vital:nth-child(odd) {
+  background: var(--ink-lift);
 }
 .char-vital span {
   color: var(--paper-faint);
@@ -83,7 +121,7 @@
   min-height: var(--touch-min);
 }
 .char-skill-name {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--paper);
 }
 .char-skill-name.skill-force {

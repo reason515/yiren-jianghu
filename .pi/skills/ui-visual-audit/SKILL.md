@@ -85,7 +85,7 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 
 - 按 P0→P1→P2 分批，每批：改代码 → 门禁全绿（test/typecheck/lint/format）→ 部署 → 公网截图对比（改前 vs 改后）。
 - 验收量化：墨底完整、字体加载、无滚动条溢出、对比度、44px 热区、按压态。
-- "部署后看不到效果"排查：先**强刷**（Ctrl+Shift+R / 加 query 参数绕过缓存），比对页面引用的 bundle hash 是否变化；仍旧则查 Nginx/静态目录。
+- "部署后看不到效果"排查：先**强刷**（Ctrl+Shift+R / 加 query 参数绕过缓存），比对页面引用的 bundle hash 是否变化；仍旧则查 Nginx/静态目录。**根治**：Nginx 配 `location = /index.html { add_header Cache-Control "no-cache" }` + `location ~* \.(?:css|js|woff2)$ { add_header Cache-Control "public, max-age=31536000, immutable" }`——SPA 入口每次回源校验、hash 资源长缓存，部署后自动生效，无需用户手动清缓存（本项目 deploy/nginx.yiren-jianghu.conf 已落地 V2.4）。
 
 ## 输出与文档化
 

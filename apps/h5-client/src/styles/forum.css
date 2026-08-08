@@ -21,6 +21,13 @@
   background: var(--ink-lift);
   color: var(--paper);
   font-size: 15px;
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
+}
+.forum-section:active {
+  transform: translateY(1px);
+  filter: brightness(1.12);
 }
 .forum-section-count {
   color: var(--paper-faint);
@@ -36,6 +43,9 @@
   color: var(--paper-dim);
   font-size: 13px;
 }
+.forum-back:active {
+  filter: brightness(1.15);
+}
 .forum-toolbar {
   display: flex;
   justify-content: space-between;
@@ -47,9 +57,16 @@
   padding: 0 16px;
   border-radius: 6px;
   border: 1px solid var(--jade);
-  background: var(--ink-lift);
+  background: rgba(95, 143, 120, 0.14);
   color: var(--jade-bright);
   font-size: 14px;
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
+}
+.forum-compose:active {
+  transform: translateY(1px);
+  filter: brightness(1.12);
 }
 .forum-posts {
   display: flex;

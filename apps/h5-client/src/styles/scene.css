@@ -5,6 +5,22 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  animation: scene-in 0.18s var(--ease-out);
+}
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.scene-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .scene-title {
   font-family: var(--font-display);
@@ -18,6 +34,7 @@
   line-height: 1.85;
   margin: 0;
   font-size: 15px;
+  max-width: 34em;
 }
 .scene-hint {
   color: var(--gold-muted);
@@ -67,6 +84,7 @@
 .exit-cell.has {
   border-color: var(--jade);
   color: var(--jade-bright);
+  background: rgba(95, 143, 120, 0.14);
 }
 .exit-cell:disabled {
   cursor: default;

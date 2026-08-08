@@ -39,4 +39,20 @@
 .lb-value {
   color: var(--paper-faint);
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lb-value::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stat-exp);
+}
+.lb-list[data-kind="season_pvp"] .lb-value::before {
+  background: var(--gold);
+}
+.lb-row.me .lb-value {
+  color: var(--jade-bright);
 }

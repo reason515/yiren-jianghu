@@ -8,6 +8,13 @@ body,
   background: var(--ink);
   color: var(--paper);
 }
+/* 宣纸纹理层（V2 批次3） */
+body {
+  background-image: var(--bg-noise);
+}
+.app {
+  background-image: var(--bg-noise);
+}
 html,
 body {
   margin: 0;

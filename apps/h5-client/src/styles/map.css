@@ -28,9 +28,14 @@
   stroke: var(--gold-muted);
 }
 .map-node.current rect {
-  fill: rgba(95, 143, 120, 0.22);
+  fill: rgba(95, 143, 120, 0.24);
   stroke: var(--jade-bright);
   stroke-width: 2.5;
+  filter: drop-shadow(0 0 6px rgba(143, 191, 166, 0.45));
+}
+.map-node.current text {
+  fill: var(--jade-bright);
+  font-weight: 600;
 }
 .map-node.locked {
   opacity: 0.38;
@@ -41,8 +46,9 @@
   font-family: var(--font-body);
 }
 .map-north {
-  fill: var(--gold-muted);
-  font-size: 12px;
+  fill: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
 }
 .map-controls {
   position: absolute;
@@ -61,4 +67,12 @@
   color: var(--paper);
   font-size: 13px;
   padding: 0 10px;
+  box-shadow: var(--shadow-btn);
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
+}
+.map-controls button:active {
+  transform: translateY(1px);
+  filter: brightness(1.15);
 }

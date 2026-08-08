@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
 import { ExitPad } from "./ExitPad.js";
+import { ArtPlaceholder } from "./ArtPlaceholder.js";
 import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
 
 /**
@@ -28,7 +29,10 @@ export function SceneView({
 
   return (
     <div className="scene" data-testid="scene">
-      <h1 className="scene-title">{room.name}</h1>
+      <div className="scene-head">
+        <ArtPlaceholder text={room.name} tone="jade" size="sm" />
+        <h1 className="scene-title">{room.name}</h1>
+      </div>
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
       {room.canSleep && <span className="scene-hint">此地可歇脚入眠。</span>}
 

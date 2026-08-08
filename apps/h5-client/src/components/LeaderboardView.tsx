@@ -42,7 +42,7 @@ export function LeaderboardView({
       {data.entries.length === 0 ? (
         <p className="lb-empty">榜上尚无留名。</p>
       ) : (
-        <ol className="lb-list" data-testid="lb-list">
+        <ol className="lb-list" data-testid="lb-list" data-kind={kind}>
           {data.entries.map((e) => (
             <li key={e.characterId} className={`lb-row${e.isMe ? " me" : ""}`}>
               <span className="lb-rank">{e.rank}</span>

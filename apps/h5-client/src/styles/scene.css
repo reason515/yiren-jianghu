@@ -42,7 +42,7 @@
 .scene {
   position: relative;
   z-index: 1;
-  padding: 16px 16px calc(16px + var(--safe-b));
+  padding: 16px 16px calc(76px + var(--safe-b));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -101,36 +101,6 @@
   color: var(--gold-muted);
   font-size: 12px;
 }
-/* 当前要事卡片（V2 收尾：承接场景下半屏留白，动作从世界中长出；V2.8 暖光纸纹面） */
-.quest-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(232, 223, 208, 0.14);
-  border-left: 3px solid var(--gold);
-  border-radius: 0 8px 8px 0;
-  background:
-    radial-gradient(140% 180% at 20% 0%, rgba(201, 168, 105, 0.07), transparent 55%),
-    var(--bg-noise), var(--ink-lift);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
-}
-.quest-card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.quest-card-info strong {
-  color: var(--paper);
-  font-size: 15px;
-  font-weight: 500;
-}
-.quest-card-info span {
-  color: var(--paper-faint);
-  font-size: 12px;
-}
 .scene-block {
   border-top: 1px solid rgba(232, 223, 208, 0.1);
   padding-top: 10px;
@@ -146,126 +116,90 @@
   letter-spacing: 2px;
 }
 
-/* ---- ExitPad 九宫格（V2.7 缩小；V2.8 简牍面板质感：内凹墨面 + 暖光出口 + 铜金中心，
- * 空位不再「死黑空洞」，交互语义不变） ---- */
+/* ---- ExitPad 罗盘（V2.9 重构：只显示可前往方向，行内居中，画面干净紧凑；
+ * 方位语义保留：北行在上、南行在下；中心为当前房间；纵向出口右侧竖列） ---- */
 .exit-pad {
   position: relative;
   display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-.exit-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  max-width: 190px;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid rgba(232, 223, 208, 0.14);
-  background:
-    radial-gradient(120% 160% at 30% 0%, rgba(232, 223, 208, 0.05), transparent 55%),
-    linear-gradient(180deg, rgba(38, 34, 28, 0.88), rgba(22, 19, 16, 0.94));
-  box-shadow:
-    inset 0 1px 8px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(232, 223, 208, 0.05);
-}
-.exit-cell {
-  min-height: 44px;
-  border-radius: 5px;
-  border: 1px solid rgba(232, 223, 208, 0.24);
-  background: linear-gradient(180deg, rgba(232, 223, 208, 0.1), rgba(30, 26, 21, 0.6));
-  color: rgba(232, 223, 208, 0.6);
-  font-size: 12px;
-  display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
 }
-.exit-cell.has {
-  border-color: rgba(143, 191, 166, 0.65);
+.exit-compass {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.exit-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+.exit-cell {
+  min-width: 52px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(143, 191, 166, 0.55);
+  background: linear-gradient(180deg, rgba(95, 143, 120, 0.22), rgba(95, 143, 120, 0.1));
   color: var(--jade-bright);
-  background: linear-gradient(180deg, rgba(95, 143, 120, 0.28), rgba(95, 143, 120, 0.12));
-  text-shadow: 0 0 10px rgba(143, 191, 166, 0.45);
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 0 10px rgba(143, 191, 166, 0.4);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 10px rgba(95, 143, 120, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(95, 143, 120, 0.1);
+  transition:
+    transform 0.06s ease,
+    filter 0.06s ease;
 }
-.exit-cell.has:active {
+.exit-cell:active {
   background: rgba(95, 143, 120, 0.38);
+  transform: translateY(1px);
+  filter: brightness(1.1);
 }
-.exit-cell:disabled {
-  cursor: default;
-}
-/* 空位方位字（V2.8：罗盘暗示——无出口方向以极淡方位字标识，地图不再“空洞”；
- * 仅视觉标识，按钮仍 disabled 无点击语义；出口格已有真实方位字，隐藏伪元素） */
-.exit-cell[data-dir]:not(.has)::before {
-  content: "";
-  opacity: 0.8;
-}
-.exit-cell[data-dir="northwest"]:not(.has)::before {
-  content: "西北";
-}
-.exit-cell[data-dir="north"]:not(.has)::before {
-  content: "北";
-}
-.exit-cell[data-dir="northeast"]:not(.has)::before {
-  content: "东北";
-}
-.exit-cell[data-dir="west"]:not(.has)::before {
-  content: "西";
-}
-.exit-cell[data-dir="east"]:not(.has)::before {
-  content: "东";
-}
-.exit-cell[data-dir="southwest"]:not(.has)::before {
-  content: "西南";
-}
-.exit-cell[data-dir="south"]:not(.has)::before {
-  content: "南";
-}
-.exit-cell[data-dir="southeast"]:not(.has)::before {
-  content: "东南";
-}
-.exit-cell.has::before {
-  content: none;
-}
-.exit-cell.center {
+.exit-center {
+  min-width: 92px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 168, 105, 0.35);
   background:
     radial-gradient(120% 140% at 50% 0%, rgba(201, 168, 105, 0.1), transparent 60%),
     linear-gradient(180deg, #2b2518, #1a1610);
-  border-color: rgba(201, 168, 105, 0.35);
-  color: var(--gold);
-  font-family: var(--font-display);
-  font-size: 10.5px;
-  letter-spacing: 0.5px;
-  text-align: center;
-  padding: 2px;
-  white-space: nowrap;
-  overflow: hidden;
   box-shadow:
     inset 0 1px 6px rgba(0, 0, 0, 0.5),
     0 0 12px rgba(201, 168, 105, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.exit-center-name {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 .exit-vertical {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 .exit-cell.vertical {
   min-width: 44px;
 }
-.exit-north {
-  position: absolute;
-  top: -8px;
-  right: 0;
-  color: var(--gold);
-  font-size: 11px;
-  letter-spacing: 1px;
-}
 
-/* ---- 见闻 Tab 与 chips ---- */
+/* ---- 见闻 Tab 与 chips（V2.9：细分隔面 + 玉色选中，品质对齐场景块） ---- */
 .scene-tabs {
   display: flex;
   gap: 8px;
@@ -274,14 +208,22 @@
   min-height: var(--touch-min);
   padding: 0 16px;
   border-radius: 6px;
-  border: 1px solid var(--line-strong);
-  background: var(--ink-lift);
+  border: 1px solid rgba(232, 223, 208, 0.12);
+  background: rgba(26, 23, 20, 0.55);
   color: var(--paper-dim);
   font-size: 14px;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.scene-tabs button:active {
+  color: var(--paper);
 }
 .scene-tabs button.on {
-  border-color: var(--jade);
+  border-color: rgba(143, 191, 166, 0.5);
   color: var(--jade-bright);
+  background: rgba(95, 143, 120, 0.14);
 }
 .chips {
   display: flex;

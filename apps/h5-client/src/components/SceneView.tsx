@@ -2,16 +2,14 @@ import { useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
 import { ExitPad } from "./ExitPad.js";
 import { ArtPlaceholder } from "./ArtPlaceholder.js";
-import { PHASE_LABEL, type QuestView } from "../lib/questTypes.js";
 import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
 
 /**
- * 场景页（mobile-ui：场景叙事优先 → 此刻可往 → 见闻 Tab；动作从世界中长出）。
+ * 场景页（mobile-ui：场景叙事优先 → 此刻可往 → 此地人物/物品/动作；动作从世界中长出）。
+ * V2.9：移除「当前要事」大卡——开放式游戏，任务由玩家自行从任务列表查看（导航「任务」常驻）。
  */
 export interface SceneViewProps {
   room: SceneRoom;
-  quest?: QuestView | null;
-  onOpenQuests?: () => void;
   onGo: (dir: string) => void;
   onSelectNpc: (npc: SceneNpc) => void;
   onSelectItem: (itemId: string) => void;
@@ -20,16 +18,12 @@ export interface SceneViewProps {
 
 export function SceneView({
   room,
-  quest,
-  onOpenQuests,
   onGo,
   onSelectNpc,
   onSelectItem,
   onAction,
 }: SceneViewProps): JSX.Element {
   const [tab, setTab] = useState<"npcs" | "items" | "actions">("npcs");
-  const pendingPhase =
-    quest?.state === "accepted" ? (quest.phases.find((p) => !p.done) ?? null) : null;
   const hasNpcs = room.npcs.length > 0;
   const hasItems = room.items.length > 0;
   const hasActions = room.actions.length > 0;
@@ -44,23 +38,6 @@ export function SceneView({
         见闻
       </div>
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
-      {pendingPhase && (
-        <section className="scene-block scene-quest">
-          <div className="scene-block-head">
-            <h2>当前要事</h2>
-          </div>
-          <div className="quest-card">
-            <div className="quest-card-info">
-              <strong>{quest!.name}</strong>
-              <span>
-                {PHASE_LABEL[pendingPhase.type]} {pendingPhase.targetName}
-              </span>
-            </div>
-            {onOpenQuests && <Chip label="查看" variant="action" onClick={onOpenQuests} />}
-          </div>
-        </section>
-      )}
-
       {room.canSleep && <span className="scene-hint">此地可歇脚入眠。</span>}
 
       <section className="scene-block">
@@ -81,7 +58,7 @@ export function SceneView({
                 className={tab === "npcs" ? "on" : ""}
                 onClick={() => setTab("npcs")}
               >
-                人物{room.npcs.length}
+                此地人物
               </button>
             )}
             {hasItems && (
@@ -92,7 +69,7 @@ export function SceneView({
                 className={tab === "items" ? "on" : ""}
                 onClick={() => setTab("items")}
               >
-                物品{room.items.length}
+                此地物品
               </button>
             )}
             {hasActions && (
@@ -103,7 +80,7 @@ export function SceneView({
                 className={tab === "actions" ? "on" : ""}
                 onClick={() => setTab("actions")}
               >
-                动作{room.actions.length}
+                可做之事
               </button>
             )}
           </div>

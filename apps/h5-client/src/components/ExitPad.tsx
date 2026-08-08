@@ -2,8 +2,9 @@ import type { JSX } from "react";
 import type { SceneExit } from "../lib/sceneTypes.js";
 
 /**
- * 出口九宫格（map-design 场景方位图：上北下南左西右东，斜向占四角；上/下/进/出竖列右侧）。
- * 无出口方向留空；固定北标，不逐边标字。
+ * 出口罗盘（V2.9 重构：只显示可前往的方向，行内居中，画面干净紧凑）。
+ * 方位语义保留（北行在上、南行在下，map-design 八向语义）；无法前往的方向不渲染，
+ * 中心为当前房间。纵向出口（上/下/进/出/入）单独右侧竖列。
  */
 export interface ExitPadProps {
   exits: SceneExit[];
@@ -11,17 +12,10 @@ export interface ExitPadProps {
   onGo: (dir: string) => void;
 }
 
-/** 3×3 九宫格：index 0..8，位置 4 为当前房间。 */
-const PLANAR_ORDER: Array<{ index: number; dir?: string }> = [
-  { index: 0, dir: "northwest" },
-  { index: 1, dir: "north" },
-  { index: 2, dir: "northeast" },
-  { index: 3, dir: "west" },
-  { index: 4 },
-  { index: 5, dir: "east" },
-  { index: 6, dir: "southwest" },
-  { index: 7, dir: "south" },
-  { index: 8, dir: "southeast" },
+const PLANAR_ROWS: string[][] = [
+  ["northwest", "north", "northeast"],
+  ["west", "east"],
+  ["southwest", "south", "southeast"],
 ];
 
 const VERTICAL = ["up", "down", "enter", "out", "in"];
@@ -46,36 +40,38 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
   const byDir = new Map(exits.map((e) => [e.dir, e]));
   const vertical = VERTICAL.filter((d) => byDir.has(d));
 
+  const cell = (dir: string): JSX.Element | null => {
+    const exit = byDir.get(dir);
+    if (!exit) return null;
+    return (
+      <button
+        key={dir}
+        type="button"
+        className="exit-cell has"
+        data-dir={dir}
+        aria-label={`向${DIR_LABEL[dir]}往${exit.name ?? exit.roomId}`}
+        onClick={() => onGo(exit.dir)}
+      >
+        {DIR_LABEL[dir]}
+      </button>
+    );
+  };
+
   return (
     <div className="exit-pad" data-testid="exit-pad" role="group" aria-label="出口">
-      <div className="exit-grid">
-        {PLANAR_ORDER.map(({ dir }) => {
-          if (!dir) {
-            return (
-              <div key="center" className="exit-cell center" data-testid="exit-center">
+      <div className="exit-compass">
+        {PLANAR_ROWS.map((row, rowIndex) => (
+          <div key={row.join()} className={`exit-row${rowIndex === 1 ? " mid" : ""}`}>
+            {rowIndex === 1 && cell("west")}
+            {rowIndex === 1 ? (
+              <span className="exit-center" data-testid="exit-center">
                 <span className="exit-center-name">{roomName}</span>
-              </div>
-            );
-          }
-          const exit = byDir.get(dir);
-          return (
-            <button
-              key={dir}
-              type="button"
-              className={`exit-cell${exit ? " has" : ""}`}
-              data-dir={dir}
-              aria-label={
-                exit
-                  ? `向${DIR_LABEL[dir]}往${exit.name ?? exit.roomId}`
-                  : `${DIR_LABEL[dir]}无出口`
-              }
-              disabled={!exit}
-              onClick={() => exit && onGo(exit.dir)}
-            >
-              {exit ? DIR_LABEL[dir] : ""}
-            </button>
-          );
-        })}
+              </span>
+            ) : null}
+            {rowIndex === 1 && cell("east")}
+            {rowIndex !== 1 && row.map(cell)}
+          </div>
+        ))}
       </div>
       {vertical.length > 0 && (
         <div className="exit-vertical" role="group" aria-label="纵向出口">
@@ -95,7 +91,6 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
           })}
         </div>
       )}
-      <div className="exit-north">北</div>
     </div>
   );
 }

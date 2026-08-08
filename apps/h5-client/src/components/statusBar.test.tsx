@@ -27,20 +27,33 @@ describe("StatusBar（主界面顶栏生存状态）", () => {
     food: 100,
     water: 100,
   };
+  const vitalsMax: Record<VitalKey, number> = {
+    qi: 420,
+    jing: 380,
+    jingli: 300,
+    neili: 200,
+    food: 400,
+    water: 350,
+  };
 
-  it("渲染气/精/精力/内力 + 银两，带语义标签与数值", () => {
-    const { host } = render(<StatusBar vitals={vitals} silver={12} />);
+  it("渲染气/精/精力/内力（当前/上限双值）+ 银两独立徽章", () => {
+    const { host } = render(<StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={12} />);
     expect(host.textContent).toContain("气");
     expect(host.textContent).toContain("精");
     expect(host.textContent).toContain("精力");
     expect(host.textContent).toContain("内力");
     expect(host.textContent).toContain("银两");
-    expect(host.textContent).toContain("96");
+    expect(host.textContent).toContain("96/420");
+    expect(host.textContent).toContain("80/380");
+    expect(host.textContent).toContain("64/300");
+    expect(host.textContent).toContain("40/200");
     expect(host.textContent).toContain("12");
+    // 银两是独立徽章区（货币非状态）
+    expect(host.querySelector('[data-testid="status-silver"]')).not.toBeNull();
   });
 
   it("数据未就绪时显示占位符", () => {
-    const { host } = render(<StatusBar vitals={null} silver={null} />);
+    const { host } = render(<StatusBar vitals={null} vitalsMax={null} silver={null} />);
     const dashes = host.querySelectorAll("b");
     expect(dashes.length).toBe(5);
     dashes.forEach((b) => expect(b.textContent).toBe("–"));

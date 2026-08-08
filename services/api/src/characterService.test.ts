@@ -5,6 +5,7 @@ import {
   createCharacterService,
   validateAttrs,
 } from "./characterService.js";
+import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
 
 type CharacterRow = {
@@ -29,9 +30,19 @@ type CharacterRow = {
 
 /** 内存 mock DB：具体的角色详情 SELECT 必须在单角色检查分支之前。 */
 function mockDb() {
-  const state = { characters: [] as CharacterRow[] };
+  const state = {
+    characters: [] as CharacterRow[],
+    skills: [] as Array<{ id: string; character_id: string; skill_id: string; level: number }>,
+  };
   const db: Db = {
     async query<T extends DbRow>(text: string, params: unknown[] = []): Promise<{ rows: T[] }> {
+      if (text.includes("SELECT skill_id, level FROM character_skills")) {
+        return {
+          rows: state.skills
+            .filter((skill) => skill.character_id === params[0])
+            .map((skill) => ({ skill_id: skill.skill_id, level: skill.level })) as unknown as T[],
+        };
+      }
       if (text.includes("SELECT id, name, gender, status, attrs, exp")) {
         return {
           rows: state.characters
@@ -112,6 +123,35 @@ function mockDb() {
 const ATTRS = { str: 25, int: 20, con: 20, dex: 15 };
 const INPUT = { name: "陆小风", gender: "male" as const, attrs: ATTRS };
 
+/** 最小内容包 stub：仅 vitals 参数 + 技能表（computeMaxVitals 只读 params.vitals）。 */
+const CONTENT = {
+  manifest: { version: "0.0.0", name: "test" },
+  params: {
+    vitals: {
+      qiBase: 100,
+      jingBase: 100,
+      jingliBase: 100,
+      qiPerCon: 16,
+      qiPerStr: 0,
+      jingPerInt: 16,
+      forceQiPerLevel: 2,
+      forceJingPerLevel: 1,
+      neiliPerLevel: 10,
+      jingliPerLevel: 3,
+      neiliToQiDiv: 4,
+      neiliToJingDiv: 12,
+      foodBase: 200,
+      foodPerCon: 10,
+      waterBase: 200,
+      waterPerDex: 10,
+    },
+  },
+  skills: [
+    { id: "xuanmen_force", name: "玄门心法", category: "force" },
+    { id: "basic_sword", name: "基础剑法", category: "weapon" },
+  ],
+} as unknown as ContentPack;
+
 describe("validateAttrs", () => {
   it("仅允许 10–30 的整数，且总和固定为 80", () => {
     expect(validateAttrs(ATTRS)).toBeNull();
@@ -124,7 +164,7 @@ describe("validateAttrs", () => {
 describe("characterService", () => {
   it("创建角色并返回人物簿所需的属性、行止和有效潜能", async () => {
     const { db, state } = mockDb();
-    const service = createCharacterService(db);
+    const service = createCharacterService(db, CONTENT);
     await service.createCharacter("acc_1", INPUT);
     expect(state.characters[0]).toMatchObject({ room_path: "village_start", name: "陆小风" });
     expect(await service.getCharacter("acc_1")).toMatchObject({
@@ -133,6 +173,32 @@ describe("characterService", () => {
       vitals: { qi: 100, jing: 100, food: 300 },
       effectivePotential: 0,
     });
+  });
+
+  it("返回生存资源上限（与当前值成对，供顶栏展示）", async () => {
+    const { db, state } = mockDb();
+    const service = createCharacterService(db, CONTENT);
+    await service.createCharacter("acc_1", INPUT);
+    const character = await service.getCharacter("acc_1");
+    // 无内功时：maxQi = 100 + 20*16 + 25*0(强韧) + 0 = 420；maxJing = 100 + 20*16 = 420；
+    // maxJingli = 100；maxNeili = 0；maxFood = 200 + 20*10 = 400；maxWater = 200 + 15*10 = 350
+    expect(character?.vitalsMax).toEqual({
+      qi: 420,
+      jing: 420,
+      jingli: 100,
+      neili: 0,
+      food: 400,
+      water: 350,
+    });
+    // 有内功时内力/气血随等级增长
+    state.skills.push({
+      id: "cs_1",
+      character_id: state.characters[0]!.id,
+      skill_id: "xuanmen_force",
+      level: 10,
+    });
+    const withForce = await service.getCharacter("acc_1");
+    expect(withForce?.vitalsMax).toMatchObject({ neili: 100, jingli: 130 });
   });
 
   it("拒绝已有角色、重复名号和不合规属性", async () => {

@@ -15,6 +15,7 @@ const PROFILE: CharacterProfile = {
     dex: { cur: 15, base: 20 },
   },
   vitals: { qi: 92, jing: 84, jingli: 70, neili: 20, food: 230, water: 260 },
+  vitalsMax: { qi: 420, jing: 380, jingli: 300, neili: 200, food: 400, water: 350 },
 };
 
 describe("toCharacterView", () => {

@@ -1,5 +1,11 @@
 import { PROTOCOL_VERSION } from "@yjh/shared";
-import { effectivePotential } from "@yjh/game-core";
+import {
+  computeMaxVitals,
+  effectivePotential,
+  maxFoodCapacity,
+  maxWaterCapacity,
+} from "@yjh/game-core";
+import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 
 /** 会话恢复域错误（code 进入错误信封）。 */
@@ -20,6 +26,15 @@ export interface ResumeCharacterView {
   status: string;
   roomPath: string;
   vitals: { qi: number; jing: number; jingli: number; neili: number; food: number; water: number };
+  /** 生存资源上限（V2.9：与当前值成对展示；无内容包时全 0）。 */
+  vitalsMax: {
+    qi: number;
+    jing: number;
+    jingli: number;
+    neili: number;
+    food: number;
+    water: number;
+  };
   exp: number;
   effectivePotential: number;
   silver: number;
@@ -59,16 +74,60 @@ type CharRow = {
   neili: number;
   food: number;
   water: number;
+  attrs?: Record<string, unknown> | string | null;
 };
 
-export function createSessionService(db: Db): SessionService {
+export function createSessionService(db: Db, content?: ContentPack): SessionService {
   return {
     async resume(accountId) {
       const rows = await db.query<CharRow>(
-        "SELECT id, name, gender, status, room_path, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, room_path, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0] ?? null;
+
+      let vitalsMax: ResumeCharacterView["vitalsMax"] = {
+        qi: 0,
+        jing: 0,
+        jingli: 0,
+        neili: 0,
+        food: 0,
+        water: 0,
+      };
+      if (row && content) {
+        const rawAttrs =
+          typeof row.attrs === "string"
+            ? JSON.parse(row.attrs)
+            : (row.attrs ?? ({} as Record<string, unknown>));
+        const num = (key: string) => {
+          const value = Number(rawAttrs[key]);
+          return Number.isFinite(value) ? value : 0;
+        };
+        const skillsById = new Map(content.skills.map((skill) => [skill.id, skill]));
+        const forceRows = await db.query<{ skill_id: string; level: number }>(
+          "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
+          [row.id],
+        );
+        const forceLevels = forceRows.rows
+          .filter((skill) => skillsById.get(skill.skill_id)?.category === "force")
+          .map((skill) => skill.level);
+        const forceLevel = forceLevels.length > 0 ? Math.max(...forceLevels) : 0;
+        const maxVitals = computeMaxVitals(content.params, {
+          str: num("str"),
+          int: num("int"),
+          con: num("con"),
+          dex: num("dex"),
+          forceLevel,
+        });
+        vitalsMax = {
+          qi: maxVitals.maxQi,
+          jing: maxVitals.maxJing,
+          jingli: maxVitals.maxJingli,
+          neili: maxVitals.maxNeili,
+          food: maxFoodCapacity(content.params, num("con")),
+          water: maxWaterCapacity(content.params, num("dex")),
+        };
+      }
 
       const character: ResumeCharacterView | null = row
         ? {
@@ -85,6 +144,7 @@ export function createSessionService(db: Db): SessionService {
               food: row.food,
               water: row.water,
             },
+            vitalsMax,
             exp: row.exp,
             effectivePotential: effectivePotential(row.potential, row.learned_points),
             silver: row.silver,

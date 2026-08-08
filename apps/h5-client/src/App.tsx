@@ -102,6 +102,7 @@ export function App(): JSX.Element {
   const [needCreate, setNeedCreate] = useState(false);
   const [departure, setDeparture] = useState(false);
   const [vitals, setVitals] = useState<Record<VitalKey, number> | null>(null);
+  const [vitalsMax, setVitalsMax] = useState<Record<VitalKey, number> | null>(null);
   const [silver, setSilver] = useState<number | null>(null);
   const [room, setRoom] = useState<SceneRoom | null>(null);
   const [panel, setPanel] = useState<Panel>("none");
@@ -204,6 +205,7 @@ export function App(): JSX.Element {
       ]);
       setCharacterView(toCharacterView(profile, skills, inventory));
       setVitals(profile.vitals);
+      setVitalsMax(profile.vitalsMax);
       setSilver(profile.silver);
     } catch (e) {
       notify(e);
@@ -245,6 +247,7 @@ export function App(): JSX.Element {
         name: (res.character as { name: string }).name,
       });
       setVitals((res.character as { vitals: Record<VitalKey, number> }).vitals);
+      setVitalsMax((res.character as { vitalsMax: Record<VitalKey, number> }).vitalsMax);
       setSilver((res.character as { silver: number }).silver);
       setNeedCreate(false);
       await Promise.all([
@@ -377,6 +380,7 @@ export function App(): JSX.Element {
           name: (res.character as { name: string }).name,
         });
         setVitals((res.character as { vitals: Record<VitalKey, number> }).vitals);
+        setVitalsMax((res.character as { vitalsMax: Record<VitalKey, number> }).vitalsMax);
         setSilver((res.character as { silver: number }).silver);
       }
       await Promise.all([refreshScene(), refreshQuests(), refreshAfk()]);
@@ -835,6 +839,9 @@ export function App(): JSX.Element {
     setToken(null);
     setCharacter(null);
     setCharacterView(null);
+    setVitals(null);
+    setVitalsMax(null);
+    setSilver(null);
     setCharacterPending(null);
     setDiscardOpen(false);
     setRoom(null);
@@ -919,11 +926,9 @@ export function App(): JSX.Element {
               <div className="ink-vignette" />
             </div>
           </div>
-          <StatusBar vitals={vitals} silver={silver} />
+          <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={silver} />
           <SceneView
             room={room}
-            quest={questData?.quests.find((q) => q.state === "accepted") ?? null}
-            onOpenQuests={openQuests}
             onGo={(d) => void onGo(d)}
             onSelectNpc={setSelectedEntity}
             onSelectItem={(itemId) => {

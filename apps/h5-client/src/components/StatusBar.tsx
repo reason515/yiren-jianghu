@@ -2,12 +2,14 @@ import type { JSX } from "react";
 import type { VitalKey } from "../lib/characterTypes.js";
 
 /**
- * 主界面顶栏生存状态条（V2.7：气/精/精力/内力 + 银两）。
- * 数值带语义标签 + stat 色点 + tabular-nums；数据来自服务端角色快照（resume/refreshCharacter）。
- * 视觉遵循墨色武侠：细线分隔、stat token 色点，滚动时吸顶（sticky）。
+ * 主界面顶栏生存状态条（V2.7 生存项；V2.9 双值 + 货币区分）。
+ * - 生存状态（气/精/精力/内力）：stat 色点 + 语义标签 + 「当前/上限」双值（tabular-nums）；
+ * - 银两：与生存状态概念不同（货币非状态），右侧独立金色徽章区，视觉明显区分。
+ * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {
   vitals: Record<VitalKey, number> | null;
+  vitalsMax: Record<VitalKey, number> | null;
   silver: number | null;
 }
 
@@ -18,18 +20,20 @@ const VITAL_META: Array<{ key: VitalKey; label: string; cls: string }> = [
   { key: "neili", label: "内力", cls: "neili" },
 ];
 
-export function StatusBar({ vitals, silver }: StatusBarProps): JSX.Element {
+export function StatusBar({ vitals, vitalsMax, silver }: StatusBarProps): JSX.Element {
   return (
     <div className="status-bar" data-testid="status-bar">
-      {VITAL_META.map((v) => (
-        <span key={v.key} className={`status-item ${v.cls}`}>
-          <i className="status-dot" aria-hidden="true" />
-          <em>{v.label}</em>
-          <b>{vitals ? vitals[v.key] : "–"}</b>
-        </span>
-      ))}
-      <span className="status-item silver">
-        <i className="status-dot" aria-hidden="true" />
+      <div className="status-vitals" role="group" aria-label="生存状态">
+        {VITAL_META.map((v) => (
+          <span key={v.key} className={`status-item ${v.cls}`}>
+            <i className="status-dot" aria-hidden="true" />
+            <em>{v.label}</em>
+            <b>{vitals && vitalsMax ? `${vitals[v.key]}/${vitalsMax[v.key]}` : "–"}</b>
+          </span>
+        ))}
+      </div>
+      <span className="status-silver" data-testid="status-silver">
+        <i className="silver-dot" aria-hidden="true" />
         <em>银两</em>
         <b>{silver ?? "–"}</b>
       </span>

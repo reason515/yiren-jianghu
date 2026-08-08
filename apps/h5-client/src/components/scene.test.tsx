@@ -40,8 +40,8 @@ const ROOM: SceneRoom = {
   actions: [{ command: "webclient", label: "查看全局" }],
 };
 
-describe("ExitPad（九宫格方位图）", () => {
-  it("出口按真实方位摆放：北在上、南在下；无出口方向留空", () => {
+describe("ExitPad（方位罗盘）", () => {
+  it("只显示可前往方向：北行在上、南行在下、中心为当前房间；无出口方向不渲染", () => {
     const { host } = render(
       <ExitPad exits={ROOM.exits} roomName={ROOM.name} onGo={() => undefined} />,
     );
@@ -52,12 +52,12 @@ describe("ExitPad（九宫格方位图）", () => {
     expect(north?.textContent).toBe(DIR_LABEL.north);
     expect(south?.textContent).toBe(DIR_LABEL.south);
     expect(east?.textContent).toBe(DIR_LABEL.east);
-    expect(northeast?.textContent).toBe(""); // 无出口留空
-    // 位置关系：北(第2格)在南(第8格)上方
-    const grid = host.querySelector(".exit-grid")!;
-    const cells = [...grid.querySelectorAll(".exit-cell")];
-    expect(cells[1]?.getAttribute("data-dir")).toBe("north");
-    expect(cells[7]?.getAttribute("data-dir")).toBe("south");
+    expect(northeast).toBeNull(); // 无出口方向不渲染
+    // 位置关系：北在第 1 行、南在第 3 行、中心在中间行
+    const rows = [...host.querySelectorAll(".exit-row")];
+    expect(rows[0]?.textContent).toContain(DIR_LABEL.north);
+    expect(rows[2]?.textContent).toContain(DIR_LABEL.south);
+    expect(rows[1]?.textContent).toContain("村口广场");
     expect(host.querySelector('[data-testid="exit-center"]')?.textContent).toContain("村口广场");
   });
 
@@ -85,7 +85,7 @@ describe("SceneView（叙事优先 + 见闻 Tab）", () => {
     );
     expect(host.querySelector(".scene-title")?.textContent).toBe("村口广场");
     expect(host.textContent).toContain("稻香未散");
-    expect(host.textContent).toContain("人物2");
+    expect(host.textContent).toContain("此地人物");
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
         .find((c) => c.textContent === "王师傅")!

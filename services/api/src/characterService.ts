@@ -1,4 +1,10 @@
-import { effectivePotential } from "@yjh/game-core";
+import {
+  computeMaxVitals,
+  effectivePotential,
+  maxFoodCapacity,
+  maxWaterCapacity,
+} from "@yjh/game-core";
+import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
 
 /** 角色域错误（code 进入错误信封）。 */
@@ -25,6 +31,15 @@ export interface CharacterSummary {
   status: string;
   attrs: Record<"str" | "int" | "con" | "dex", { cur: number; base: number }>;
   vitals: { qi: number; jing: number; jingli: number; neili: number; food: number; water: number };
+  /** 生存资源上限（V2.9：与当前值成对展示；无内容包时全 0）。 */
+  vitalsMax: {
+    qi: number;
+    jing: number;
+    jingli: number;
+    neili: number;
+    food: number;
+    water: number;
+  };
   exp: number;
   effectivePotential: number;
   silver: number;
@@ -62,7 +77,7 @@ export interface CharacterService {
   updateName(accountId: string, name: string): Promise<{ name: string }>;
 }
 
-export function createCharacterService(db: Db): CharacterService {
+export function createCharacterService(db: Db, content?: ContentPack): CharacterService {
   return {
     async createCharacter(accountId, input) {
       const name = input.name.trim();
@@ -130,17 +145,53 @@ export function createCharacterService(db: Db): CharacterService {
           base: Number.isFinite(value) ? value : 0,
         };
       };
+      // 生存资源上限（V2.9）：与 sceneService 同一规则引擎（computeMaxVitals），不重复实现公式。
+      const attrs = {
+        str: attribute("str"),
+        int: attribute("int"),
+        con: attribute("con"),
+        dex: attribute("dex"),
+      };
+      let vitalsMax: CharacterSummary["vitalsMax"] = {
+        qi: 0,
+        jing: 0,
+        jingli: 0,
+        neili: 0,
+        food: 0,
+        water: 0,
+      };
+      if (content) {
+        const skillsById = new Map(content.skills.map((skill) => [skill.id, skill]));
+        const forceRows = await db.query<{ skill_id: string; level: number }>(
+          "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
+          [row.id],
+        );
+        const forceLevels = forceRows.rows
+          .filter((skill) => skillsById.get(skill.skill_id)?.category === "force")
+          .map((skill) => skill.level);
+        const forceLevel = forceLevels.length > 0 ? Math.max(...forceLevels) : 0;
+        const maxVitals = computeMaxVitals(content.params, {
+          str: attrs.str.cur,
+          int: attrs.int.cur,
+          con: attrs.con.cur,
+          dex: attrs.dex.cur,
+          forceLevel,
+        });
+        vitalsMax = {
+          qi: maxVitals.maxQi,
+          jing: maxVitals.maxJing,
+          jingli: maxVitals.maxJingli,
+          neili: maxVitals.maxNeili,
+          food: maxFoodCapacity(content.params, attrs.con.cur),
+          water: maxWaterCapacity(content.params, attrs.dex.cur),
+        };
+      }
       return {
         id: row.id,
         name: row.name,
         gender: row.gender,
         status: row.status,
-        attrs: {
-          str: attribute("str"),
-          int: attribute("int"),
-          con: attribute("con"),
-          dex: attribute("dex"),
-        },
+        attrs,
         vitals: {
           qi: row.qi,
           jing: row.jing,
@@ -149,6 +200,7 @@ export function createCharacterService(db: Db): CharacterService {
           food: row.food,
           water: row.water,
         },
+        vitalsMax,
         exp: Number(row.exp),
         effectivePotential: effectivePotential(Number(row.potential), Number(row.learned_points)),
         silver: Number(row.silver),

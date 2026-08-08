@@ -76,7 +76,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
     opts.verifyToken ??
     (db ? createAuthService({ db, inviteCodes, allowAnyInvite }).verifyToken : undefined);
   const auth = db ? createAuthService({ db, inviteCodes, allowAnyInvite }) : null;
-  const characters = db ? createCharacterService(db) : null;
+  const characters = db ? createCharacterService(db, deps.content) : null;
   const skills = db && deps.content ? createSkillsService(db, deps.content) : null;
   const quests = db && deps.content ? createQuestsService(db, deps.content) : null;
   const scene =
@@ -87,7 +87,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   const afk = db && deps.content ? createAfkService(db, deps.content) : null;
   const pvp = db && deps.content ? createPvpService(db, deps.content) : null;
   const forum = db ? createForumService(db) : null;
-  const session = db ? createSessionService(db) : null;
+  const session = db ? createSessionService(db, deps.content) : null;
   const combat =
     db && deps.content ? createCombatService(db, deps.content, quests ?? undefined) : null;
   const app = Fastify({

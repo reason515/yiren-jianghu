@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PROTOCOL_VERSION } from "@yjh/shared";
 import { createApp } from "./app.js";
 import { SessionError, createSessionService } from "./sessionService.js";
+import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
 
 interface CharState {
@@ -21,6 +22,7 @@ interface CharState {
   neili: number;
   food: number;
   water: number;
+  attrs?: Record<string, unknown> | string | null;
 }
 
 interface AfkState {
@@ -49,6 +51,7 @@ function mockDb() {
     characters: [] as CharState[],
     afk: [] as AfkState[],
     matches: [] as MatchState[],
+    skills: [] as Array<{ id: string; character_id: string; skill_id: string; level: number }>,
   };
   const db: Db = {
     async query<T extends DbRow>(text: string, params: unknown[] = []): Promise<{ rows: T[] }> {
@@ -79,6 +82,13 @@ function mockDb() {
             .map((s) => ({ account_id: s.account_id, expires_at: s.expires_at })) as unknown as T[],
         };
       }
+      if (text.includes("SELECT skill_id, level FROM character_skills")) {
+        return {
+          rows: state.skills
+            .filter((skill) => skill.character_id === params[0])
+            .map((skill) => ({ skill_id: skill.skill_id, level: skill.level })) as unknown as T[],
+        };
+      }
       if (text.includes("SELECT id, name, gender, status, room_path, exp, potential")) {
         return {
           rows: state.characters
@@ -99,6 +109,7 @@ function mockDb() {
               neili: c.neili,
               food: c.food,
               water: c.water,
+              attrs: c.attrs,
             })) as unknown as T[],
         };
       }
@@ -179,6 +190,32 @@ function boot() {
   return { db, state, session };
 }
 
+/** 最小内容包 stub：仅 vitals 参数 + 技能表（computeMaxVitals 只读 params.vitals）。 */
+const CONTENT = {
+  manifest: { version: "0.0.0", name: "test" },
+  params: {
+    vitals: {
+      qiBase: 100,
+      jingBase: 100,
+      jingliBase: 100,
+      qiPerCon: 16,
+      qiPerStr: 0,
+      jingPerInt: 16,
+      forceQiPerLevel: 2,
+      forceJingPerLevel: 1,
+      neiliPerLevel: 10,
+      jingliPerLevel: 3,
+      neiliToQiDiv: 4,
+      neiliToJingDiv: 12,
+      foodBase: 200,
+      foodPerCon: 10,
+      waterBase: 200,
+      waterPerDex: 10,
+    },
+  },
+  skills: [{ id: "xuanmen_force", name: "玄门心法", category: "force" }],
+} as unknown as ContentPack;
+
 describe("sessionService.resume", () => {
   it("无角色：character 为 null、空未读、stateVersion=协议版本", async () => {
     const { session } = boot();
@@ -203,6 +240,26 @@ describe("sessionService.resume", () => {
       effectivePotential: 80, // 120 − 40
       silver: 66,
       vitals: { qi: 300, jing: 200, jingli: 100, neili: 50, food: 180, water: 160 },
+    });
+  });
+
+  it("返回生存资源上限（与当前值成对，供顶栏展示）", async () => {
+    const { db, state, session } = boot();
+    // 无 attrs 时按 0 计算：maxQi = 100 + 0 + 0 = 100；
+    // 再给角色补 attrs 与内功等级验证公式生效
+    state.characters[0]!.attrs = { str: 25, int: 20, con: 20, dex: 15 };
+    state.skills.push({ id: "cs_1", character_id: "char_1", skill_id: "xuanmen_force", level: 10 });
+    const withContent = createSessionService(db, CONTENT);
+    const res = await withContent.resume("acc_1");
+    // maxNeili = 10*10 = 100；maxJingli = 100 + 10*3 = 130；
+    // maxQi = 100 + 20*16 + 25*0 + 10*2 + floor(100/4) = 100+320+0+20+25 = 465
+    expect(res.character?.vitalsMax).toEqual({
+      qi: 465,
+      jing: 100 + 20 * 16 + 10 * 1 + Math.floor(100 / 12),
+      jingli: 130,
+      neili: 100,
+      food: 200 + 20 * 10,
+      water: 200 + 15 * 10,
     });
   });
 

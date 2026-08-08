@@ -48,6 +48,8 @@ export interface CharacterProfile {
   silver: number;
   attrs: CharAttrs;
   vitals: Record<VitalKey, number>;
+  /** 生存资源上限（V2.9：与当前值成对展示）。 */
+  vitalsMax: Record<VitalKey, number>;
 }
 
 export interface CharacterView extends CharacterProfile {

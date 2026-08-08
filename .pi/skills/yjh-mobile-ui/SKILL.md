@@ -149,26 +149,27 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **导航收敛**：底部导航 = 高频 5 项（角色/挂机/任务/论剑/论坛）+「更多」抽屉（榜单/地图/离开）；战局为情境按钮。
 - **场景首字印章**：场景标题旁接 `ArtPlaceholder`（DC-006 轻量插画边界）；已接任务的场景显示「当前要事」卡片（相位用 `PHASE_LABEL` 中文，不泄漏内部类型名）。
 
-## 4.13 登录页与开场卷轴（V2.1，纯 CSS/SVG 无外部资源）
+## 4.13 登录页与开场卷轴（V2.1–V2.2，纯 CSS/SVG 无外部资源）
 
-登录页 = 水墨远景舞台 + 宣纸表单 + 开场卷轴（手法借鉴 sanguo-mud 登录徽记/开场画册，登记见 `docs/sibling-borrowings.md` §8）。新界面若需要"意境开场"或"水墨背景"，照此复用，勿另起炉灶。
+登录页 = 水墨远景舞台 + 宣纸表单 + 开场卷轴（手法借鉴 sanguo-mud 登录徽记/开场画册，登记见 `docs/sibling-borrowings.md` §8）。**V2.2 已提炼为设计系统资产**：通用原语在 `styles/atmosphere.css`（ink-* 远景图层 / paper-card 宣纸面 / v-cols 竖排）、token 在 tokens.css（--moon/--paper-surface/--wood/--lantern）、完整说明在 `docs/design-system.md`。新界面需要"意境开场"或"水墨背景"时：**读 design-system.md §3 → 组合原语 → 不足再补 token/原语**，勿复制登录页实现。
 
-**水墨远景（`.auth-vista`，纯 CSS/SVG）**
+_*远景舞台（ink-* 原语，atmosphere.css）_*
 
-- 分层：孤月（右上 + 月晕 `::before` 融入夜空 + 呼吸动画）→ 疏星（多 radial-gradient 点）→ 三层山峦 → 月下孤影 → 前景松柏 + 朱砂灯笼 → 流雾 ×3 → 暗角。
+- 分层：`.ink-moon`（右上 + 月晕 ::before 融入夜空 + 呼吸动画）→ `.ink-stars`（多 radial-gradient 点）→ `.ink-range` 三层 → `.ink-figure` 月下孤影 → `.ink-pine` 松柏 + `.ink-lantern` 朱砂灯笼 → `.ink-mist` 流雾 ×3 → `.ink-vignette` 暗角。
 - 三层山峦 = 空气透视：远山雾青（blur + 亮色雾顶渐变）/ 中峰墨褐（顶部染月光 + `drop-shadow` 山脊轮廓光）/ 近山墨黑。**山体必须提亮到可辨层次，否则底部成"死黑"**（视觉模型反复点名的头号问题）。
-- `.auth-lights` 月光洒落层（径向暖光 blur）破山坳死黑；雾 ≥3 条（底部最亮）交替漂移（仅 transform/opacity 动画）。
-- **月下孤影**：前景右下近大远小，持剑剪影 + 朱砂剑穗（呼应印章）+ `::before` 金色背光晕。⚠️ **内联 SVG 必须显式 `width/height`**（CSS 给定或 svg 属性），否则默认 300×150 撑开定位、人物"消失"——V2.1 实测踩坑。
+- `.ink-lights` 月光洒落层（径向暖光 blur）破山坳死黑；雾 ≥3 条（底部最亮）交替漂移（仅 transform/opacity 动画）。
+- **月下孤影**（`.ink-figure`）：前景右下近大远小，持剑剪影 + 朱砂剑穗（呼应印章）+ `::before` 金色背光晕。⚠️ **内联 SVG 必须显式 `width/height`**（CSS 给定或 svg 属性），否则默认 300×150 撑开定位、人物"消失"——V2.1 实测踩坑。
 
-**宣纸表单（登录 CTA 专用）**
+**宣纸面（paper-card 原语）**
 
-- 输入框与主按钮**成对**用宣纸色（米白渐变 + `--bg-noise` + 茶渍 radial 做旧）；输入框更白 + 内阴影凹陷 + 文字左对齐，与按钮纸纹+暖光自然分层。
+- 宣纸卡片 `.paper-card`：米白渐变 + `--bg-noise` + 茶渍做旧 + 墨字 + 暖光；凹陷面 `.paper-card.inset`（输入框类）；卷轴 `.paper-card.rolls`（紫檀木轴）。
+- 输入框与主按钮**成对**用宣纸色；输入框更白 + 内阴影凹陷 + 文字左对齐，与按钮纸纹+暖光自然分层。登录页表单是 paper-card 的等价手写实现（.btn/.input 基类覆盖顺序所致），新界面直接组合类。
 - 主 CTA 用宣纸而非玉色：登录是"场景外"入口，玉色"可行动"语义保留给游戏内动作。
 
-**开场卷轴（`.prologue-*`，只播一次可略过）**
+**开场卷轴（组合 paper-card/rolls + v-cols，只播一次可略过）**
 
-- 三卷竖排：`writing-mode: vertical-rl` + `text-orientation: upright`；容器 `flex-direction: row-reverse`（右起读序）；`align-items: flex-start`（顶对齐，竖排古籍规范）。
-- 每卷 = 卷数+题名（朱砂）→ 竖排短句（短句顿挫，文案走 `yjh-wuxia-copywriting`）→ 意境落款。卷轴 = 宣纸渐变 + `::before/::after` 木轴（紫檀 + 噪点）。
+- 三卷竖排：`v-cols`/`v-col` 原语（`writing-mode: vertical-rl` + `text-orientation: upright`；容器 `flex-direction: row-reverse` 右起读序；`align-items: flex-start` 顶对齐）。
+- 每卷 = 卷数+题名（朱砂）→ 竖排短句（短句顿挫，文案走 `yjh-wuxia-copywriting`）→ 意境落款。卷轴 = `paper-card rolls`（宣纸 + 紫檀木轴）。
 - **UI 控件不入纸面**：进度墨线、提示语放卷外深底（实测圆点/墨线印在纸上均违和）。
 - 状态：`localStorage`（`yjh.prologueSeen`）只播一次；轻触翻卷、末卷即入门；"略过"≥44px；Escape 可跳；不支持 writing-mode 的端列退化为横排仍可读。
 
@@ -196,3 +197,4 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - [ ] 颜色全部来自 tokens；字体遵循字体栈。
 - [ ] 挂机战报与绝招演出按 wuxia 文案规范。
 - [ ] 每个可选挂机种类均已由 Worker 实际结算，并覆盖状态、停止、战报和 resume 未读回响。
+- [ ] 新界面意境背景/宣纸面/竖排：先查 `docs/design-system.md` 与 `styles/atmosphere.css` 原语，勿复制登录页实现（单一事实来源）。

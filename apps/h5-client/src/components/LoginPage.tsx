@@ -120,18 +120,18 @@ export function LoginPage({ api, onLoggedIn }: LoginPageProps): JSX.Element {
 
   return (
     <div className="auth-page" data-testid="login-page">
-      {/* 水墨远景：孤月、疏星、层山、雾、独行人影（纯 CSS/SVG，无外部资源） */}
-      <div className="auth-vista" aria-hidden="true">
-        <div className="auth-stars" />
-        <div className="auth-moon" />
-        <div className="auth-horizon" />
-        <div className="auth-range back" />
-        <div className="auth-range mid" />
-        <div className="auth-range front" />
+      {/* 墨色远景：atmosphere.css 的 ink-* 原语（孤月/疏星/层山/月光洒落/月下孤影/松柏灯笼/雾/暗角） */}
+      <div className="ink-backdrop" aria-hidden="true">
+        <div className="ink-stars" />
+        <div className="ink-moon" />
+        <div className="ink-horizon" />
+        <div className="ink-range back" />
+        <div className="ink-range mid" />
+        <div className="ink-range front" />
         {/* 月光洒落：山坳里的一层暖光，破底部死黑 */}
-        <div className="auth-lights" aria-hidden="true" />
+        <div className="ink-lights" aria-hidden="true" />
         {/* 月下孤影：前景右下，背朝观者望月；近大远小；剑穗一点朱砂，呼应印章 */}
-        <div className="auth-figure">
+        <div className="ink-figure">
           <svg viewBox="0 0 24 72" aria-hidden="true">
             <path d="M18.5 6.5 L21 10.5 L16.6 11.4 Z" fill="#c45c4a" opacity="1" />
             <path d="M18.7 7.2 L20.4 9.8 L17.4 10.4 Z" fill="#e08a74" opacity="0.85" />
@@ -149,15 +149,16 @@ export function LoginPage({ api, onLoggedIn }: LoginPageProps): JSX.Element {
           </svg>
         </div>
         {/* 前景松柏：压住左下角落；松下挂一盏灯，添江湖人气 */}
-        <svg className="auth-pine auth-pine-l" viewBox="0 0 40 90" aria-hidden="true">
+        <svg className="ink-pine ink-pine-l" viewBox="0 0 40 90" aria-hidden="true">
           <path d="M20 90 L20 60" stroke="currentColor" strokeWidth="3" fill="none" />
           <path d="M6 66 L20 32 L34 66 Z" fill="currentColor" />
           <path d="M10 78 L20 50 L30 78 Z" fill="currentColor" />
         </svg>
-        <div className="auth-lantern" aria-hidden="true" />
-        <div className="auth-mist m1" />
-        <div className="auth-mist m2" />
-        <div className="auth-vignette" />
+        <div className="ink-lantern" aria-hidden="true" />
+        <div className="ink-mist m1" />
+        <div className="ink-mist m2" />
+        <div className="ink-mist m3" />
+        <div className="ink-vignette" />
       </div>
 
       <div className="auth-content">
@@ -224,14 +225,14 @@ export function LoginPage({ api, onLoggedIn }: LoginPageProps): JSX.Element {
           >
             略过
           </button>
-          <div className="prologue-scroll">
+          <div className="prologue-scroll paper-card rolls">
             <div className="p-head">
               <span className="p-roll">卷{page.num}</span>
               <span className="p-name">· {page.title}</span>
             </div>
-            <div className="p-cols" key={page.num}>
+            <div className="v-cols" key={page.num}>
               {page.cols.map((c) => (
-                <p key={c} className="p-col">
+                <p key={c} className="v-col">
                   {c}
                 </p>
               ))}

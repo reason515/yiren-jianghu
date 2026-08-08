@@ -1,0 +1,485 @@
+/**
+ * 意境原语库（V2.2：登录页水墨远景提炼为通用原语，供任意界面复用）。
+ *
+ * 用法：在任意 `position: relative` 容器内组合 `ink-*` 图层，即可获得
+ * 墨色武侠氛围背景；宣纸面用 `paper-card`（+ `rolls` 木轴变体）；
+ * 古籍竖排用 `v-cols` / `v-col`。完整组合示例与参数说明见
+ * docs/design-system.md §3，界面改造流程见 yjh-mobile-ui §4.13。
+ *
+ * 设计约束：
+ * - 全部纯 CSS/SVG，无外部资源（图片/字体/CDN）；
+ * - 动效仅 transform/opacity（DC-027 动效基线），附 prefers-reduced-motion 降级；
+ * - 颜色一律来自 tokens.css（--moon/--paper-surface/--wood/--lantern 等）。
+ */
+
+/* ================= 远景舞台容器 ================= */
+
+.ink-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 孤月：右上圆月 + 月晕（::before 融入夜空，避免"贴图感"） */
+.ink-moon {
+  position: absolute;
+  top: 8%;
+  right: 13%;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 42% 38%,
+    #f5edda 0%,
+    var(--moon) 50%,
+    rgba(227, 213, 180, 0.4) 70%,
+    transparent 78%
+  );
+  box-shadow:
+    0 0 30px rgba(227, 213, 180, 0.35),
+    0 0 90px rgba(227, 213, 180, 0.18),
+    0 0 200px rgba(227, 213, 180, 0.08);
+  opacity: 0.94;
+  animation: moon-breathe 7s ease-in-out infinite;
+}
+.ink-moon::before {
+  content: "";
+  position: absolute;
+  inset: -70px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(227, 213, 180, 0.14) 0%,
+    rgba(227, 213, 180, 0.05) 38%,
+    transparent 70%
+  );
+}
+
+/* 疏星：纯 CSS 多点星（点缀夜空，避免纯黑空洞） */
+.ink-stars {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(1.4px 1.4px at 18% 22%, rgba(232, 223, 208, 0.7), transparent 100%),
+    radial-gradient(1px 1px at 31% 12%, rgba(232, 223, 208, 0.5), transparent 100%),
+    radial-gradient(1.2px 1.2px at 47% 18%, rgba(232, 223, 208, 0.6), transparent 100%),
+    radial-gradient(1px 1px at 62% 9%, rgba(232, 223, 208, 0.45), transparent 100%),
+    radial-gradient(1.4px 1.4px at 74% 20%, rgba(232, 223, 208, 0.65), transparent 100%),
+    radial-gradient(1px 1px at 88% 13%, rgba(232, 223, 208, 0.5), transparent 100%),
+    radial-gradient(1.1px 1.1px at 9% 35%, rgba(232, 223, 208, 0.4), transparent 100%),
+    radial-gradient(1px 1px at 57% 30%, rgba(232, 223, 208, 0.35), transparent 100%),
+    radial-gradient(1.2px 1.2px at 93% 32%, rgba(232, 223, 208, 0.42), transparent 100%),
+    radial-gradient(1px 1px at 26% 28%, rgba(232, 223, 208, 0.3), transparent 100%);
+}
+
+/* 地平天光：层山之后的月下薄雾（空气透视） */
+.ink-horizon {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 40%;
+  height: 34%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(214, 200, 170, 0.1) 45%,
+    rgba(214, 200, 170, 0.16) 55%,
+    rgba(214, 200, 170, 0.05) 75%,
+    transparent 100%
+  );
+  filter: blur(6px);
+}
+
+/* ================= 三层山峦（空气透视） ================= */
+
+.ink-range {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+}
+/* 远山：雾青 + blur + 亮色雾顶（注意：山体必须提亮到可辨层次，否则底部成"死黑"） */
+.ink-range.back {
+  height: 56%;
+  opacity: 0.75;
+  filter: blur(1.4px);
+  background: linear-gradient(180deg, rgba(200, 215, 205, 0.38) 0%, #3c514a 14%, #22302b 100%);
+  clip-path: polygon(
+    0 100%,
+    0 55%,
+    8% 52%,
+    16% 60%,
+    26% 42%,
+    34% 50%,
+    44% 34%,
+    52% 44%,
+    60% 30%,
+    70% 40%,
+    78% 26%,
+    88% 38%,
+    100% 22%,
+    100% 100%
+  );
+}
+/* 中峰：墨褐 + 顶部染月光 + 山脊轮廓光 */
+.ink-range.mid {
+  height: 36%;
+  opacity: 0.96;
+  background: linear-gradient(180deg, rgba(214, 182, 122, 0.28) 0%, #453720 16%, #221a0d 100%);
+  filter: drop-shadow(0 -2px 6px rgba(227, 213, 180, 0.16));
+  clip-path: polygon(
+    0 100%,
+    0 78%,
+    10% 72%,
+    20% 80%,
+    30% 66%,
+    40% 74%,
+    50% 60%,
+    58% 70%,
+    68% 52%,
+    78% 30%,
+    86% 44%,
+    100% 36%,
+    100% 100%
+  );
+}
+/* 近山：墨黑，压住画面底部 */
+.ink-range.front {
+  height: 30%;
+  background: linear-gradient(180deg, #3a2f1c 0%, #171008 100%);
+  filter: drop-shadow(0 -2px 4px rgba(227, 213, 180, 0.11));
+  clip-path: polygon(
+    0 100%,
+    0 88%,
+    16% 82%,
+    28% 88%,
+    42% 76%,
+    55% 84%,
+    70% 70%,
+    82% 78%,
+    100% 64%,
+    100% 100%
+  );
+}
+
+/* 月光洒落：山坳里的一层暖光，破底部死黑 */
+.ink-lights {
+  position: absolute;
+  left: 28%;
+  right: -8%;
+  bottom: 5%;
+  height: 48%;
+  background: radial-gradient(
+    85% 100% at 72% 18%,
+    rgba(227, 213, 180, 0.12) 0%,
+    rgba(227, 213, 180, 0.04) 55%,
+    transparent 78%
+  );
+  filter: blur(10px);
+}
+
+/* 月下孤影：前景剪影 + 背光晕。⚠️ 内部 SVG 必须显式 width/height，
+ * 否则默认 300×150 撑开定位导致"失踪"（V2.1 实测踩坑）。 */
+.ink-figure {
+  position: absolute;
+  left: 84%;
+  bottom: 9.5%;
+  width: 60px;
+  height: 176px;
+  transform: translateX(-50%);
+  color: #141009;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)) drop-shadow(-4px 0 4px rgba(227, 213, 180, 0.5));
+  animation: figure-bob 6s ease-in-out infinite;
+}
+.ink-figure svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ink-figure::before {
+  content: "";
+  position: absolute;
+  inset: -26px -34px;
+  background: radial-gradient(
+    circle at 55% 45%,
+    rgba(227, 213, 180, 0.5) 0%,
+    rgba(227, 213, 180, 0.2) 40%,
+    transparent 64%
+  );
+  z-index: -1;
+}
+
+/* 前景松柏：压住底部角落，破纯黑空洞 */
+.ink-pine {
+  position: absolute;
+  color: #0a0d0b;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+}
+.ink-pine-l {
+  left: 4%;
+  bottom: 5%;
+  width: 52px;
+  height: 110px;
+}
+
+/* 朱砂灯笼：暖光呼吸（人情味点缀） */
+.ink-lantern {
+  position: absolute;
+  left: 11.5%;
+  bottom: 21%;
+  width: 12px;
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--lantern) 0%, #9c3f2c 100%);
+  box-shadow:
+    0 0 10px rgba(196, 100, 74, 0.8),
+    0 0 26px rgba(196, 100, 74, 0.4);
+  animation: lantern-glow 3.6s ease-in-out infinite;
+}
+.ink-lantern::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 2px;
+  height: 5px;
+  transform: translateX(-50%);
+  background: #0a0d0b;
+}
+.ink-lantern::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 3px;
+  height: 5px;
+  transform: translateX(-50%);
+  background: rgba(196, 100, 74, 0.55);
+  filter: blur(1px);
+}
+
+/* 流雾：≥3 条（底部最亮）交替漂移 */
+.ink-mist {
+  position: absolute;
+  left: -20%;
+  width: 140%;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(206, 196, 174, 0.16) 0%, transparent 65%);
+  animation: mist-drift 26s ease-in-out infinite alternate;
+}
+.ink-mist.m1 {
+  bottom: 34%;
+}
+.ink-mist.m2 {
+  bottom: 16%;
+  animation-delay: -13s;
+  animation-duration: 34s;
+}
+.ink-mist.m3 {
+  bottom: 3%;
+  height: 190px;
+  animation-delay: -7s;
+  animation-duration: 40s;
+  background: radial-gradient(ellipse at center, rgba(206, 196, 174, 0.2) 0%, transparent 65%);
+}
+
+/* 暗角 + 底部收墨（电影感；底部放宽给山峦留层次） */
+.ink-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 90% at 50% 18%,
+      transparent 40%,
+      rgba(10, 8, 6, 0.42) 80%,
+      rgba(8, 6, 5, 0.78) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(10, 8, 6, 0.4) 0%,
+      transparent 28%,
+      transparent 62%,
+      rgba(8, 6, 5, 0.6) 100%
+    );
+}
+
+/* ================= 宣纸面 ================= */
+
+/* 宣纸卡片：米白渐变 + 噪点 + 茶渍做旧（表单/卡片/卷轴通用）
+ * 配合 .rolls 变体可加上下木轴（卷轴）。 */
+.paper-card {
+  background:
+    radial-gradient(150% 200% at 30% 12%, rgba(168, 128, 66, 0.12), transparent 55%),
+    var(--bg-noise),
+    linear-gradient(180deg, var(--paper-surface) 0%, var(--paper-surface-deep) 100%);
+  color: var(--paper-ink);
+  border: 1px solid rgba(201, 168, 105, 0.55);
+  border-radius: 4px;
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.5),
+    0 0 26px rgba(224, 210, 176, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+/* 纸面凹陷（输入框等容器）：更白 + 内阴影 */
+.paper-card.inset {
+  background:
+    radial-gradient(140% 180% at 28% 16%, rgba(168, 128, 66, 0.08), transparent 58%),
+    linear-gradient(180deg, #f5efdf 0%, #e8dcc0 100%);
+  border-color: rgba(201, 168, 105, 0.4);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.26),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+}
+/* 上下木轴（紫檀 + 木纹噪点） */
+.paper-card.rolls::before,
+.paper-card.rolls::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--bg-noise), linear-gradient(180deg, var(--wood-light) 0%, var(--wood) 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.paper-card.rolls::before {
+  top: -5px;
+}
+.paper-card.rolls::after {
+  bottom: -5px;
+}
+
+/* ================= 古籍竖排 ================= */
+
+/* 竖排列容器：古籍右起读序（row-reverse），每句一列，顶对齐 */
+.v-cols {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 18px;
+}
+.v-col {
+  margin: 0;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 6px;
+  color: var(--paper-ink);
+  animation: col-in 0.55s var(--ease-out) both;
+}
+.v-col:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.v-col:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.v-col:nth-child(3) {
+  animation-delay: 0.19s;
+}
+.v-col:nth-child(4) {
+  animation-delay: 0.26s;
+}
+.v-col:nth-child(5) {
+  animation-delay: 0.33s;
+}
+/* 不支持 writing-mode 的端：列退化为横排诗句仍可读 */
+
+/* ================= 动效（仅 transform/opacity） ================= */
+
+@keyframes moon-breathe {
+  0%,
+  100% {
+    opacity: 0.86;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes figure-bob {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+@keyframes lantern-glow {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 14px rgba(196, 100, 74, 0.95),
+      0 0 34px rgba(196, 100, 74, 0.5);
+  }
+}
+@keyframes mist-drift {
+  from {
+    transform: translateX(-4%) scaleY(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateX(4%) scaleY(1.15);
+    opacity: 0.95;
+  }
+}
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes scroll-rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes col-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes hint-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-moon,
+  .ink-figure,
+  .ink-mist,
+  .ink-lantern,
+  .v-col,
+  .p-hint {
+    animation: none;
+  }
+}

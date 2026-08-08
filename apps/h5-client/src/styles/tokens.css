@@ -107,4 +107,13 @@
 
   /* 宣纸纹理（DC-027 V2 批次3：极淡噪点，打破纯黑扁平；不干扰阅读） */
   --bg-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
+  /* 意境原语（V2.2：登录页水墨远景提炼为通用 token，atmosphere.css 复用；对应 docs/design-system.md §3） */
+  --moon: #e3d5b4; /* 孤月本体（含月晕渐变） */
+  --paper-surface: #efe6d2; /* 宣纸亮面（卡片/按钮/输入框） */
+  --paper-surface-deep: #e0d2b4; /* 宣纸深面（渐变收尾） */
+  --paper-ink: #171209; /* 纸上墨字 */
+  --wood: #5d4426; /* 紫檀木轴（深） */
+  --wood-light: #8a6a40; /* 紫檀木轴（亮） */
+  --lantern: #c4644a; /* 朱砂灯笼 */
 }

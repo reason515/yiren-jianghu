@@ -21,7 +21,37 @@
 - 内容任务（房间/NPC/物品/任务/剧情）启动前，先按 `yjh-project-conventions` 的"任务启动必读"表确认要加载哪些 skill。
 - 内容进入仓库前，必须登记 pkuxkx 权利状态（机制借鉴/需改写/需授权），见 `docs/pkuxkx-content-catalog.md`。
 - 提交前质量门禁必须全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；新增/修改 API 或事件时同步 `docs/protocol.md`（`pnpm test:docs`）。
-- **任务收尾**：按全局 AGENTS.md 的「Global Task Wrap-up Rule」执行——①提炼检查（skill/设计规范/借鉴登记/执行记录，有则更新）→ ②门禁全绿后自动提交推送 → ③改动影响运行时产物时自动部署（`node scripts/deploy-jd.cjs deploy`，H5 先 `pnpm --filter @yjh/h5-client build:web`）；纯文档/skill 变更不部署；用户明确交待不提交/不部署时遵守。
+
+## 任务收尾（自动三步，除非用户明确交待不提交/不部署）
+
+每个任务处理完（改动已实现、验证已过）后，默认自动执行三步收尾：
+
+**① 提炼检查（skill/文档沉淀）**
+
+快速过一遍变更清单，判断是否产生值得沉淀的可复用资产——有才更新，无则跳过（总结中说明"无新增沉淀"）：
+
+| 检查点                            | 有则更新到                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------- |
+| 新组件/原语/设计模式/技法         | `docs/design-system.md` 与对应 UI skill（`yjh-mobile-ui` 等）                |
+| 踩了新坑（渲染/布局/编码/工具链） | 对应 skill 的常见坑/经验清单（`ui-visual-audit`、`yjh-project-conventions`） |
+| 借鉴了外部项目手法                | `docs/sibling-borrowings.md`                                                 |
+| 完成计划内任务                    | `docs/design-and-development-plan.md` 执行记录                               |
+| 验证了新最佳实践                  | 团队 skill（`D:\code\team-ai-skills\skills\`）                               |
+
+- 更新过 `.pi/` 下 skill 文档后必须 `pnpm format`（prettier 门禁），并保证 `pnpm test:docs-design` 不破。
+
+**② 提交与推送**
+
+- 门禁全绿（① 前先跑）才提交；提交信息遵循 `feat|fix|docs|refactor|test|ci|chore(<scope>): 中文描述`。
+- 默认 `git push` 当前分支远端。
+
+**③ 部署（仅当改动影响运行时产物）**
+
+- **只影响文档/skill/测试的改动不部署**（无运行时产物变化，避免无谓重建与风险）。
+- 改动运行时产物（客户端代码/样式、服务端代码、迁移、内容包等）：先 `pnpm --filter @yjh/h5-client build:web`，再 `node scripts/deploy-jd.cjs deploy`（详见 yjh-project-conventions），部署后线上验证（bundle hash / 关键样式与文案）。
+- 环境不允许（无凭据/无网络/无 Docker）时说明原因，不擅自跳过验证。
+
+**例外与安全**：用户明确交待不提交/不部署/只本地验证时一律遵守；半成品/待确认设计/未过门禁时不自动提交部署；不确定时先问用户，不擅自执行。
 
 ## 权威文档
 

@@ -92,7 +92,11 @@ async function main() {
 
     console.log("== [2/5] 上传源码包并构建镜像 ==");
     await new Promise((res, rej) => {
-      ssh.sftp((err, sftp) => (err ? rej(err) : sftp.fastPut(tar, "/opt/yiren-jianghu/release.tar", (e) => (e ? rej(e) : res()))));
+      ssh.sftp((err, sftp) =>
+        err
+          ? rej(err)
+          : sftp.fastPut(tar, "/opt/yiren-jianghu/release.tar", (e) => (e ? rej(e) : res())),
+      );
     });
     await check(
       "cd /opt/yiren-jianghu/src && tar xf /opt/yiren-jianghu/release.tar && rm /opt/yiren-jianghu/release.tar",
@@ -129,7 +133,9 @@ async function main() {
     );
     const distDir = path.join(repo, "apps", "h5-client", "dist");
     await new Promise((res, rej) => {
-      ssh.sftp((err, sftp) => (err ? rej(err) : sftpUploadDir(sftp, distDir, "/var/www/yiren/dist").then(res).catch(rej)));
+      ssh.sftp((err, sftp) =>
+        err ? rej(err) : sftpUploadDir(sftp, distDir, "/var/www/yiren/dist").then(res).catch(rej),
+      );
     });
     await check("curl -fsS http://127.0.0.1/ | head -c 80 && echo H5_OK", "本地静态页");
 

@@ -94,8 +94,10 @@
 | `.paper-card` | 宣纸卡片 | 米白渐变 + `--bg-noise` + 茶渍 radial 做旧；墨字；暖光投影 |
 | `.paper-card.inset` | 凹陷面 | 更白 + 内阴影（输入框类容器） |
 | `.paper-card.rolls` | 上下木轴 | `::before/::after` 紫檀 + 木纹噪点（卷轴） |
+| `.input.paper` | 宣纸输入框 | 控件形态（`.paper-card.inset` 等价）：更白 + 内阴影凹陷 + 左对齐 + 墨字；placeholder 用 display 字体（登录帖号/建角名号） |
+| `.btn.paper` | 宣纸主 CTA | 控件形态（`.paper-card` 等价）：纸纹 + 暖光 + 墨字；场景外入口主按钮（登录叩门/建角立名·踏入），玉色"可行动"语义留给游戏内动作 |
 
-> 登录页表单（`.auth-page .input / .btn.primary`）是 paper-card 的**等价手写实现**：因 `.btn/.input` 基类覆盖顺序（auth.css 晚于 atmosphere.css 加载）不便直接组合类，新界面优先直接用 `paper-card` 类。
+> 登录页表单（`.auth-page .input / .btn.primary`）是控件的等价手写实现：因 `.btn/.input` 基类覆盖顺序（auth.css 晚于 atmosphere.css 加载）不便直接组合类，新界面优先直接用 `.input.paper` / `.btn.paper`。
 
 ## 3.3 古籍竖排
 

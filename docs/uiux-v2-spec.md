@@ -191,6 +191,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 - 改动：榜单行加 stat 色点图标（成长榜=剑形字符/赛季榜=令牌）；"我的"行玉色底 + 左边框；论剑对手卡对齐（名号 + 门类 + 分数分层）。
 - 验收：榜单结构一眼可读；我的行定位 ≤2 秒。
 
+## 6.9 建角流程（CharacterCreateSheet，V2.3）
+
+- 现状（V2 前）：Sheet 浮层内一屏塞满（名号/性别/四维/按钮），无故事背景、无引导。
+- 改动：升级为**全屏两步流程**——①序章引导（ink-screen 水墨远景 + 卷轴竖排五句交待"一人一江湖"背景 + 引导句 + 立名闯荡）→ ②立名与根基（闯字印章 + 标题 + 宣纸名号输入框 `.input.paper` + ChoiceRow 性别 + AttributeAllocator 四维 + 宣纸踏入江湖 `.btn.paper` + 回想序章返回）。原语组合见 docs/design-system.md §3/§5，文案走 yjh-wuxia-copywriting。
+- 验收：序章 30 秒内能说出"我是谁、要去做什么"；390px 布局无溢出（attr-row 用 `minmax(0,1fr)`）；98 h5 用例全绿。
+
 # 7. 工程化落地清单
 
 ## 7.1 新增 token（tokens.css）

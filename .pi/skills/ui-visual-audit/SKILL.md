@@ -32,7 +32,9 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 
 - 浏览器自动化打开目标页面（本地 preview 或公网），登录 → 走查每个主界面（登录/主场景/各浮层面板）逐一截图。
 - React 受控输入自动化有坑（CDP 注入不触发 onChange）：**优先 API 登录 + localStorage 注入 token** 绕过登录页，再逐屏点开面板。
+- **多倍率截图**：移动端 1x（390×844）看构图，**3x（1170×2532）看细节**——小元素（剪影/点缀/小字）在 1x 下对视觉模型几乎不可见，3x 才判读准确；截图尺寸固定后逐轮对比。
 - 每屏截图后立即用视觉模型描述（无原生视觉时 `node deepseek-vision/vision.js <截图>`；有原生视觉直接用 read）。
+- **视觉模型噪声处置**：run-to-run 结论有波动，逐轮迭代只追**多次一致的结论**；单次冒出的新建议先记录不追（实测同一页面从"底部死黑"到"落地"反复横跳，而"底部太暗"是每轮都出现的真问题）。
 
 ### 2. 探针核实（关键！视觉模型会误判）
 
@@ -61,6 +63,7 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 - `scrollHeight > clientHeight` → 溢出（查 box-sizing / 容器高度）
 - `bodyBg/appBg` 透明 → P0-1 容器缺背景
 - `fonts.*` false → 字体未自包或未加载完（2.6MB 字体首查可能 loading，稍等复查）
+- **SVG 定位陷阱**：内联 `<svg>` 未显式 `width/height` 时默认 300×150，会撑开 `position: absolute` 元素导致"失踪/错位"——视觉模型报"元素缺失"时先探针查 `getBoundingClientRect()` 实际尺寸，再怀疑渲染（V2.1 登录页人物剪影实测踩坑）。
 
 ### 3. 分级
 

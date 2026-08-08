@@ -61,7 +61,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.1 已落地组件基线（apps/h5-client/src/，勿重复造轮子）
 
 - 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
-- 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage` / `CharacterCreateSheet`
+- 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）
 - 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
@@ -148,6 +148,29 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **组件质感基线**：可点元素有 `:active` 按压态；chip 分类色 tint（action 玉色/perform 金色/npc/item/danger 朱砂）；Sheet 上滑动画挂载即播（@keyframes）。
 - **导航收敛**：底部导航 = 高频 5 项（角色/挂机/任务/论剑/论坛）+「更多」抽屉（榜单/地图/离开）；战局为情境按钮。
 - **场景首字印章**：场景标题旁接 `ArtPlaceholder`（DC-006 轻量插画边界）；已接任务的场景显示「当前要事」卡片（相位用 `PHASE_LABEL` 中文，不泄漏内部类型名）。
+
+## 4.13 登录页与开场卷轴（V2.1，纯 CSS/SVG 无外部资源）
+
+登录页 = 水墨远景舞台 + 宣纸表单 + 开场卷轴（手法借鉴 sanguo-mud 登录徽记/开场画册，登记见 `docs/sibling-borrowings.md` §8）。新界面若需要"意境开场"或"水墨背景"，照此复用，勿另起炉灶。
+
+**水墨远景（`.auth-vista`，纯 CSS/SVG）**
+
+- 分层：孤月（右上 + 月晕 `::before` 融入夜空 + 呼吸动画）→ 疏星（多 radial-gradient 点）→ 三层山峦 → 月下孤影 → 前景松柏 + 朱砂灯笼 → 流雾 ×3 → 暗角。
+- 三层山峦 = 空气透视：远山雾青（blur + 亮色雾顶渐变）/ 中峰墨褐（顶部染月光 + `drop-shadow` 山脊轮廓光）/ 近山墨黑。**山体必须提亮到可辨层次，否则底部成"死黑"**（视觉模型反复点名的头号问题）。
+- `.auth-lights` 月光洒落层（径向暖光 blur）破山坳死黑；雾 ≥3 条（底部最亮）交替漂移（仅 transform/opacity 动画）。
+- **月下孤影**：前景右下近大远小，持剑剪影 + 朱砂剑穗（呼应印章）+ `::before` 金色背光晕。⚠️ **内联 SVG 必须显式 `width/height`**（CSS 给定或 svg 属性），否则默认 300×150 撑开定位、人物"消失"——V2.1 实测踩坑。
+
+**宣纸表单（登录 CTA 专用）**
+
+- 输入框与主按钮**成对**用宣纸色（米白渐变 + `--bg-noise` + 茶渍 radial 做旧）；输入框更白 + 内阴影凹陷 + 文字左对齐，与按钮纸纹+暖光自然分层。
+- 主 CTA 用宣纸而非玉色：登录是"场景外"入口，玉色"可行动"语义保留给游戏内动作。
+
+**开场卷轴（`.prologue-*`，只播一次可略过）**
+
+- 三卷竖排：`writing-mode: vertical-rl` + `text-orientation: upright`；容器 `flex-direction: row-reverse`（右起读序）；`align-items: flex-start`（顶对齐，竖排古籍规范）。
+- 每卷 = 卷数+题名（朱砂）→ 竖排短句（短句顿挫，文案走 `yjh-wuxia-copywriting`）→ 意境落款。卷轴 = 宣纸渐变 + `::before/::after` 木轴（紫檀 + 噪点）。
+- **UI 控件不入纸面**：进度墨线、提示语放卷外深底（实测圆点/墨线印在纸上均违和）。
+- 状态：`localStorage`（`yjh.prologueSeen`）只播一次；轻触翻卷、末卷即入门；"略过"≥44px；Escape 可跳；不支持 writing-mode 的端列退化为横排仍可读。
 
 ## 4.11 新手引导接线契约（E14.11）
 

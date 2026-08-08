@@ -53,13 +53,13 @@
 # 5. 文档/方法论借鉴（sanguo-mud）
 
 - **first-session-ux-v3（首日闭环）**：注册→创建→首区→首战→入城→首日终点的全流程设计 + 七原则（**首战教学展示**：必胜弱敌纯自动 30–45s；主线被动暗线；首日零出身差异）。→ **E14.11 新手引导的直接参考**（按本项目叙事/机制改写）。
-- **design-baseline.json + check-doc-consistency.js**：设计基准单一事实来源 + 自动一致性检查。→ 本项目 design-docs skill 已提到移植思路但 `scripts/` **未落地**——**登记待办**（与 `pnpm test:docs` 协议契约并列的设计侧检查）。
+- **design-baseline.json + check-doc-consistency.js**：设计基准单一事实来源 + 自动一致性检查。→ 本项目 design-docs skill 已提到移植思路；**`scripts/check-doc-consistency.js` 已落地**（E14.12），接入 `pnpm test:docs-design`（CI quality 同步，与 `pnpm test:docs` 协议契约并列）。
 - **mobile-uiux-v1 + 审计轮次**（多轮审计/修复复核）：本项目 design-docs skill 已移植。
 
 # 6. 工程工具借鉴
 
 - xkx `scripts/generate-*.mjs`（从源数据生成 `.generated.ts`）：本项目内容包 CLI（validate/preview/bundle）已覆盖同类需求，无需引入。
-- sanguo `scripts/check-doc-consistency.js`：见 §5，待移植。
+- sanguo `scripts/check-doc-consistency.js`：见 §5，已移植（`scripts/check-doc-consistency.js` + `pnpm test:docs-design`）。
 
 # 7. 执行登记
 
@@ -68,4 +68,4 @@
 - E14.5 战斗悬浮 → xkx FloatingPerfBar
 - E14.10 易用性 → xkx ChoiceRow / attr-card / toast 约定
 - E14.11 新手引导 → sanguo first-session-ux-v3（改写）
-- 新待办：移植 check-doc-consistency（design-docs §4 落地）
+- ~~新待办：移植 check-doc-consistency（design-docs §4 落地）~~ **已完成**（E14.12：`scripts/check-doc-consistency.js` + `pnpm test:docs-design`，CI quality 同步）

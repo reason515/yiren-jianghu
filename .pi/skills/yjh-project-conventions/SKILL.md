@@ -46,6 +46,7 @@ pnpm dev:infra       # 本地 PostgreSQL + Redis（docker compose，需 Docker�
 pnpm migrate / migrate:down / migrate:create / seed   # 数据库迁移（services/api；脚本经 --env-file-if-exists 自动读根 .env 的 DATABASE_URL，CI 无 .env 时回退环境变量）
 pnpm content:validate / content:preview / content:pack  # 内容包（见 yjh-content-pack）
 pnpm test:docs     # 协议一致性契约测试（docs/protocol.md ↔ 代码）
+pnpm test:docs-design  # 设计决策引用完整性（scripts/check-doc-consistency.js，DC-xxx ↔ docs/decisions.md）
 pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev:infra，CI 服务容器）
 ```
 
@@ -57,7 +58,7 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
   - **SQL 造数点标注**：依赖未落地的域（战斗/商店/回精）用 SQL 直接准备状态（如提 exp/潜能、推进任务相位、造行囊、回精），**必须注释标注"待 X 域落地后移除"**；唯一邀请码按运行生成 → 幂等可重跑。
   - **复用 dev 库的断言要稳健**：榜单/对手 TopN 会被历史运行数据占满（新角色 exp 0 排不进 Top10）——断言"排除自己/非空/计数≥"，不断言"包含特定新角色"。
   - **e2e 的价值**：mock db 测不到的真实集成问题——复合主键缺失（ON CONFLICT 42P10）、jsonb 二次解析、限流生效、精耗尽导致结算空转。新域落地后至少让 journey 走一遍。
-- **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
+- **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/test:docs-design/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
 - **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API/Worker 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范 + G1 实战）**。
 - 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤；**并检查容器入口接线**（见常见坑 #24）。
 - **G1 服务器部署实战要点（117.72.34.43，京东云 2GB 小机）**：镜像用**服务器本地 docker build**（git archive 源码包上传 → build，buildkit 缓存复用，2GB 内存 OK）；**自定义 tag（如 yiren/api:main）不被 daocloud 镜像代理**（白名单外）——`API_IMAGE=yiren/api:main docker compose up` 指向本地镜像；**容器内 `DATABASE_URL`/`REDIS_URL` 的 host 用 compose 服务名（postgres/redis）非 localhost**；Nginx 只绑 loopback 转发（公网 80→127.0.0.1:3000）；Windows 无 sshpass 时用 node+ssh2 脚本（密码认证）执行 SSH/SFTP。
@@ -79,6 +80,7 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 
 - **单一事实来源**：协议类型在 `@yjh/shared`（`PROTOCOL_VERSION`/`EVENT_TYPES`），内容 Schema 在 `@yjh/content`；禁止在别处复制定义。
 - **协议清单**：`docs/protocol.md` 是路由/事件的唯一人工维护入口；`services/api/src/protocol.contract.test.ts` 强制「清单路由 = 已注册路由、事件集合 = EVENT_TYPES、版本 = PROTOCOL_VERSION」，`pnpm test:docs` 不一致即失败。新增/修改 API 或事件必须同步三处：代码 / 测试 / `docs/protocol.md`（PR 模板「三件套」）。
+- **设计决策引用**：`pnpm test:docs-design`（`scripts/check-doc-consistency.js`，E14.12 落地）扫描 docs/ 中「DC-xxx」引用必须登记于 `docs/decisions.md`，且「影响文档」列引用的文档必须存在；新增决策/文档引用后跑它自检。
 - **内容一致性**：内容包 fixtures 由 CI validate；Schema 改动必须同步校验器测试与 yjh-content-pack 文档。
 - **执行记录**：每完成计划任务更新 `docs/design-and-development-plan.md` 执行记录表。
 - 示例即测试：文档中的内容包示例应来自 fixtures（CI 校验通过的真实例子），防止文档写出 Schema 不支持的格式。

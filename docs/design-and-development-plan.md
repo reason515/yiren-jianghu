@@ -29,7 +29,7 @@
 | M0 工程基座 | ✅ 完成 | — | A1–A6 全部完成，本机全绿；Docker 运行验证待服务器/CI |
 | M1 核心规则可测 | ✅ 完成 | — | B1/B2 契约 + C1–C10 规则引擎全部完成，137 用例全绿；确定性可复现 |
 | M2 切片内容 | ✅ 完成 | — | D1–D8 全部完成：dev-pack@0.2.0（18 房间/14 NPC/5 物品/6 技能/4 绝招/4 任务/5 主线），新手村→主城→门派主循环成型 |
-| M3 H5 垂直闭环 | 🔄 进行中（核心闭环已接入） | E 阶段客户端全量 + H5 SPA 生产上线（http://117.72.34.43/，登录→建角→场景）；**剩余**：E14.12 验收与发布 |
+| M3 H5 垂直闭环 | 🟡 代码侧验收完成，发布待执行 | E 阶段客户端全量 + H5 SPA 生产上线（http://117.72.34.43/，登录→建角→场景）；**剩余**：浏览器真机全闭环 + 生产部署更新（E14.12 发布步骤） |
 | M2.5 服务端业务 | ✅ 完成 | — | B2 缺口全部补齐：auth/character/scene/skills/quests/templates/afk/pvp/leaderboard/forum/session 十一域 + 收尾 6 stub（logout 吊销会话 / characters 改名 / inventory equip·unequip·use 装备与物品效果结算 / content 版本）——**协议清单 40 路由 100% 真实实现，0 stub**（迁移 0006–0008）；299 用例全绿 + 本地真库 e2e |
 | M1 核心规则可测 | B+C 阶段：领域契约 + 战斗/挂机/PVP/模板引擎 | 全部规则单测绿，确定性可复现 | 3–4 周 |
 | M2 切片内容 | D 阶段：数值表、新手村/主城/门派/NPC/物品/任务/主线 | 内容包校验通过，可导入游戏世界 | 2–3 周 |
@@ -431,7 +431,7 @@
 - **✅ E14.11 新手引导**：首启引导（登录→建角→第一条任务→学武→首次战斗），文案遵循 yjh-wuxia-copywriting；**方法参考 sanguo first-session-ux-v3（首日闭环/首战教学展示），GuideTip 轻量提示组件**。事件驱动、可跳过、一次出现：进场景欢迎 → 接任务提示学武 → 学武提示首战 → 首战胜利收尾；乱序操作跳级不倒退，进度存 localStorage（`yjh.onboard`）。
   - 验收：新玩家 30 秒内完成一次可理解行动（引导状态机 + GuideTip DOM 单测覆盖）
   - 验收：新玩家 30 秒内完成一次可理解行动
-- **E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环（登录→建角→探索→学武→任务→战斗→挂机→PVP→论坛）+ 生产部署更新（重新 build:web + 上传）；**新待办：移植 sanguo check-doc-consistency（design-docs §4 落地）**
+- **🔄 E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环（登录→建角→探索→学武→任务→战斗→挂机→PVP→论坛）+ 生产部署更新（重新 build:web + 上传）；**✅ check-doc-consistency 已移植**（`scripts/check-doc-consistency.js` + `pnpm test:docs-design`，CI quality 同步，design-docs §4 落地）。代码侧验收完成（350 单测 + 18 e2e + build:web 产物验证）；**浏览器真机闭环与生产部署为发布步骤待执行**（需服务器环境）。
   - 验收：试玩清单全绿（复用 beta-launch-checklist 门禁）
 - **依赖**：E1–E13、M2.5 API、F0 战斗域
 - **估时**：5–7 人日（E14.1–14.9 各 0.5 日，14.10–14.12 各 0.5–1 日）
@@ -595,7 +595,7 @@
 | E13 视觉与演出 | ✅ 完成 | — | ArtPlaceholder（首字印章占位）+ sound 环境音占位（可注入/事件映射表）+ effects（绝招行高亮动画，动效克制）；204 用例 |
 | F1–F4 联调测试 | ✅ 完成 | — | F1 规则确定性（持续）+ F2 Worker 结算（settlement.ts 纯函数 + run.ts FOR UPDATE 幂等 + startWorker 崩溃恢复）+ F3 全链路 e2e（journey 11 步，抓出复合主键/jsonb 二次解析 2 真 bug）+ F4 性能基线（4354/2556/1839 RPS，worker 6.1ms/作业，docs/performance-baseline.md） |
 | F0 PVE 战斗域 | ✅ 完成 | — | DC-023/024；逐回合可重演 state（RNG 调用计数 + 绝招冷却 + 有序事件）、迁移 0010 单场约束、PVE/PVP 共用角色战斗体。`/combat/start`、`/combat/action`、`/combat/status` 已接入 attack/recover/flee/perform；绝招按内容包校验，胜利按 NPC `battleRewards` / `drops` 结算并调用 `recordProgress` 推进 kill 任务。服务/规则/内容测试与真库 journey E2E（16 用例）均通过；E14.3/14.5/14.6/14.11 前置已解除。 |
-| E14 H5 面板闭环 | 🔄 进行中 | — | **E14.1 场景交互已接入**：交谈/请托/交易/拾取均从 EntitySheet 的结构化动作进入；ShopView 用服务端交易快照展示报价、银两与行囊，场景物品每角色仅可拾取一次（DC-025），真库 E2E 覆盖。**E14.2 角色面板与学武已接入**：`GET /characters/me` 提供角色四维、行止与有效潜能；客户端合并角色/武功/行囊快照，装备槽由已佩挂物品派生；请教/演练/参悟、佩上/卸下/使用均只提交服务端意图，结果刷新人物簿并反馈。**E14.3 任务面板已接入**：`GET /quests` 返回服务端组装的 `{ quests, story }`；QuestPanel 完成接/交/查、主线足迹、目标名与 goto 指向，移动抵达由服务端推进 goto 相位，战斗结束刷新 kill 进度；交差奖励即时回显。**E14.4 挂机闭环已接入**：`/afk/status`、`/afk/start`、`/afk/stop`、`/afk/reports` 与 resume 未读报告接入 GrindBanner/AfkSheet/AfkReportView；AfkSheet 以分段控件切换修炼/行侠，修炼选已学武功+时长，行侠选已接击杀差事+战术模板+时长，只提交受控意图（DC-026）。行侠作业由 Worker 固定种子自动结算，真库 E2E 覆盖。**E14.5 战斗 UI 已接入**：场景 NPC「较量」→ `/combat/start`，服务端状态/事件适配为 CombatView；受控 action（普攻/回气/逃跑/绝招）→ `/combat/action`，胜负横幅、收益摘要、断线 status 恢复均已接线。**E14.6 PVP 论剑已接入**：PvpView（赛季余日 + 对手列表）+ 发起对战二次确认 + PvpReplayView（匹配后拉取 `GET /pvp/matches/:id` 叙事回放，与 PVE 共用事件渲染器）。**E14.7 论坛完整交互已接入**：ForumView 板块→帖子→详情 + PostComposer 发帖/回帖/举报；点赞后用服务端返回值更新本地 likedByMe/计数。**E14.8 地图与榜单已接入**：服务端新增 `GET /map`（rooms.grid + 去重边 + current 标记）；MapSheet 相邻出口真实移动、跨房间提示；LeaderboardView 双榜接线，榜单公开读故客户端按角色 id 标记我的行。**E14.9 断线重连已接入**：网络失败自动进入指数退避重连（复用 E12 状态机），重连成功 resume 刷新全量状态并翻开未读挂机/论剑战报；401 回登录、超次提示。**E14.10 体验打磨已接入**：ChoiceRow 分段控件泛型化（替换 AfkSheet/LeaderboardView/CharacterCreateSheet）；修复 `.app-nav` 底部导航与 `.toast-host` 全局 toast 缺失样式的真实缺口；44px 触控与底部安全区已用 tokens。**E14.11 新手引导已接入**：GuideTip 轻量提示 + 事件驱动首启动线（进场景/接任务/学武/首战），进度存 localStorage、乱序跳级不倒退（参考 sanguo first-session-ux-v3）。其余 1 子任务待办；借鉴 xkx ShopView/TrainSheet/FloatingPerfBar/ChoiceRow + sanguo first-session-ux（见 docs/sibling-borrowings.md）；估时 5–7 人日 |
+| E14 H5 面板闭环 | 🔄 进行中 | — | **E14.1 场景交互已接入**：交谈/请托/交易/拾取均从 EntitySheet 的结构化动作进入；ShopView 用服务端交易快照展示报价、银两与行囊，场景物品每角色仅可拾取一次（DC-025），真库 E2E 覆盖。**E14.2 角色面板与学武已接入**：`GET /characters/me` 提供角色四维、行止与有效潜能；客户端合并角色/武功/行囊快照，装备槽由已佩挂物品派生；请教/演练/参悟、佩上/卸下/使用均只提交服务端意图，结果刷新人物簿并反馈。**E14.3 任务面板已接入**：`GET /quests` 返回服务端组装的 `{ quests, story }`；QuestPanel 完成接/交/查、主线足迹、目标名与 goto 指向，移动抵达由服务端推进 goto 相位，战斗结束刷新 kill 进度；交差奖励即时回显。**E14.4 挂机闭环已接入**：`/afk/status`、`/afk/start`、`/afk/stop`、`/afk/reports` 与 resume 未读报告接入 GrindBanner/AfkSheet/AfkReportView；AfkSheet 以分段控件切换修炼/行侠，修炼选已学武功+时长，行侠选已接击杀差事+战术模板+时长，只提交受控意图（DC-026）。行侠作业由 Worker 固定种子自动结算，真库 E2E 覆盖。**E14.5 战斗 UI 已接入**：场景 NPC「较量」→ `/combat/start`，服务端状态/事件适配为 CombatView；受控 action（普攻/回气/逃跑/绝招）→ `/combat/action`，胜负横幅、收益摘要、断线 status 恢复均已接线。**E14.6 PVP 论剑已接入**：PvpView（赛季余日 + 对手列表）+ 发起对战二次确认 + PvpReplayView（匹配后拉取 `GET /pvp/matches/:id` 叙事回放，与 PVE 共用事件渲染器）。**E14.7 论坛完整交互已接入**：ForumView 板块→帖子→详情 + PostComposer 发帖/回帖/举报；点赞后用服务端返回值更新本地 likedByMe/计数。**E14.8 地图与榜单已接入**：服务端新增 `GET /map`（rooms.grid + 去重边 + current 标记）；MapSheet 相邻出口真实移动、跨房间提示；LeaderboardView 双榜接线，榜单公开读故客户端按角色 id 标记我的行。**E14.9 断线重连已接入**：网络失败自动进入指数退避重连（复用 E12 状态机），重连成功 resume 刷新全量状态并翻开未读挂机/论剑战报；401 回登录、超次提示。**E14.10 体验打磨已接入**：ChoiceRow 分段控件泛型化（替换 AfkSheet/LeaderboardView/CharacterCreateSheet）；修复 `.app-nav` 底部导航与 `.toast-host` 全局 toast 缺失样式的真实缺口；44px 触控与底部安全区已用 tokens。**E14.11 新手引导已接入**：GuideTip 轻提示 + 事件驱动首启动线（进场景/接任务/学武/首战），进度存 localStorage、乱序跳级不倒退（参考 sanguo first-session-ux-v3）。**E14.12 代码侧验收完成**：check-doc-consistency 移植（`pnpm test:docs-design`，CI quality 同步）；全部组件 DOM 单测覆盖；build:web 产物验证通过；350 单测 + 18 e2e 全绿。浏览器真机闭环与生产部署更新待发布步骤执行；借鉴 xkx ShopView/TrainSheet/FloatingPerfBar/ChoiceRow + sanguo first-session-ux（见 docs/sibling-borrowings.md）；估时 5–7 人日 |
 | G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 
@@ -613,4 +613,4 @@
 
 # 6. 下一步（当前任务）
 
-继续 **E14 H5 面板闭环**：E14.1–E14.11（场景/角色/任务/挂机/战斗/PVP/论坛/地图·榜单/断线重连/体验打磨/新手引导）均已接入并验收。**下一步推进 E14.12 验收与发布**：各面板 DOM 单测补全 + 浏览器/真机全闭环试玩清单 + 生产部署更新（重新 build:web + 上传）+ check-doc-consistency 移植待办。
+继续 **E14 H5 面板闭环**：E14.1–E14.11 全部接入并验收，E14.12 代码侧验收完成（check-doc-consistency 落地 + 单测补全 + build:web 验证 + 全量门禁绿）。**下一步为发布步骤**：浏览器/真机全闭环试玩验证 + 生产部署更新（重新 build:web 上传服务器）；完成后 M3 收口。

@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run -c vitest.e2e.config.ts",
     "test:docs": "pnpm --filter @yjh/api test:docs",
+    "test:docs-design": "node scripts/check-doc-consistency.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -40,6 +40,9 @@ jobs:
       - name: Docs contract (protocol.md ↔ code)
         run: pnpm test:docs
 
+      - name: Docs design consistency (DC references)
+        run: pnpm test:docs-design
+
       - name: Lint
         run: pnpm lint
 

@@ -50,8 +50,8 @@ description: 《一人江湖》(yiren-jianghu) 设计文档工作流规范——
 
 ## 4. 一致性检查
 
-- 决策引用编号的完整性用脚本校验（移植 sanguo 的 `check-doc-consistency.js` 思路）：扫描文档中的「（DC-xxx）」引用，全部必须存在于 `docs/decisions.md`；`decisions.md` 的"影响文档"中提到的文档必须存在。
-- 落地建议：在 `scripts/` 建 `check-doc-consistency.js`，接入 CI（类似 `pnpm test:docs` 的协议契约机制）。
+- 决策引用编号的完整性用脚本校验（移植 sanguo 的 `check-doc-consistency.js` 思路）：扫描文档中的「（DC-xxx）」引用，全部必须存在于 `docs/decisions.md`；`decisions.md` 的“影响文档”中提到的文档必须存在。
+- 落地状态：**已完成**（E14.12）——`scripts/check-doc-consistency.js` + 根脚本 `pnpm test:docs-design`，CI quality 作业同步执行（与 `pnpm test:docs` 协议契约并列）。新增决策登记后跑 `pnpm test:docs-design` 即可自检。
 - 与既有 Q2 机制的关系：协议契约（代码↔文档）管运行时契约；本规范管设计决策与设计文档；内容包校验管内容结构。
 
 ## 5. 检查清单

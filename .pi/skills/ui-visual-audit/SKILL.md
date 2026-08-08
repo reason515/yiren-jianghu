@@ -37,6 +37,8 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 - **预览文件编码坑**：Windows git-bash 的 heredoc/python 脚本往 HTML 里写中文会变 GBK 乱码（元素内容损坏导致"渲染缺失"假象）——预览文件一律用 write 工具生成，不用 heredoc 传中文；headless 截图加 `--force-device-scale-factor=1` 保证布局视口=目标宽（否则 390 窗口实际渲染 512 视口，右侧被裁的假溢出）。
 - 每屏截图后立即用视觉模型描述（无原生视觉时 `node deepseek-vision/vision.js <截图>`；有原生视觉直接用 read）。
 - **视觉模型噪声处置**：run-to-run 结论有波动，逐轮迭代只追**多次一致的结论**；单次冒出的新建议先记录不追（实测同一页面从"底部死黑"到"落地"反复横跳，而"底部太暗"是每轮都出现的真问题）。
+- **评分波动 vs 真回归：像素级 diff 客观判定**（V2.8 实测）：视觉模型打分会无因波动（同版近 98% 像素相同的两图，评分 8→6 跳变）。判断"要不要为某条反馈改代码"前，先用最小 PNG 解码脚本对比前后截图 `changedPx/changedPct`（Node zlib 解 IDAT + 反滤波，无需依赖）——改动量 <2% 且集中在目标区域，即为噪声/预期改动，不要追。
+- **视觉模型配额耗尽（free tier 403）时的兜底**（V2.10 实测）：`vision.js` 返回 `AllocationQuota.FreeTierOnly` 后，验证**只靠 DOM 探针**仍可完成——`getComputedStyle`（display/grid-template-columns/fontFamily）、`getBoundingClientRect`（两行布局 top 分层）、`scrollHeight > clientHeight`（可滚动）、元素存在性探针（无大卡/无浮动指示）均客观；配合逐项核对用户反馈点验收，不依赖视觉模型也能闭环。
 
 ### 2. 探针核实（关键！视觉模型会误判）
 
@@ -66,6 +68,7 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 - `bodyBg/appBg` 透明 → P0-1 容器缺背景
 - `fonts.*` false → 字体未自包或未加载完（2.6MB 字体首查可能 loading，稍等复查）
 - **SVG 定位陷阱**：内联 `<svg>` 未显式 `width/height` 时默认 300×150，会撑开 `position: absolute` 元素导致"失踪/错位"——视觉模型报"元素缺失"时先探针查 `getBoundingClientRect()` 实际尺寸，再怀疑渲染（V2.1 登录页人物剪影实测踩坑）。
+- **CSS 改动必须探针验证计算样式，不只验证文本**（V2.10 踩坑）：`edit` 工具多 edits 数组是 **all-or-nothing**——一个 oldText 不匹配 → 整次调用失败，前面的 edits **也不会应用**（当时以为 `.status-vitals` 已改 grid，实际还是 flex，DOM 探针 `getComputedStyle().display === "flex"` 才发现）。修改布局类 CSS 后，探针检查 `display`/`gridTemplateColumns`/`getBoundingClientRect` 的实际值，勿只看源文件 grep 通过。
 
 ### 3. 分级
 

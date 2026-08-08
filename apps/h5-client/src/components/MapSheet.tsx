@@ -80,7 +80,6 @@ export function MapSheet({
   onClose,
 }: MapSheetProps): JSX.Element | null {
   const { layout, boxes } = buildLayout(rooms);
-  const byId = new Map(rooms.map((r) => [r.id, r]));
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ zoom: 1, cx: 0, cy: 0 });
   const drag = useRef<{ x: number; y: number; dragging: boolean } | null>(null);

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
-import { attackOnly } from "./combat.js";
 import type { Combatant } from "./combat.js";
-import { createTacticSelector } from "./tactic.js";
 import {
   canChallengeToday,
   computeScoreChanges,

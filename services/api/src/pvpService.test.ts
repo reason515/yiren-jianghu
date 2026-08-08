@@ -436,7 +436,7 @@ describe("pvpService.startMatch", () => {
 
 describe("pvpService.getMatch", () => {
   it("仅参与者可看战报；返回事件流", async () => {
-    const { pvp, state } = boot();
+    const { pvp } = boot();
     const view = await pvp.startMatch("acc_a", "char_b");
     const detail = await pvp.getMatch("acc_a", view.id);
     expect(detail).toMatchObject({ id: view.id, result: view.result, turns: view.turns });

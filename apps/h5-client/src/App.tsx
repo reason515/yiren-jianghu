@@ -42,7 +42,7 @@ import {
   type AfkTemplateOption,
 } from "./lib/afkTypes.js";
 import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./lib/pvpTypes.js";
-import type { ForumComment, ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
+import type { ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
 import type { LeaderboardData } from "./lib/leaderboardTypes.js";
 import type { MapData } from "./lib/mapTypes.js";
 import {
@@ -54,7 +54,6 @@ import {
 } from "./lib/reconnect.js";
 import {
   advanceGuide,
-  GUIDE_DONE,
   guideText,
   isOnboarded,
   shouldShowGuide,

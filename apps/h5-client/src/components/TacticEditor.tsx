@@ -1,5 +1,4 @@
 import type { JSX } from "react";
-import { Chip } from "./base/Chip.js";
 import {
   ACTION_LABEL,
   CONDITION_META,

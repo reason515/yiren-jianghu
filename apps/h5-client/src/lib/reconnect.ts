@@ -22,12 +22,12 @@ export function retryDelayMs(attempt: number, jitterRatio = 0.5): number {
   return Math.round(base * (1 + jitterRatio));
 }
 
-export function onConnectSuccess(s: ReconnectState): ReconnectState {
+export function onConnectSuccess(_s: ReconnectState): ReconnectState {
   return { phase: "connected", attempt: 0, nextRetryMs: 0 };
 }
 
 /** 连接断开：进入重连，第一次重试延迟按 attempt=1。 */
-export function onDisconnect(s: ReconnectState): ReconnectState {
+export function onDisconnect(_s: ReconnectState): ReconnectState {
   return { phase: "reconnecting", attempt: 1, nextRetryMs: retryDelayMs(1) };
 }
 

@@ -1,17 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import type { ReactElement } from "react";
-import { ApiError, createAuthApi, type AuthSession } from "../lib/authApi.js";
-
-function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
-  const host = document.createElement("div");
-  document.body.appendChild(host);
-  const root = createRoot(host);
-  act(() => root.render(ui));
-  return { host, root };
-}
+import { ApiError, createAuthApi } from "../lib/authApi.js";
 
 afterEach(() => {
   document.body.innerHTML = "";

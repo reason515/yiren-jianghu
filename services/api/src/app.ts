@@ -21,7 +21,7 @@ import { TemplatesError, createTemplatesService } from "./templatesService.js";
 import { AfkError, createAfkService } from "./afkService.js";
 import { PvpError, createPvpService } from "./pvpService.js";
 import { ForumError, createForumService } from "./forumService.js";
-import { SessionError, createSessionService } from "./sessionService.js";
+import { createSessionService } from "./sessionService.js";
 import { CombatError, createCombatService } from "./combatService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";

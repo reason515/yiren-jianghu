@@ -89,7 +89,6 @@ describe("ForumView（论坛）", () => {
 
   it("帖子列表：标题/作者/点赞·评论数；打开与点赞回调；顶部可发帖", () => {
     let opened = "";
-    let liked = "";
     let composed = 0;
     const { host } = render(
       <ForumView
@@ -98,7 +97,7 @@ describe("ForumView（论坛）", () => {
         onOpenSection={noop}
         onOpenPost={(p) => (opened = p)}
         onBack={noop}
-        onLike={(p) => (liked = p)}
+        onLike={noop}
         onReportPost={noop}
         onReportComment={noop}
         onComposePost={() => (composed += 1)}

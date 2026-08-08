@@ -49,7 +49,7 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
   return (
     <div className="exit-pad" data-testid="exit-pad" role="group" aria-label="出口">
       <div className="exit-grid">
-        {PLANAR_ORDER.map(({ index, dir }) => {
+        {PLANAR_ORDER.map(({ dir }) => {
           if (!dir) {
             return (
               <div key="center" className="exit-cell center" data-testid="exit-center">

@@ -3,6 +3,30 @@
  * 所有界面颜色/字体必须使用此处变量，禁止散落写死色值。
  * 规范见 yjh-mobile-ui skill。
  */
+
+/* ---- 自包字体（DC-027 V2 批次1：woff2 随包，禁 CDN，防系统字体回退） ---- */
+@font-face {
+  font-family: "ZCOOL XiaoWei";
+  src: url("fonts/zcool-xiaowei-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Serif SC";
+  src: url("fonts/noto-serif-sc-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Serif SC";
+  src: url("fonts/noto-serif-sc-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* 字体 */
   --font-body: "Noto Serif SC", serif;

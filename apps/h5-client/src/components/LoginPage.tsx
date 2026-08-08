@@ -74,9 +74,7 @@ export function LoginPage({ api, onLoggedIn }: LoginPageProps): JSX.Element {
           spellCheck={false}
           disabled={busy}
         />
-        {invite && !error && (
-          <p className="field-hint">上次的帖号已记下，凭此帖再入，仍是故人。想换新帖，清空重填。</p>
-        )}
+        {invite && !error && <p className="field-hint">上次帖号已记下，同帖再入，仍是故人。</p>}
         {error && (
           <p className="form-error" role="alert">
             {error}

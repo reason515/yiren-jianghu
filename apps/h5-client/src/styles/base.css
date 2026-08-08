@@ -1,5 +1,44 @@
 /* 基础组件样式（E1，全部使用 tokens；规范见 yjh-mobile-ui） */
 
+/* ---- 全局墨底（DC-027 V2 批次1：主界面容器必须持有墨色背景，防白底浅字） ---- */
+html,
+body,
+#root,
+.app {
+  background: var(--ink);
+  color: var(--paper);
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ---- 细墨滚动条（DC-027 V2 批次1：禁默认白/灰滚动条破坏沉浸） ---- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--paper-faint);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
 /* ---- Sheet 浮层 ---- */
 .overlay {
   position: fixed;

@@ -178,6 +178,6 @@ describe("LoginPage", () => {
     act(() => root.unmount());
     const { host: host2 } = render(<LoginPage api={api} onLoggedIn={() => undefined} />);
     expect(host2.querySelector<HTMLInputElement>(".input")!.value).toBe("invite-keep");
-    expect(host2.textContent).toContain("上次的帖号已记下");
+    expect(host2.textContent).toContain("上次帖号已记下");
   });
 });

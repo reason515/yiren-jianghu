@@ -1,19 +1,19 @@
 # 《一人江湖》项目级规则
 
-本文件是 yiren-jianghu 仓库的项目级 AGENTS.md。涉及本仓库的任何操作，先读对应技能再动手。
+本文件是 yiren-jianghu 仓库的项目级 AGENTS.md（pi 兼容入口）。**Skill 权威目录已迁移至 `.cursor/skills/`**；Cursor 规则见 `.cursor/rules/`。涉及本仓库的任何操作，先读对应技能再动手。
 
 ## 技能触发表
 
-| 触发条件                                                                                                | 技能                      | 位置                                          |
-| ------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------- |
-| 任何在本仓库写代码、改配置、跑测试、提交、部署相关任务                                                  | `yjh-project-conventions` | `.pi/skills/yjh-project-conventions/SKILL.md` |
-| 内容包/Schema/校验/CLI；从 pkuxkx 筛选、移植、登记内容                                                  | `yjh-content-pack`        | `.pi/skills/yjh-content-pack/SKILL.md`        |
-| 编写或优化任何玩家可见游戏文本（绝招/招式、战斗演出、房间场景、NPC 对话、任务简报、剧情事件、物品描述） | `yjh-wuxia-copywriting`   | `.pi/skills/yjh-wuxia-copywriting/SKILL.md`   |
-| 设计或修改区域地图/世界地图/场景方位图（八向网格、多视图一致性、地图数据契约、校验与交互）              | `yjh-map-design`          | `.pi/skills/yjh-map-design/SKILL.md`          |
-| 设计或变更设计决策/撰写设计提案、规格、审计；维护决策登记表                                             | `yjh-design-docs`         | `.pi/skills/yjh-design-docs/SKILL.md`         |
-| 设计或实现移动端界面/交互/信息架构（E 阶段 H5 前端、组件、数值展示）                                    | `yjh-mobile-ui`           | `.pi/skills/yjh-mobile-ui/SKILL.md`           |
-| 界面粗糙/太丑/像管理后台/UI 升级/视觉打磨（先取证分级再动手）                                           | `ui-visual-audit`         | `.pi/skills/ui-visual-audit/SKILL.md`         |
-| 中文字体自包/子集化/防系统字体回退（woff2 随包，禁 CDN）                                                | `chinese-font-selfhost`   | `.pi/skills/chinese-font-selfhost/SKILL.md`   |
+| 触发条件                                                                                                | 技能                      | 位置                                              |
+| ------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------- |
+| 任何在本仓库写代码、改配置、跑测试、提交、部署相关任务                                                  | `yjh-project-conventions` | `.cursor/skills/yjh-project-conventions/SKILL.md` |
+| 内容包/Schema/校验/CLI；从 pkuxkx 筛选、移植、登记内容                                                  | `yjh-content-pack`        | `.cursor/skills/yjh-content-pack/SKILL.md`        |
+| 编写或优化任何玩家可见游戏文本（绝招/招式、战斗演出、房间场景、NPC 对话、任务简报、剧情事件、物品描述） | `yjh-wuxia-copywriting`   | `.cursor/skills/yjh-wuxia-copywriting/SKILL.md`   |
+| 设计或修改区域地图/世界地图/场景方位图（八向网格、多视图一致性、地图数据契约、校验与交互）              | `yjh-map-design`          | `.cursor/skills/yjh-map-design/SKILL.md`          |
+| 设计或变更设计决策/撰写设计提案、规格、审计；维护决策登记表                                             | `yjh-design-docs`         | `.cursor/skills/yjh-design-docs/SKILL.md`         |
+| 设计或实现移动端界面/交互/信息架构（E 阶段 H5 前端、组件、数值展示）                                    | `yjh-mobile-ui`           | `.cursor/skills/yjh-mobile-ui/SKILL.md`           |
+| 界面粗糙/太丑/像管理后台/UI 升级/视觉打磨（先取证分级再动手）                                           | `ui-visual-audit`         | `.cursor/skills/ui-visual-audit/SKILL.md`         |
+| 中文字体自包/子集化/防系统字体回退（woff2 随包，禁 CDN）                                                | `chinese-font-selfhost`   | `.cursor/skills/chinese-font-selfhost/SKILL.md`   |
 
 **强制规则**：
 
@@ -38,7 +38,7 @@
 | 完成计划内任务                    | `docs/design-and-development-plan.md` 执行记录                               |
 | 验证了新最佳实践                  | 团队 skill（`D:\code\team-ai-skills\skills\`）                               |
 
-- 更新过 `.pi/` 下 skill 文档后必须 `pnpm format`（prettier 门禁），并保证 `pnpm test:docs-design` 不破。
+- 更新过 `.cursor/` 下 skill/rules 或本 AGENTS.md 后必须 `pnpm format`（prettier 门禁），并保证 `pnpm test:docs-design` 不破。
 
 **② 提交与推送**
 

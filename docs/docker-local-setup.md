@@ -142,5 +142,5 @@ REDIS_URL=redis://localhost:6379 pnpm test:e2e   # 真实 PG/Redis 冒烟
 
 # 9. 与既有约定
 
-- 权威文档登记见 `.pi/agent/AGENTS.md`；开发命令与质量门禁见 `yjh-project-conventions` skill。
+- 权威文档登记见 `.cursor/rules/yjh-agents.mdc`（Cursor）与 `.pi/agent/AGENTS.md`（兼容入口）；开发命令与质量门禁见 `.cursor/skills/yjh-project-conventions`。
 - 服务器侧部署、回滚、`down -v` 警示见 `deploy/README.md`。

@@ -1,0 +1,43 @@
+---
+description: 《一人江湖》项目级 Agent 规则：技能触发表、强制加载、质量门禁与任务收尾三步
+alwaysApply: true
+---
+
+# 《一人江湖》项目级规则
+
+涉及本仓库的任何操作，先读对应 skill 再动手。Skill 权威目录：`.cursor/skills/`。
+
+## 技能触发表
+
+| 触发条件 | 技能 | 位置 |
+| --- | --- | --- |
+| 写代码、改配置、跑测试、提交、部署 | `yjh-project-conventions` | `.cursor/skills/yjh-project-conventions/SKILL.md` |
+| 内容包/Schema/校验/CLI；pkuxkx 筛选移植登记 | `yjh-content-pack` | `.cursor/skills/yjh-content-pack/SKILL.md` |
+| 玩家可见游戏文本（绝招/战斗/房间/NPC/任务/剧情/物品） | `yjh-wuxia-copywriting` | `.cursor/skills/yjh-wuxia-copywriting/SKILL.md` |
+| 区域/世界/场景方位图（八向网格、多视图、数据契约） | `yjh-map-design` | `.cursor/skills/yjh-map-design/SKILL.md` |
+| 设计决策/提案/规格/审计；决策登记表 | `yjh-design-docs` | `.cursor/skills/yjh-design-docs/SKILL.md` |
+| 移动端界面/交互/信息架构（H5、组件、数值展示） | `yjh-mobile-ui` | `.cursor/skills/yjh-mobile-ui/SKILL.md` |
+| 界面粗糙/太丑/像管理后台/UI 升级（先取证分级） | `ui-visual-audit` | `.cursor/skills/ui-visual-audit/SKILL.md` |
+| 中文字体自包/子集化/防系统回退（woff2，禁 CDN） | `chinese-font-selfhost` | `.cursor/skills/chinese-font-selfhost/SKILL.md` |
+
+## 强制规则
+
+- 涉及玩家文案：**第一步必须 read `yjh-wuxia-copywriting`**；每次触发重新加载，禁止用「已在上下文中」替代。
+- 内容任务启动前，按 `yjh-project-conventions` 的「任务启动必读」表确认要加载的 skill。
+- 内容进仓库前登记 pkuxkx 权利状态，见 `docs/pkuxkx-content-catalog.md`。
+- 提交前门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；改 API/事件同步 `docs/protocol.md`（`pnpm test:docs`）。
+
+## 任务收尾（默认三步；用户明确不提交/不部署则遵守）
+
+① **提炼检查**：有可复用资产才更新（设计系统/skill 坑点/`sibling-borrowings`/计划执行记录/团队 skill）；更新过 `.cursor/` 或 `.pi/` markdown 后 `pnpm format`，并保证 `pnpm test:docs-design` 不破。无则说明「无新增沉淀」。
+
+② **提交与推送**：门禁全绿才提交；信息 `feat|fix|docs|refactor|test|ci|chore(<scope>): 中文描述`；默认 `git push`。若用户规则要求「仅在明确要求时提交」，则以用户当次指示为准。
+
+③ **部署**：仅运行时产物变化时部署（`pnpm --filter @yjh/h5-client build:web` → `node scripts/deploy-jd.cjs deploy`）；纯文档/skill/测试跳过。
+
+④ **收尾可见性**：最终回复末尾输出三步清单（提炼 / 提交推送 / 部署）。
+
+## 权威文档
+
+- `docs/project-charter.md` / `docs/design-and-development-plan.md` / `docs/database-schema.md`
+- `docs/protocol.md` / `docs/docker-local-setup.md` / `docs/pkuxkx-content-catalog.md`

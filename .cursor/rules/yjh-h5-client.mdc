@@ -1,0 +1,16 @@
+---
+description: H5 客户端 UI 工作时强制加载 yjh-mobile-ui（及质感/字体相关 skill）
+globs: apps/h5-client/**/*
+alwaysApply: false
+---
+
+# H5 客户端工作护栏
+
+改动 `apps/h5-client` 时：
+
+1. 先 read `.cursor/skills/yjh-mobile-ui/SKILL.md`
+2. 玩家可见文案同步 read `.cursor/skills/yjh-wuxia-copywriting/SKILL.md`
+3. 地图组件/方位图加读 `.cursor/skills/yjh-map-design/SKILL.md`
+4. 「界面太丑/粗糙/像后台」类任务：先走 `.cursor/skills/ui-visual-audit/SKILL.md`（取证→分级→再改）
+5. 字体自包/子集化：`.cursor/skills/chinese-font-selfhost/SKILL.md`（woff2 随包，禁 CDN）
+6. 通用门禁与踩坑见 `.cursor/skills/yjh-project-conventions/SKILL.md`

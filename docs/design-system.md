@@ -14,7 +14,7 @@
 - **Token 层**：`apps/h5-client/src/styles/tokens.css`（颜色/字体/触控/阴影/纹理）
 - **原语层**：`apps/h5-client/src/styles/atmosphere.css`（意境背景图层 ink-*、宣纸面 paper-card、古籍竖排 v-cols/v-col、动效 keyframes）
 - **组合层**：各界面样式文件（如 `auth.css` 登录页 = ink-* 原语组合 + 卷轴 paper-card/rolls + v-cols）
-- **规范层**：`.pi/skills/yjh-mobile-ui`（UI/UX 设计规范，§4.13 登录页与开场卷轴）
+- **规范层**：`.cursor/skills/yjh-mobile-ui`（UI/UX 设计规范，§4.13 登录页与开场卷轴）
 
 界面改造流程：先看本文档找现成资产 → 组合原语 → 不足再补 token/原语（新颜色必须先补 token）。
 

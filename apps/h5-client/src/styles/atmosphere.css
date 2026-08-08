@@ -14,6 +14,29 @@
 
 /* ================= 远景舞台容器 ================= */
 
+/* 全屏墨色舞台：登录/建角/序章等全屏页容器（内容层需 z-index 置于其上） */
+.ink-screen {
+  position: relative;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--ink);
+}
+
+/* 内容层：舞台之上的居中内容（z-index 2 + 安全区内边距） */
+.ink-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px calc(20px + var(--safe-b));
+  gap: 8px;
+  text-align: center;
+}
+
 .ink-backdrop {
   position: absolute;
   inset: 0;

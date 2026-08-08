@@ -53,6 +53,8 @@
 
 | 类 | 作用 | 说明 |
 |---|---|---|
+| `.ink-screen` | 全屏墨色舞台 | 登录/建角/序章等全屏页容器：100dvh + overflow hidden + 墨底 |
+| `.ink-content` | 内容层 | 舞台之上的居中内容：z-index 2 + flex 居中 + 安全区内边距 |
 | `.ink-backdrop` | 舞台容器 | absolute inset 0、overflow hidden、pointer-events none |
 | `.ink-stars` | 疏星 | 多 radial-gradient 点，点缀夜空破空洞 |
 | `.ink-moon` | 孤月 + 月晕 | 右上，`::before` 月晕融入夜空（避免"贴图感"）；呼吸动画 |
@@ -68,7 +70,7 @@
 **最小示例**（加载屏/建角页/公告页通用）：
 
 ```html
-<div class="some-screen">
+<div class="ink-screen">
   <div class="ink-backdrop" aria-hidden="true">
     <div class="ink-stars" />
     <div class="ink-moon" />
@@ -79,7 +81,9 @@
     <div class="ink-mist m2" />
     <div class="ink-vignette" />
   </div>
-  <!-- 页面内容 z-index 置于其上 -->
+  <div class="ink-content">
+    <!-- 页面内容 -->
+  </div>
 </div>
 ```
 
@@ -108,9 +112,14 @@
 - 全局 `@media (prefers-reduced-motion: reduce)` 关闭氛围动画（atmosphere.css 已内置）。
 - 现有 keyframes：`moon-breathe`（月）、`mist-drift`（雾）、`lantern-glow`（灯）、`figure-bob`（人）、`scroll-rise`（卷轴入场）、`col-in`（竖排列入场）、`hint-pulse`（提示）、`overlay-fade`（浮层入场）。
 
-# 5 组合示例：登录页（参考实现）
+# 5 组合示例：登录页与建角流程（参考实现）
 
-登录页（`auth.css` + `LoginPage.tsx`）是原语组合的完整示例：`ink-backdrop` 远景 + `paper-card rolls` 开场卷轴 + `v-cols/v-col` 竖排诗句 + 宣纸表单（手写等价实现）。开场卷轴模式（三卷、只播一次、可略过、进度墨线置卷外）见 yjh-mobile-ui §4.13。
+登录页（`auth.css` + `LoginPage.tsx`）与建角流程（`CharacterCreateSheet.tsx`）是原语组合的完整示例：`ink-screen` + `ink-backdrop` 远景 + `prologue-scroll paper-card rolls` 卷轴 + `v-cols/v-col` 竖排 + 宣纸控件（`.input.paper` / `.btn.paper`）。
+
+- **登录页**：ink-* 远景 + 宣纸表单（登录页表单是 `.input.paper`/`.btn.paper` 的等价手写实现，因基类覆盖顺序）；开场卷轴模式（三卷、只播一次、可略过）见 yjh-mobile-ui §4.13。
+- **建角流程（V2.3）**：全屏两步——①序章引导（ink-screen + 卷轴竖排五句交待"一人一江湖"背景 + 引导句 + 立名闯荡）→ ②立名与根基（印章 + 标题 + `.input.paper` 名号 + ChoiceRow 性别 + AttributeAllocator 四维 + `.btn.paper` 踏入江湖 + 回想序章返回）。
+
+宣纸控件原语（auth.css）：`.input.paper`（输入框：更白 + 内阴影凹陷 + 左对齐 + 墨字）、`.btn.paper`（宣纸主 CTA：纸纹 + 暖光）。
 
 # 6 复用指南（三步）
 

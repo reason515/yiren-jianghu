@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ReactElement } from "react";
 import { AttributeAllocator, type Attrs } from "./AttributeAllocator.js";
+import { CharacterCreateSheet } from "./CharacterCreateSheet.js";
 import { ConfirmSheet } from "./ConfirmSheet.js";
 import { LoginPage } from "./LoginPage.js";
 import type { AuthApi } from "../lib/authApi.js";
@@ -179,5 +180,119 @@ describe("LoginPage", () => {
     const { host: host2 } = render(<LoginPage api={api} onLoggedIn={() => undefined} />);
     expect(host2.querySelector<HTMLInputElement>(".input")!.value).toBe("invite-keep");
     expect(host2.textContent).toContain("上次帖号已记下");
+  });
+});
+
+describe("CharacterCreateSheet", () => {
+  const api: AuthApi = {
+    login: async () => ({ accountId: "acc_1", token: "tok" }),
+    createCharacter: async () => ({ characterId: "c_1" }),
+    discardCharacter: async () => ({ ok: true }),
+  };
+
+  function toForm(host: HTMLDivElement): void {
+    const begin = [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) =>
+      b.textContent?.includes("立名闯荡"),
+    );
+    if (!begin) throw new Error("未找到立名闯荡按钮");
+    act(() => begin.click());
+  }
+
+  it("序章渲染故事背景与引导；立名闯荡进入表单", () => {
+    const { host } = render(
+      <CharacterCreateSheet
+        open
+        token="t"
+        api={api}
+        onCreated={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(host.textContent).toContain("入江湖");
+    expect(host.textContent).toContain("一人一江湖");
+    expect(host.textContent).toContain("城门那边");
+    expect(host.querySelector<HTMLInputElement>(".input")).toBeNull();
+
+    toForm(host);
+    expect(host.textContent).toContain("立名闯江湖");
+    expect(host.querySelector<HTMLInputElement>(".input")).not.toBeNull();
+    expect(host.textContent).toContain("踏入江湖");
+  });
+
+  it("提交调用 api.createCharacter 并回传角色 id", async () => {
+    let created = "";
+    const { host } = render(
+      <CharacterCreateSheet
+        open
+        token="t"
+        api={api}
+        onCreated={(id) => (created = id)}
+        onClose={() => undefined}
+      />,
+    );
+    toForm(host);
+    const input = host.querySelector<HTMLInputElement>(".input")!;
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    )!.set!;
+    act(() => {
+      setter.call(input, "叶孤舟");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      host
+        .querySelector<HTMLFormElement>(".form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(created).toBe("c_1");
+  });
+
+  it("名号留空时提示且不调用 api", async () => {
+    let called = false;
+    const api2: AuthApi = {
+      ...api,
+      createCharacter: async () => {
+        called = true;
+        return { characterId: "c" };
+      },
+    };
+    const { host } = render(
+      <CharacterCreateSheet
+        open
+        token="t"
+        api={api2}
+        onCreated={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    toForm(host);
+    await act(async () => {
+      host
+        .querySelector<HTMLFormElement>(".form")!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(called).toBe(false);
+    expect(host.textContent).toContain("江湖路远，先立名号。");
+  });
+
+  it("回想序章可返回并再次进入表单", () => {
+    const { host } = render(
+      <CharacterCreateSheet
+        open
+        token="t"
+        api={api}
+        onCreated={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    toForm(host);
+    const back = [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) =>
+      b.textContent?.includes("回想序章"),
+    )!;
+    act(() => back.click());
+    expect(host.textContent).toContain("入江湖");
+    toForm(host);
+    expect(host.textContent).toContain("立名闯江湖");
   });
 });

@@ -892,6 +892,8 @@ export function App(): JSX.Element {
         <>
           <SceneView
             room={room}
+            quest={questData?.quests.find((q) => q.state === "accepted") ?? null}
+            onOpenQuests={openQuests}
             onGo={(d) => void onGo(d)}
             onSelectNpc={setSelectedEntity}
             onSelectItem={(itemId) => {

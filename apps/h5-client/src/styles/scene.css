@@ -40,6 +40,33 @@
   color: var(--gold-muted);
   font-size: 12px;
 }
+/* 当前要事卡片（V2 收尾：承接场景下半屏留白，动作从世界中长出） */
+.quest-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  background: var(--ink-lift);
+}
+.quest-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.quest-card-info strong {
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 500;
+}
+.quest-card-info span {
+  color: var(--paper-faint);
+  font-size: 12px;
+}
 .scene-block {
   border-top: 1px solid var(--line);
   padding-top: 10px;

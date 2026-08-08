@@ -194,8 +194,21 @@ export function MapSheet({
                 a,
                 boxes.find((x) => x.id === e.to)!,
               );
+              // 微弧贝塞尔：控制点取中点 + 垂直偏移（按边索引方向交替，避免同向堆叠；偏移量小不穿节点）
+              const mx = (from.x + to.x) / 2;
+              const my = (from.y + to.y) / 2;
+              const dx = to.x - from.x;
+              const dy = to.y - from.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const off = (i % 2 === 0 ? 1 : -1) * Math.min(10, len * 0.08);
+              const cx = mx + (-dy / len) * off;
+              const cy = my + (dx / len) * off;
               return (
-                <path key={i} className="map-edge" d={`M${from.x},${from.y} L${to.x},${to.y}`} />
+                <path
+                  key={i}
+                  className="map-edge"
+                  d={`M${from.x},${from.y} Q${cx},${cy} ${to.x},${to.y}`}
+                />
               );
             })}
           </g>

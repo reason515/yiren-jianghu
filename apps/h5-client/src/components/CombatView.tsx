@@ -47,7 +47,12 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
         </>
       ) : (
         <div className="combat-actions" data-testid="combat-actions">
-          <Chip label="普攻" variant="action" onClick={() => onAction({ action: "attack" })} />
+          <Chip
+            label="普攻"
+            variant="action"
+            className="primary"
+            onClick={() => onAction({ action: "attack" })}
+          />
           {state.performs.map((p) => (
             <Chip
               key={p.id}

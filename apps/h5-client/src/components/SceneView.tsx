@@ -2,6 +2,7 @@ import { useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
 import { ExitPad } from "./ExitPad.js";
 import { ArtPlaceholder } from "./ArtPlaceholder.js";
+import type { QuestView } from "../lib/questTypes.js";
 import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
 
 /**
@@ -9,6 +10,8 @@ import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
  */
 export interface SceneViewProps {
   room: SceneRoom;
+  quest?: QuestView | null;
+  onOpenQuests?: () => void;
   onGo: (dir: string) => void;
   onSelectNpc: (npc: SceneNpc) => void;
   onSelectItem: (itemId: string) => void;
@@ -17,6 +20,8 @@ export interface SceneViewProps {
 
 export function SceneView({
   room,
+  quest,
+  onOpenQuests,
   onGo,
   onSelectNpc,
   onSelectItem,
@@ -34,6 +39,21 @@ export function SceneView({
         <h1 className="scene-title">{room.name}</h1>
       </div>
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
+      {quest && quest.state === "accepted" && (
+        <section className="scene-block scene-quest">
+          <div className="scene-block-head">
+            <h2>当前要事</h2>
+          </div>
+          <div className="quest-card">
+            <div className="quest-card-info">
+              <strong>{quest.name}</strong>
+              <span>{quest.phases.find((p) => !p.done)?.type ?? "已成"}</span>
+            </div>
+            {onOpenQuests && <Chip label="查看" variant="action" onClick={onOpenQuests} />}
+          </div>
+        </section>
+      )}
+
       {room.canSleep && <span className="scene-hint">此地可歇脚入眠。</span>}
 
       <section className="scene-block">

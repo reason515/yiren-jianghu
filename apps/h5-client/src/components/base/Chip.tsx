@@ -6,15 +6,23 @@ export type ChipVariant = "action" | "perform" | "npc" | "item" | "danger";
 export interface ChipProps {
   label: string;
   variant?: ChipVariant;
+  /** 追加类名（如战斗主操作 .primary） */
+  className?: string;
   onClick?: () => void;
   disabled?: boolean;
 }
 
-export function Chip({ label, variant = "action", onClick, disabled }: ChipProps): JSX.Element {
+export function Chip({
+  label,
+  variant = "action",
+  className,
+  onClick,
+  disabled,
+}: ChipProps): JSX.Element {
   return (
     <button
       type="button"
-      className={`chip ${variant}`}
+      className={`chip ${variant}${className ? ` ${className}` : ""}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}

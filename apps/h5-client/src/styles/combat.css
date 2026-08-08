@@ -70,3 +70,14 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+/* 主攻击按钮（V2 收尾：实底玉色 + 书法字，战斗中最值得按的） */
+.combat-actions .chip.primary {
+  background: var(--jade);
+  border-color: transparent;
+  color: #f3eee2;
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 3px;
+  box-shadow: var(--shadow-btn);
+  flex: 1.3;
+}

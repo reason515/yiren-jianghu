@@ -32,15 +32,27 @@
 .lb-rank {
   color: var(--gold-muted);
   font-family: var(--font-display);
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
-/* 前三名金银铜（V2 批次3） */
+/* 前三名金银铜徽章（V2 收尾） */
 .lb-row:nth-child(1) .lb-rank {
+  background: rgba(201, 168, 105, 0.22);
+  border: 1px solid var(--gold);
   color: var(--gold);
 }
 .lb-row:nth-child(2) .lb-rank {
+  background: rgba(201, 205, 212, 0.14);
+  border: 1px solid #c9cdd4;
   color: #c9cdd4;
 }
 .lb-row:nth-child(3) .lb-rank {
+  background: rgba(176, 138, 90, 0.16);
+  border: 1px solid #b08a5a;
   color: #b08a5a;
 }
 .lb-me {

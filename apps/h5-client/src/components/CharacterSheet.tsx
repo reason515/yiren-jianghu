@@ -101,20 +101,22 @@ export function CharacterSheet({
 
       <section className="char-section">
         <h4 className="char-section-title">四维</h4>
-        {(Object.keys(ATTR_META) as Array<keyof CharacterView["attrs"]>).map((key) => {
-          const meta = ATTR_META[key];
-          const attr = character.attrs[key];
-          return (
-            <div className="char-attr-row" key={key} data-attr={key}>
-              <span className="char-attr-label" style={{ color: meta.color }}>
-                {meta.label}
-              </span>
-              <span className="char-attr-value">
-                当前 {attr.cur} · 先天 {attr.base}
-              </span>
-            </div>
-          );
-        })}
+        <div className="attr-grid">
+          {(Object.keys(ATTR_META) as Array<keyof CharacterView["attrs"]>).map((key) => {
+            const meta = ATTR_META[key];
+            const attr = character.attrs[key];
+            return (
+              <div className="char-attr-row" key={key} data-attr={key}>
+                <span className="char-attr-label" style={{ color: meta.color }}>
+                  {meta.label}
+                </span>
+                <span className="char-attr-value">
+                  当前 {attr.cur} · 先天 {attr.base}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section className="char-section">

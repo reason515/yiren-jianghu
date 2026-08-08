@@ -906,6 +906,19 @@ export function App(): JSX.Element {
 
       {room && !needCreate && (
         <>
+          {/* 主界面水墨远景舞台（V2.8：复用 atmosphere ink-* 原语弱化铺底，对齐登录页质感） */}
+          <div className="scene-stage" aria-hidden="true">
+            <div className="ink-backdrop">
+              <div className="ink-stars" />
+              <div className="ink-moon" />
+              <div className="ink-horizon" />
+              <div className="ink-range back" />
+              <div className="ink-range mid" />
+              <div className="ink-mist m1" />
+              <div className="ink-mist m2" />
+              <div className="ink-vignette" />
+            </div>
+          </div>
           <StatusBar vitals={vitals} silver={silver} />
           <SceneView
             room={room}
@@ -931,22 +944,28 @@ export function App(): JSX.Element {
                 战局
               </button>
             )}
-            <button className="app-nav-btn" onClick={openCharacter}>
+            <button
+              className={`app-nav-btn${panel === "character" ? " on" : ""}`}
+              onClick={openCharacter}
+            >
               角色
             </button>
-            <button className="app-nav-btn" onClick={openAfk}>
+            <button className={`app-nav-btn${panel === "afk" ? " on" : ""}`} onClick={openAfk}>
               挂机
             </button>
-            <button className="app-nav-btn" onClick={openQuests}>
+            <button className={`app-nav-btn${questOpen ? " on" : ""}`} onClick={openQuests}>
               任务
             </button>
-            <button className="app-nav-btn" onClick={openPvp}>
+            <button className={`app-nav-btn${panel === "pvp" ? " on" : ""}`} onClick={openPvp}>
               论剑
             </button>
-            <button className="app-nav-btn" onClick={openForum}>
+            <button className={`app-nav-btn${panel === "forum" ? " on" : ""}`} onClick={openForum}>
               论坛
             </button>
-            <button className="app-nav-btn" onClick={() => setMoreOpen(true)}>
+            <button
+              className={`app-nav-btn${moreOpen ? " on" : ""}`}
+              onClick={() => setMoreOpen(true)}
+            >
               更多
             </button>
           </nav>

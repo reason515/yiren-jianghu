@@ -33,6 +33,7 @@ compatibility: 需要浏览器自动化（browser-tools 套件）、截图分析
 - 浏览器自动化打开目标页面（本地 preview 或公网），登录 → 走查每个主界面（登录/主场景/各浮层面板）逐一截图。
 - React 受控输入自动化有坑（CDP 注入不触发 onChange）：**优先 API 登录 + localStorage 注入 token** 绕过登录页，再逐屏点开面板。
 - **多倍率截图**：移动端 1x（390×844）看构图，**3x（1170×2532）看细节**——小元素（剪影/点缀/小字）在 1x 下对视觉模型几乎不可见，3x 才判读准确；截图尺寸固定后逐轮对比。
+- **vite dev（Windows）CSS 变换缓存静默失效（V2.8 踩坑）**：dev server 长时间运行后部分 CSS 模块会返回**空 transform**（`fetch('/src/styles/x.css')` 只有 HMR 包装、无 CSS 内容），页面样式悄悄丢失——视觉模型反复抱怨“状态栏像纯黑粗体/按钮像 Win95”，实际是 base.css 未被应用。**截图前必须 fetch 验证关键 CSS 内容**（`t.includes('.status-bar')` 等），发现为空立刻重启 dev server（`vite --port X`），勿在陈旧样式上迭代。
 - **预览文件编码坑**：Windows git-bash 的 heredoc/python 脚本往 HTML 里写中文会变 GBK 乱码（元素内容损坏导致"渲染缺失"假象）——预览文件一律用 write 工具生成，不用 heredoc 传中文；headless 截图加 `--force-device-scale-factor=1` 保证布局视口=目标宽（否则 390 窗口实际渲染 512 视口，右侧被裁的假溢出）。
 - 每屏截图后立即用视觉模型描述（无原生视觉时 `node deepseek-vision/vision.js <截图>`；有原生视觉直接用 read）。
 - **视觉模型噪声处置**：run-to-run 结论有波动，逐轮迭代只追**多次一致的结论**；单次冒出的新建议先记录不追（实测同一页面从"底部死黑"到"落地"反复横跳，而"底部太暗"是每轮都出现的真问题）。

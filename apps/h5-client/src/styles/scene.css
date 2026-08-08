@@ -1,6 +1,47 @@
 /* 场景与探索样式（E3；全部 tokens，细线分栏如简牍） */
 
+/* ---- 场景舞台背景（V2.8：复用 atmosphere ink-* 远景原语做弱化背景，对齐登录页质感；
+ * 叙事可读优先——远景只做氛围，不抢文字对比；fixed 铺底，内容层 z-index 1 之上） ---- */
+.scene-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.scene-stage .ink-stars {
+  opacity: 0.3;
+}
+.scene-stage .ink-moon {
+  top: 0.5%;
+  right: 9%;
+  width: 46px;
+  height: 46px;
+  opacity: 0.38;
+}
+.scene-stage .ink-horizon {
+  bottom: 36%;
+  height: 26%;
+  opacity: 0.7;
+}
+.scene-stage .ink-range.back {
+  opacity: 0.35;
+  height: 28%;
+}
+.scene-stage .ink-range.mid {
+  opacity: 0.48;
+  height: 20%;
+}
+.scene-stage .ink-mist {
+  opacity: 0.5;
+}
+.scene-stage .ink-vignette {
+  opacity: 0.72;
+}
+
 .scene {
+  position: relative;
+  z-index: 1;
   padding: 16px 16px calc(16px + var(--safe-b));
   display: flex;
   flex-direction: column;
@@ -29,21 +70,25 @@
   font-size: 22px;
   letter-spacing: 2px;
 }
-/* 见闻引首：章回感小标签（V2.7） */
+/* 见闻引首：章回感小标签（V2.7；V2.8 双侧墨线 + 铜金，对齐登录页「引首」质感） */
 .scene-journal {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--gold-muted);
+  color: var(--gold);
   font-family: var(--font-display);
   font-size: 12px;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
 }
-.scene-journal::before {
+.scene-journal::before,
+.scene-journal::after {
   content: "";
-  width: 16px;
+  width: 18px;
   height: 1px;
-  background: var(--gold-muted);
+  background: linear-gradient(90deg, transparent, var(--gold-muted));
+}
+.scene-journal::after {
+  background: linear-gradient(90deg, var(--gold-muted), transparent);
 }
 .scene-desc {
   color: var(--paper-dim);
@@ -56,17 +101,20 @@
   color: var(--gold-muted);
   font-size: 12px;
 }
-/* 当前要事卡片（V2 收尾：承接场景下半屏留白，动作从世界中长出） */
+/* 当前要事卡片（V2 收尾：承接场景下半屏留白，动作从世界中长出；V2.8 暖光纸纹面） */
 .quest-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(232, 223, 208, 0.14);
   border-left: 3px solid var(--gold);
   border-radius: 0 8px 8px 0;
-  background: var(--ink-lift);
+  background:
+    radial-gradient(140% 180% at 20% 0%, rgba(201, 168, 105, 0.07), transparent 55%),
+    var(--bg-noise), var(--ink-lift);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
 }
 .quest-card-info {
   display: flex;
@@ -84,7 +132,7 @@
   font-size: 12px;
 }
 .scene-block {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgba(232, 223, 208, 0.1);
   padding-top: 10px;
   display: flex;
   flex-direction: column;
@@ -98,7 +146,8 @@
   letter-spacing: 2px;
 }
 
-/* ---- ExitPad 九宫格（V2.7 缩小美化：190px 网格，占用缩小 ~70px；交互语义不变） ---- */
+/* ---- ExitPad 九宫格（V2.7 缩小；V2.8 简牍面板质感：内凹墨面 + 暖光出口 + 铜金中心，
+ * 空位不再「死黑空洞」，交互语义不变） ---- */
 .exit-pad {
   position: relative;
   display: flex;
@@ -112,38 +161,92 @@
   flex: 1;
   aspect-ratio: 1 / 1;
   max-width: 190px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(232, 223, 208, 0.14);
+  background:
+    radial-gradient(120% 160% at 30% 0%, rgba(232, 223, 208, 0.05), transparent 55%),
+    linear-gradient(180deg, rgba(38, 34, 28, 0.88), rgba(22, 19, 16, 0.94));
+  box-shadow:
+    inset 0 1px 8px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(232, 223, 208, 0.05);
 }
 .exit-cell {
   min-height: 44px;
   border-radius: 5px;
-  border: 1px solid var(--line);
-  background: var(--ink-lift);
-  color: var(--paper-faint);
+  border: 1px solid rgba(232, 223, 208, 0.24);
+  background: linear-gradient(180deg, rgba(232, 223, 208, 0.1), rgba(30, 26, 21, 0.6));
+  color: rgba(232, 223, 208, 0.6);
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 .exit-cell.has {
-  border-color: var(--jade);
+  border-color: rgba(143, 191, 166, 0.65);
   color: var(--jade-bright);
-  background: rgba(95, 143, 120, 0.16);
+  background: linear-gradient(180deg, rgba(95, 143, 120, 0.28), rgba(95, 143, 120, 0.12));
+  text-shadow: 0 0 10px rgba(143, 191, 166, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 10px rgba(95, 143, 120, 0.12);
 }
 .exit-cell.has:active {
-  background: rgba(95, 143, 120, 0.3);
+  background: rgba(95, 143, 120, 0.38);
 }
 .exit-cell:disabled {
   cursor: default;
 }
+/* 空位方位字（V2.8：罗盘暗示——无出口方向以极淡方位字标识，地图不再“空洞”；
+ * 仅视觉标识，按钮仍 disabled 无点击语义；出口格已有真实方位字，隐藏伪元素） */
+.exit-cell[data-dir]:not(.has)::before {
+  content: "";
+  opacity: 0.8;
+}
+.exit-cell[data-dir="northwest"]:not(.has)::before {
+  content: "西北";
+}
+.exit-cell[data-dir="north"]:not(.has)::before {
+  content: "北";
+}
+.exit-cell[data-dir="northeast"]:not(.has)::before {
+  content: "东北";
+}
+.exit-cell[data-dir="west"]:not(.has)::before {
+  content: "西";
+}
+.exit-cell[data-dir="east"]:not(.has)::before {
+  content: "东";
+}
+.exit-cell[data-dir="southwest"]:not(.has)::before {
+  content: "西南";
+}
+.exit-cell[data-dir="south"]:not(.has)::before {
+  content: "南";
+}
+.exit-cell[data-dir="southeast"]:not(.has)::before {
+  content: "东南";
+}
+.exit-cell.has::before {
+  content: none;
+}
 .exit-cell.center {
-  background: var(--ink-soft);
-  border-color: var(--line-strong);
-  color: var(--paper);
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(201, 168, 105, 0.1), transparent 60%),
+    linear-gradient(180deg, #2b2518, #1a1610);
+  border-color: rgba(201, 168, 105, 0.35);
+  color: var(--gold);
   font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
   text-align: center;
   padding: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 6px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(201, 168, 105, 0.06);
 }
 .exit-vertical {
   display: flex;
@@ -157,8 +260,9 @@
   position: absolute;
   top: -8px;
   right: 0;
-  color: var(--gold-muted);
+  color: var(--gold);
   font-size: 11px;
+  letter-spacing: 1px;
 }
 
 /* ---- 见闻 Tab 与 chips ---- */

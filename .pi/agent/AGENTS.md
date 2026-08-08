@@ -21,6 +21,7 @@
 - 内容任务（房间/NPC/物品/任务/剧情）启动前，先按 `yjh-project-conventions` 的"任务启动必读"表确认要加载哪些 skill。
 - 内容进入仓库前，必须登记 pkuxkx 权利状态（机制借鉴/需改写/需授权），见 `docs/pkuxkx-content-catalog.md`。
 - 提交前质量门禁必须全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；新增/修改 API 或事件时同步 `docs/protocol.md`（`pnpm test:docs`）。
+- **任务收尾**：按全局 AGENTS.md 的「Global Task Wrap-up Rule」执行——①提炼检查（skill/设计规范/借鉴登记/执行记录，有则更新）→ ②门禁全绿后自动提交推送 → ③改动影响运行时产物时自动部署（`node scripts/deploy-jd.cjs deploy`，H5 先 `pnpm --filter @yjh/h5-client build:web`）；纯文档/skill 变更不部署；用户明确交待不提交/不部署时遵守。
 
 ## 权威文档
 

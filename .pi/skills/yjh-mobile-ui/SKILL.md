@@ -141,7 +141,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.12 视觉落地硬性项（DC-027 V2 实战验证，新增界面/样式必须遵守）
 
 - **墨底必须落在容器上**：`html, body, #root, .app` 要有背景规则（不能只靠页面自身背景）——否则主界面白底浅字（`--paper` 在白底上不可读），这是本项目最经典的 P0。
-- **字体必须自包 woff2**：`@font-face` 写在 tokens.css，字体文件放 `src/styles/fonts/`（相对 `url()`，vite 自动 hash）；禁 Google Fonts CDN（国内不可达）。子集化流程见 team skill `chinese-font-selfhost`。
+- **字体必须自包 woff2**：`@font-face` 写在 tokens.css，字体文件放 `src/styles/fonts/`（相对 `url()`，vite 自动 hash）；禁 Google Fonts CDN（国内不可达）。子集化流程见本项目 skill `chinese-font-selfhost`。
 - **body 必须声明字体基线**：`html, body { font-family: var(--font-body) }`，否则正文落系统黑体。
 - **全局 `box-sizing: border-box`**：缺失会导致 `height:100dvh` + padding 溢出视口出现莫名滚动条。
 - **滚动条必须定制**：`::-webkit-scrollbar` 细墨样式，禁默认白/灰滚动条破坏沉浸。

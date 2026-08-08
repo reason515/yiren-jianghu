@@ -12,6 +12,8 @@
 | 设计或修改区域地图/世界地图/场景方位图（八向网格、多视图一致性、地图数据契约、校验与交互）              | `yjh-map-design`          | `.pi/skills/yjh-map-design/SKILL.md`          |
 | 设计或变更设计决策/撰写设计提案、规格、审计；维护决策登记表                                             | `yjh-design-docs`         | `.pi/skills/yjh-design-docs/SKILL.md`         |
 | 设计或实现移动端界面/交互/信息架构（E 阶段 H5 前端、组件、数值展示）                                    | `yjh-mobile-ui`           | `.pi/skills/yjh-mobile-ui/SKILL.md`           |
+| 界面粗糙/太丑/像管理后台/UI 升级/视觉打磨（先取证分级再动手）                                           | `ui-visual-audit`          | `.pi/skills/ui-visual-audit/SKILL.md`         |
+| 中文字体自包/子集化/防系统字体回退（woff2 随包，禁 CDN）                                                | `chinese-font-selfhost`   | `.pi/skills/chinese-font-selfhost/SKILL.md`   |
 
 **强制规则**：
 

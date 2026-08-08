@@ -69,3 +69,41 @@
 - E14.10 易用性 → xkx ChoiceRow / attr-card / toast 约定
 - E14.11 新手引导 → sanguo first-session-ux-v3（改写）
 - ~~新待办：移植 check-doc-consistency（design-docs §4 落地）~~ **已完成**（E14.12：`scripts/check-doc-consistency.js` + `pnpm test:docs-design`，CI quality 同步）
+- V2 批次1–4 + 收尾 → 见 §8（sibling/xkx Chip·Sheet·attr-card、sibling/sanguo 行旅簿·导航收敛）
+
+# 8. UI/UX V2 借鉴闭环（DC-027，2026-08 实战）
+
+V2 把 §2–§5 的借鉴从「设计意图」推进到「真实落地」，并新增若干**本项目自产**的视觉决策。全部经公网部署 + 真机走查验证。
+
+## 8.1 借鉴落地表（来源 → 落地 → 实测）
+
+| 来源 | 借鉴点 | V2 落地 | 实测结果 |
+|------|--------|---------|----------|
+| xkx `app.css` chip 体系 | 分类色 tint（action 玉色 / npc 朱砂 / item 蓝灰）+ 选中态加深 | Chip 质感体系：`action/perform/npc/item/danger` 分类 tint + `:active` 按压态；**perform 金色**为战斗绝招专用 | 公网实测：按压反馈、主次分明 |
+| xkx `app.css .sheet` | 上滑入场 `translateY(16px)→0` + 0.2s | Sheet `@keyframes sheet-up` 挂载即播（本项目组件无 open class 切换，animation 更可靠） | 实测：浮层上滑 |
+| xkx attr-card 规范 | 左彩条属性色 + 当前→新值 | 四维改 2×2 卡片网格：属性色左边框 3px + 底色交替 + 圆角 | 实测：2 列 × 4 卡 |
+| sanguo §4 行旅簿 | 深漆墨底 + 宣纸字 + 材质分层（非纯黑） | 全局墨底容器规则 + `--bg-noise` 宣纸噪点纹理（SVG data-URI 5% 不透明度） | 实测：背景不再"死" |
+| sanguo §3 | 六个主场景 / 底部导航收敛 | 导航 8–9 项 → **5 高频 + 「更多」抽屉**（榜单/地图/离开）；战局为情境按钮 | 实测：6 项 15px 主次分明 |
+| sanguo §4.3 | 场景卡细线分栏 | 保持（防回归） | — |
+
+**不借鉴**：xkx 胶囊圆角 chip（本项目保留矩形轻边框，已定组件语言）；sanguo 汉末器物元素（题材不同）；双方文案一律原创。
+
+## 8.2 本项目自产视觉决策（非借鉴，V2 新定）
+
+- **全局墨底容器规则**：`html/body/#root/.app` 必须持有背景——P0 根因（白底浅字）不在配色而在容器缺背景规则。
+- **字体自包禁 CDN**：GB2312 子集 woff2 随包（ZCOOL 2.6MB + Noto ×2 ≈ 5MB）；Google Fonts 国内不可达，xkx 的 CDN 方案不可照搬（见 team skill `chinese-font-selfhost`）。
+- **首字印章**：`ArtPlaceholder`（E13 建、长期孤儿组件）接入登录页与场景标题，承担 DC-006 轻量插画边界。
+- **场景「当前要事」卡片**：已接任务 + 相位中文（`PHASE_LABEL`，不泄漏内部类型名）+ 查看入口，承接场景下半屏留白。
+- **榜单金银铜徽章**、**战斗主攻击实底玉色按钮**、**地图微弧贝塞尔连线**（按边索引方向交替，不穿节点）。
+
+## 8.3 方法论沉淀（超出姊妹项目范畴，已入团队 skill）
+
+- **`ui-visual-audit`**（team-ai-skills）：证据驱动走查——视觉模型会误判（曾把墨色读成白色），必须 CSS 探针交叉验证；高频 P0 清单（容器缺背景/字体未自包/滚动条未定制/box-sizing 溢出/body 字体基线缺失）。
+- **`chinese-font-selfhost`**（team-ai-skills）：字体子集化全流程 + fontsource 21MB 坑（283 分片）vs 自子集化 5MB（3 文件）实测对比。
+- 两 skill 的方法均在本项目 V2 批次 1–4 实战中验证，后续姊妹项目（xkx Web 客户端等）可直接复用。
+
+## 8.4 部署侧教训（V2 实战踩坑，防复发）
+
+- **部署窗口 502**：`mv dist dist.bak` + `compose up` 重建 api 的秒级间隙，浏览器 `/api/` 请求会 502——非故障，等几秒自愈；access log 无 502 佐证。
+- **SPA fallback 吞 `/health`**：Nginx `try_files $uri /index.html` 会把 `/health` 回退成 index.html，探针拿不到 JSON——须加 `location = /health` 直通（已修，`deploy/nginx.yiren-jianghu.conf`）。
+- **浏览器缓存旧 bundle**：部署后用户"看不到效果"先强刷/比对 bundle hash，非部署失败。

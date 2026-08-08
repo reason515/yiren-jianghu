@@ -110,18 +110,6 @@
   border-radius: 0 6px 6px 0;
   background: var(--ink-lift);
 }
-.char-attr-row[data-attr="str"] {
-  border-left-color: var(--attr-str);
-}
-.char-attr-row[data-attr="int"] {
-  border-left-color: var(--attr-int);
-}
-.char-attr-row[data-attr="con"] {
-  border-left-color: var(--attr-con);
-}
-.char-attr-row[data-attr="dex"] {
-  border-left-color: var(--attr-dex);
-}
 .attr-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -130,31 +118,22 @@
 .char-attr-label {
   font-family: var(--font-display);
   font-size: 16px;
+  color: var(--paper);
 }
 .char-attr-value {
   font-size: 13px;
   color: var(--paper-dim);
   letter-spacing: 0.5px;
 }
-/* 读数分色：当前值着领域色（与属性名呼应），先天值弱化 */
+/* 读数分色：当前值墨色加粗，先天值弱化（不染色，靠字重与亮度） */
 .char-attr-value b {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-.char-attr-row[data-attr="str"] .char-attr-value b {
-  color: var(--attr-str);
-}
-.char-attr-row[data-attr="int"] .char-attr-value b {
-  color: var(--attr-int);
-}
-.char-attr-row[data-attr="con"] .char-attr-value b {
-  color: var(--attr-con);
-}
-.char-attr-row[data-attr="dex"] .char-attr-value b {
-  color: var(--attr-dex);
+  color: var(--paper);
 }
 .char-attr-value .base {
   color: var(--paper-faint);
+  font-weight: 400;
 }
 .char-skill-row {
   display: grid;

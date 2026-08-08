@@ -15,11 +15,11 @@ export interface CharacterSheetProps {
   onDiscard?: () => void;
 }
 
-const ATTR_META: Record<keyof CharacterView["attrs"], { label: string; color: string }> = {
-  str: { label: "膂力", color: "var(--attr-str)" },
-  int: { label: "悟性", color: "var(--attr-int)" },
-  con: { label: "根骨", color: "var(--attr-con)" },
-  dex: { label: "身法", color: "var(--attr-dex)" },
+const ATTR_META: Record<keyof CharacterView["attrs"], { label: string }> = {
+  str: { label: "膂力" },
+  int: { label: "悟性" },
+  con: { label: "根骨" },
+  dex: { label: "身法" },
 };
 
 const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
@@ -107,9 +107,7 @@ export function CharacterSheet({
             const attr = character.attrs[key];
             return (
               <div className="char-attr-row" key={key} data-attr={key}>
-                <span className="char-attr-label" style={{ color: meta.color }}>
-                  {meta.label}
-                </span>
+                <span className="char-attr-label">{meta.label}</span>
                 <span className="char-attr-value">
                   当前 <b>{attr.cur}</b> · 先天 <b className="base">{attr.base}</b>
                 </span>

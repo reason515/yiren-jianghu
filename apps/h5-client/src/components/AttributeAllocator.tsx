@@ -12,11 +12,11 @@ export type AttrKey = keyof Attrs;
 
 export const ATTR_KEYS: AttrKey[] = ["str", "int", "con", "dex"];
 
-export const ATTR_META: Record<AttrKey, { label: string; hint: string; color: string }> = {
-  str: { label: "膂力", hint: "气血之厚，力道之沉", color: "var(--attr-str)" },
-  int: { label: "悟性", hint: "精神之盈，学艺之敏", color: "var(--attr-int)" },
-  con: { label: "根骨", hint: "气血之根，体魄之坚", color: "var(--attr-con)" },
-  dex: { label: "身法", hint: "闪转之敏，先手之机", color: "var(--attr-dex)" },
+export const ATTR_META: Record<AttrKey, { label: string; hint: string }> = {
+  str: { label: "膂力", hint: "气血之厚，力道之沉" },
+  int: { label: "悟性", hint: "精神之盈，学艺之敏" },
+  con: { label: "根骨", hint: "气血之根，体魄之坚" },
+  dex: { label: "身法", hint: "闪转之敏，先手之机" },
 };
 
 export interface AttributeAllocatorProps {
@@ -56,13 +56,9 @@ export function AttributeAllocator({
         const meta = ATTR_META[key];
         return (
           <div className="attr-row" key={key} data-attr={key}>
-            <span className="attr-label" style={{ color: meta.color }}>
-              {meta.label}
-            </span>
+            <span className="attr-label">{meta.label}</span>
             <span className="attr-hint">{meta.hint}</span>
-            <span className="attr-value" style={{ color: meta.color }}>
-              {attrs[key]}
-            </span>
+            <span className="attr-value">{attrs[key]}</span>
             <div className="attr-btns">
               <button
                 type="button"

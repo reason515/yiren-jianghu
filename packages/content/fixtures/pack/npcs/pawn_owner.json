@@ -3,9 +3,16 @@
   "name": "当铺掌柜",
   "kind": "vendor",
   "level": 10,
-  "goods": [{ "itemId": "iron_sword", "buy": 8, "sell": 3 }],
+  "goods": [
+    {
+      "itemId": "iron_sword",
+      "buy": 8,
+      "sell": 3
+    }
+  ],
   "dialogue": [
     "死当活当，当面看货，银货两讫。有什么要脱手的，尽管拿上来。",
     "柜台高，规矩也高。看准了再当，别回头后悔。"
-  ]
+  ],
+  "description": "戴铜边老花镜，拨算盘珠子叮当响。两眼精明，死当活当，从不含糊。"
 }

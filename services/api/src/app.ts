@@ -291,7 +291,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         if (type === "move") {
           return await scene.move(accountId, typeof body.dir === "string" ? body.dir : "");
         }
-        if (type === "talk" || type === "take" || type === "trade") {
+        if (type === "talk" || type === "take" || type === "trade" || type === "observe") {
           if (typeof body.targetId !== "string" || !body.targetId) {
             return envelope(reply, 400, "invalid_request", "缺少场景目标");
           }

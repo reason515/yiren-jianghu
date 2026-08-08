@@ -3,9 +3,15 @@
   "name": "藏经阁长老",
   "kind": "npc",
   "level": 55,
-  "skills": [{ "skillId": "xuanmen_taoism", "level": 90 }],
+  "skills": [
+    {
+      "skillId": "xuanmen_taoism",
+      "level": 90
+    }
+  ],
   "dialogue": [
     "剑谱在架上，道学在心里。读书不是背书，是要把字读进骨头里。",
     "二层那几本，借出去之前先想清楚——带得走书，带不走功夫。"
-  ]
+  ],
+  "description": "头发花白，一身洗得发白的旧袍。守着满架书卷，说话文绉绉，最恨书页折角。"
 }

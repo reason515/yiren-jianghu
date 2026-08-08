@@ -59,6 +59,29 @@ export function maxWaterCapacity(p: GameParams, dex: number): number {
   return p.vitals.waterBase + dex * p.vitals.waterPerDex;
 }
 
+/**
+ * 自然恢复（V2.12，参照 pkuxkx heart_beat 时间恢复）：
+ * 按距上次结算的分钟数恢复 qi/jing/jingli/neili（每分钟为上限的 qiPerMin 等比例），
+ * 食水不自动恢复（pkuxkx 食水随时间消耗，本项目暂不实现饥饿）；单次封顶窗口防离线累积。
+ */
+export function applyRegen(
+  current: VitalsState,
+  max: MaxVitals,
+  deltaMinutes: number,
+  p: GameParams,
+): VitalsState {
+  const r = p.regen;
+  const capped = Math.min(deltaMinutes, r.maxWindowMinutes);
+  const gain = (maxValue: number, perMin: number): number => Math.floor(maxValue * perMin * capped);
+  return {
+    ...current,
+    qi: Math.min(max.maxQi, current.qi + gain(max.maxQi, r.qiPerMin)),
+    jing: Math.min(max.maxJing, current.jing + gain(max.maxJing, r.jingPerMin)),
+    jingli: Math.min(max.maxJingli, current.jingli + gain(max.maxJingli, r.jingliPerMin)),
+    neili: Math.min(max.maxNeili, current.neili + gain(max.maxNeili, r.neiliPerMin)),
+  };
+}
+
 /** 当前状态（数据库持久化字段）。 */
 export interface VitalsState {
   qi: number;

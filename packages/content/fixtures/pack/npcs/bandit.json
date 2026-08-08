@@ -3,9 +3,24 @@
   "name": "劫道匪徒",
   "kind": "battle",
   "level": 6,
-  "skills": [{ "skillId": "basic_sword", "level": 15 }],
+  "skills": [
+    {
+      "skillId": "basic_sword",
+      "level": 15
+    }
+  ],
   "aggressive": false,
   "respawnSec": 60,
-  "drops": [{ "itemId": "jinchuang_yao", "chance": 0.3 }],
-  "battleRewards": { "exp": 30, "potential": 10, "silver": 12 }
+  "drops": [
+    {
+      "itemId": "jinchuang_yao",
+      "chance": 0.3
+    }
+  ],
+  "battleRewards": {
+    "exp": 30,
+    "potential": 10,
+    "silver": 12
+  },
+  "description": "獐头鼠目，提一把缺口朴刀。专挑落单的行人下手，嘴上横，脚下却虚。"
 }

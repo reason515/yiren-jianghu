@@ -1,6 +1,11 @@
 {
-  "expCurve": { "base": 100, "growth": 1.1 },
-  "potential": { "learnCostFactor": 1 },
+  "expCurve": {
+    "base": 100,
+    "growth": 1.1
+  },
+  "potential": {
+    "learnCostFactor": 1
+  },
   "combat": {
     "baseHitRate": 0.7,
     "baseDodgeRate": 0.1,
@@ -15,7 +20,11 @@
     "recoverNeiliPerTurn": 20,
     "fleeBaseChance": 0.7
   },
-  "afk": { "maxDurationHours": 8, "dailyDiminishRate": 0.5, "studyAttemptsPerHour": 12 },
+  "afk": {
+    "maxDurationHours": 8,
+    "dailyDiminishRate": 0.5,
+    "studyAttemptsPerHour": 12
+  },
   "vitals": {
     "qiBase": 100,
     "jingBase": 100,
@@ -43,6 +52,20 @@
     "practicePointsPerAction": 1,
     "studyJingBase": 80
   },
-  "pvp": { "dailyChallengeLimit": 5, "kFactor": 32, "seasonWeeks": 6 },
-  "economy": { "silverDropBase": 5, "maxCashflowPerDay": 1000 }
+  "pvp": {
+    "dailyChallengeLimit": 5,
+    "kFactor": 32,
+    "seasonWeeks": 6
+  },
+  "economy": {
+    "silverDropBase": 5,
+    "maxCashflowPerDay": 1000
+  },
+  "regen": {
+    "qiPerMin": 0.02,
+    "jingPerMin": 0.015,
+    "jingliPerMin": 0.02,
+    "neiliPerMin": 0.01,
+    "maxWindowMinutes": 30
+  }
 }

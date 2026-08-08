@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
 import {
+  applyRegen,
   clampEff,
   clampVitals,
   computeMaxVitals,
@@ -117,5 +118,43 @@ describe("clampVitals / clampEff", () => {
     expect(clampEff(150, 100)).toBe(100);
     expect(clampEff(-10, 100)).toBe(0);
     expect(clampEff(80, 100)).toBe(80);
+  });
+});
+
+describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () => {
+  const MAX = { maxQi: 420, maxJing: 420, maxJingli: 100, maxNeili: 100 };
+  const HURT: Parameters<typeof applyRegen>[0] = {
+    qi: 0,
+    jing: 0,
+    jingli: 0,
+    neili: 0,
+    food: 300,
+    water: 300,
+    effQi: 0,
+    effJing: 0,
+  };
+
+  it("按上限比例 + 时间差恢复，封顶上限", () => {
+    const next = applyRegen(HURT, MAX, 10, DEFAULT_PARAMS);
+    // qi: floor(420 * 0.02 * 10) = 84；jing: floor(420*0.015*10) = 63；
+    // jingli: floor(100*0.02*10) = 20；neili: floor(100*0.01*10) = 10
+    expect(next).toMatchObject({ qi: 84, jing: 63, jingli: 20, neili: 10 });
+    // 食水不自动恢复
+    expect(next.food).toBe(300);
+    expect(next.water).toBe(300);
+  });
+
+  it("恢复不超上限；时间差超窗口按窗口封顶（防离线累积）", () => {
+    const nearlyFull = applyRegen(
+      { ...HURT, qi: 400, jing: 400, jingli: 90, neili: 95 },
+      MAX,
+      10,
+      DEFAULT_PARAMS,
+    );
+    expect(nearlyFull.qi).toBe(420);
+    expect(nearlyFull.jing).toBe(420);
+    // 3 小时（180 分钟）远超 30 分钟窗口 → 只按 30 分钟恢复
+    const offline = applyRegen(HURT, MAX, 180, DEFAULT_PARAMS);
+    expect(offline.qi).toBe(Math.floor(420 * 0.02 * 30));
   });
 });

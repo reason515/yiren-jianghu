@@ -3,14 +3,29 @@
   "name": "村口守卫",
   "kind": "battle",
   "level": 3,
-  "skills": [{ "skillId": "basic_sword", "level": 10 }],
-  "drops": [{ "itemId": "iron_sword", "chance": 0.2 }],
-  "battleRewards": { "exp": 8, "potential": 3, "silver": 3 },
+  "skills": [
+    {
+      "skillId": "basic_sword",
+      "level": 10
+    }
+  ],
+  "drops": [
+    {
+      "itemId": "iron_sword",
+      "chance": 0.2
+    }
+  ],
+  "battleRewards": {
+    "exp": 8,
+    "potential": 3,
+    "silver": 3
+  },
   "aggressive": false,
   "respawnSec": 60,
   "dialogue": [
     "站住。村里这两日不太平——过路的交个路引，闲逛的趁早回去，天黑前城门要关。",
     "瞧你这身打扮，是来学艺的？村东头王师傅收徒，去晚了可抢不到铺位。",
     "喂，库房那边夜里总有响动。你要是闲得慌，去会会那些“住户”，村里有赏。"
-  ]
+  ],
+  "description": "粗布劲装，腰挎短刀。见了生人先打量三眼，手始终不离刀柄。"
 }

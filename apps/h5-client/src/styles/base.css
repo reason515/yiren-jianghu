@@ -324,6 +324,9 @@ textarea {
   font-size: 12px;
   letter-spacing: 1px;
   flex-shrink: 0;
+  /* V2.12 数字列对齐：标签固定 2 汉字宽右对齐（气/精力/内力都是 1–2 字），数字左缘对齐 */
+  min-width: 2em;
+  text-align: right;
 }
 .status-item b {
   color: var(--paper);

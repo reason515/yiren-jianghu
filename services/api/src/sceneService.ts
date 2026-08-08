@@ -1,5 +1,5 @@
 import type { ContentPack, Item, Npc, Room, Skill } from "@yjh/content";
-import { computeMaxVitals, maxFoodCapacity, maxWaterCapacity } from "@yjh/game-core";
+import { applyRegen, computeMaxVitals, maxFoodCapacity, maxWaterCapacity } from "@yjh/game-core";
 import type { Db } from "./db.js";
 import type { QuestsService } from "./questsService.js";
 
@@ -72,14 +72,22 @@ export interface TakeView {
   item: { id: string; name: string; quantity: number };
 }
 
+export interface ObserveView {
+  kind: "observe";
+  targetType: "npc" | "item";
+  name: string;
+  description: string;
+}
+
 export type SceneActionInput =
   | { type: "talk"; targetId: string }
   | { type: "take"; targetId: string }
+  | { type: "observe"; targetId: string }
   | { type: "trade"; targetId: string }
   | { type: "buy"; targetId: string; itemId: string; count: number }
   | { type: "sell"; targetId: string; itemId: string; count: number };
 
-export type SceneActionView = TalkView | TradeView | TakeView;
+export type SceneActionView = TalkView | TradeView | TakeView | ObserveView;
 
 export interface ContentIndex {
   rooms: Map<string, Room>;
@@ -165,6 +173,70 @@ export function createSceneService(
     const room = content.rooms.get(roomPath);
     if (!room) throw new SceneError("room_not_found", "当前所在房间不存在（内容包版本不一致）");
     return room;
+  };
+
+  /**
+   * V2.12 自然恢复：按距上次结算的时间差恢复 qi/jing/jingli/neili（参照 pkuxkx heart_beat
+   * 时间恢复），单次封顶 maxWindowMinutes 防离线累积；1 分钟内不结算避免高频。
+   * 在 getScene / move / act 入口统一调用，服务端权威。
+   */
+  const regenCharacter = async (database: Db, accountId: string): Promise<void> => {
+    const rows = await database.query<{
+      id: string;
+      qi: number;
+      jing: number;
+      jingli: number;
+      neili: number;
+      food: number;
+      water: number;
+      attrs: string | Record<string, unknown> | null;
+      last_heal_at: string | Date | null;
+    }>(
+      "SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at FROM characters WHERE account_id = $1 AND status = 'active'",
+      [accountId],
+    );
+    const row = rows.rows[0];
+    if (!row || !row.last_heal_at) return;
+    const deltaMinutes = (Date.now() - new Date(row.last_heal_at).getTime()) / 60000;
+    if (deltaMinutes < 1) return;
+    const rawAttrs = typeof row.attrs === "string" ? JSON.parse(row.attrs) : (row.attrs ?? {});
+    const num = (key: string): number => {
+      const value = Number((rawAttrs as Record<string, unknown>)[key]);
+      return Number.isFinite(value) ? value : 0;
+    };
+    const forceRows = await database.query<{ skill_id: string; level: number }>(
+      "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
+      [row.id],
+    );
+    const forceLevel = forceRows.rows
+      .filter((skill) => content.skills.get(skill.skill_id)?.category === "force")
+      .reduce((acc, skill) => Math.max(acc, skill.level), 0);
+    const maxVitals = computeMaxVitals(content.params, {
+      str: num("str"),
+      int: num("int"),
+      con: num("con"),
+      dex: num("dex"),
+      forceLevel,
+    });
+    const next = applyRegen(
+      {
+        qi: row.qi,
+        jing: row.jing,
+        jingli: row.jingli,
+        neili: row.neili,
+        food: row.food,
+        water: row.water,
+        effQi: row.qi,
+        effJing: row.jing,
+      },
+      maxVitals,
+      deltaMinutes,
+      content.params,
+    );
+    await database.query(
+      "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, last_heal_at = now() WHERE id = $5",
+      [next.qi, next.jing, next.jingli, next.neili, row.id],
+    );
   };
 
   const roomView = async (database: Db, characterId: string, room: Room): Promise<SceneView> => {
@@ -277,6 +349,7 @@ export function createSceneService(
 
   return {
     async getScene(accountId) {
+      await regenCharacter(db, accountId);
       const character = await activeCharacter(db, accountId);
       if (!character) return null;
       return roomView(db, character.id, roomFor(character.room_path));
@@ -307,6 +380,7 @@ export function createSceneService(
     },
 
     async move(accountId, dir) {
+      await regenCharacter(db, accountId);
       const character = await activeCharacter(db, accountId);
       if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
       const room = roomFor(character.room_path);
@@ -322,12 +396,43 @@ export function createSceneService(
     },
 
     async act(accountId, input) {
+      await regenCharacter(db, accountId);
       if (input.type === "talk") {
         const character = await activeCharacter(db, accountId);
         if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
         const npc = npcInRoom(roomFor(character.room_path), input.targetId);
         await quests?.recordProgress(accountId, "talk", npc.id);
         return { kind: "talk", npc: { id: npc.id, name: npc.name }, dialogue: npc.dialogue };
+      }
+
+      // V2.12 观察：NPC/物品外观描述入见闻（只读，不改状态）。
+      if (input.type === "observe") {
+        const character = await activeCharacter(db, accountId);
+        if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
+        const room = roomFor(character.room_path);
+        const npc = room.npcIds.includes(input.targetId)
+          ? content.npcs.get(input.targetId)
+          : undefined;
+        if (npc) {
+          return {
+            kind: "observe",
+            targetType: "npc",
+            name: npc.name,
+            description: npc.description || "此人风尘仆仆，看不出深浅，只觉一双眼睛格外沉静。",
+          };
+        }
+        if (room.itemIds.includes(input.targetId)) {
+          const item = content.items.get(input.targetId);
+          if (item) {
+            return {
+              kind: "observe",
+              targetType: "item",
+              name: item.name,
+              description: item.description || "看久了，也看不出什么特别之处，只是件寻常物什。",
+            };
+          }
+        }
+        throw new SceneError("target_not_here", "眼前没有此物可看");
       }
 
       if (input.type === "take") {

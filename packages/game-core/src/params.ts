@@ -32,6 +32,13 @@ export const DEFAULT_PARAMS: GameParams = {
     fleeBaseChance: 0.7,
   },
   afk: { maxDurationHours: 8, dailyDiminishRate: 0.5, studyAttemptsPerHour: 12 },
+  regen: {
+    qiPerMin: 0.02,
+    jingPerMin: 0.015,
+    jingliPerMin: 0.02,
+    neiliPerMin: 0.01,
+    maxWindowMinutes: 30,
+  },
   vitals: {
     qiBase: 100,
     jingBase: 100,

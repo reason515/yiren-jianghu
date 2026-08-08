@@ -35,6 +35,18 @@ export const paramsSchema = z.object({
     /** 修炼挂机每小时的参悟/演练次数（F2 worker 结算频率）。 */
     studyAttemptsPerHour: z.number().int().min(1).max(60).default(12),
   }),
+  /** 自然恢复（V2.12，参照 pkuxkx heart_beat 时间恢复）：
+   * 每分钟按上限比例恢复（qiPerMin=0.02 → maxQi 的 2%/min）；
+   * 场景交互时按距上次结算的时间差恢复，单次封顶 maxWindowMinutes 防离线累积。 */
+  regen: z
+    .object({
+      qiPerMin: z.number().min(0).max(1).default(0.02),
+      jingPerMin: z.number().min(0).max(1).default(0.015),
+      jingliPerMin: z.number().min(0).max(1).default(0.02),
+      neiliPerMin: z.number().min(0).max(1).default(0.01),
+      maxWindowMinutes: z.number().int().min(1).max(1440).default(30),
+    })
+    .default({}),
   /** 状态（Vitals）公式系数：C2 动态上限（首版无年龄阶段，采用成年人常数，参照 pkuxkx 31–60 段公式） */
   vitals: z.object({
     qiBase: z.number().int().nonnegative().default(100),
@@ -134,6 +146,8 @@ export const npcSchema = z.object({
   id,
   name: z.string().min(1),
   kind: z.enum(["battle", "vendor", "apprentice_master", "quest_giver", "npc"]),
+  /** 外观描述（V2.12 观察动作）：玩家「观察」时显示，短句画面感（wuxia 规范）。 */
+  description: z.string().default(""),
   level: z.number().int().nonnegative().optional(),
   attrs: z
     .object({ str: z.number(), int: z.number(), con: z.number(), dex: z.number() })

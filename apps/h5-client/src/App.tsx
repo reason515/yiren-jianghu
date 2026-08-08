@@ -167,11 +167,14 @@ export function App(): JSX.Element {
   const journalIdRef = useRef(0);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
 
-  /** 见闻（V2.10 动态文字流）：互动事件追加，与静态场景描述分离。 */
-  const addJournal = useCallback((text: string, kind?: JournalEntry["kind"]): void => {
-    journalIdRef.current += 1;
-    setJournal((prev) => [...prev, { id: journalIdRef.current, text, kind }]);
-  }, []);
+  /** 见闻（V2.10 动态文字流）：互动事件追加，与静态场景描述分离；mark 标记关键词（地名等）独立色。 */
+  const addJournal = useCallback(
+    (text: string, kind?: JournalEntry["kind"], mark?: JournalEntry["mark"]): void => {
+      journalIdRef.current += 1;
+      setJournal((prev) => [...prev, { id: journalIdRef.current, text, kind, mark }]);
+    },
+    [],
+  );
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
   const authApi: AuthApi = useMemo(() => createAuthApi(BASE_URL), []);
@@ -403,7 +406,9 @@ export function App(): JSX.Element {
     try {
       const next = (await api.move(dir)) as SceneRoom;
       setRoom(next);
-      addJournal(`你向${DIR_LABEL[dir] ?? ""}行去，来到${next.name}。`);
+      addJournal(`你向${DIR_LABEL[dir] ?? ""}行去，来到${next.name}。`, undefined, [
+        { text: next.name, cls: "place" },
+      ]);
       await refreshQuests();
     } catch (e) {
       notify(e);
@@ -801,6 +806,20 @@ export function App(): JSX.Element {
           if (result.kind === "trade") {
             setTrade(result);
             addJournal(`你向${result.vendor.name}打听货物。`);
+          }
+        })
+        .catch(notify);
+      return;
+    }
+    if (action === "observe") {
+      void api
+        .sceneAction({ type: "observe", targetId })
+        .then((result) => {
+          setSelectedEntity(null);
+          if (result.kind === "observe") {
+            addJournal(`${result.name}：${result.description}`, undefined, [
+              { text: result.name, cls: "place" },
+            ]);
           }
         })
         .catch(notify);

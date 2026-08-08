@@ -62,11 +62,21 @@ export interface SceneTakeResult {
   item: { id: string; name: string; quantity: number };
 }
 
-export type SceneActionResult = SceneTalkResult | SceneTradeResult | SceneTakeResult;
+/** V2.12 观察结果：NPC/物品外观描述（入见闻展示）。 */
+export interface SceneObserveResult {
+  kind: "observe";
+  targetType: "npc" | "item";
+  name: string;
+  description: string;
+}
+
+export type SceneActionResult =
+  SceneTalkResult | SceneTradeResult | SceneTakeResult | SceneObserveResult;
 
 export type SceneActionInput =
   | { type: "talk"; targetId: string }
   | { type: "take"; targetId: string }
+  | { type: "observe"; targetId: string }
   | { type: "trade"; targetId: string }
   | { type: "buy"; targetId: string; itemId: string; count: number }
   | { type: "sell"; targetId: string; itemId: string; count: number };

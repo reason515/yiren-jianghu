@@ -21,29 +21,36 @@ const ITEM_KINDS = new Set(["weapon", "armor", "drug", "food", "misc"]);
 
 function actionsFor(entity: SceneNpc | SceneItem): ActionDef[] {
   if (ITEM_KINDS.has(entity.kind)) {
-    return [{ command: `take ${entity.id}`, label: "拾取", variant: "action" }];
+    return [
+      { command: `observe ${entity.id}`, label: "观察", variant: "action" },
+      { command: `take ${entity.id}`, label: "拾取", variant: "action" },
+    ];
   }
   const npc = entity as SceneNpc;
+  const observe = { command: `observe ${npc.id}`, label: "观察", variant: "action" as const };
   switch (npc.kind) {
     case "vendor":
       return [
+        observe,
         { command: `talk ${npc.id}`, label: "交谈", variant: "action" },
         { command: `trade ${npc.id}`, label: "交易", variant: "action" },
       ];
     case "apprentice_master":
       return [
+        observe,
         { command: `talk ${npc.id}`, label: "交谈", variant: "action" },
         { command: `apprentice ${npc.id}`, label: "拜师", variant: "action" },
       ];
     case "quest_giver":
       return [
+        observe,
         { command: `talk ${npc.id}`, label: "交谈", variant: "action" },
         { command: `quest ${npc.id}`, label: "请托", variant: "action" },
       ];
     case "battle":
-      return [{ command: `fight ${npc.id}`, label: "较量", variant: "danger" }];
+      return [observe, { command: `fight ${npc.id}`, label: "较量", variant: "danger" }];
     default:
-      return [{ command: `talk ${npc.id}`, label: "交谈", variant: "action" }];
+      return [observe, { command: `talk ${npc.id}`, label: "交谈", variant: "action" }];
   }
 }
 

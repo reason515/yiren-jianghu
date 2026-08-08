@@ -4,12 +4,22 @@
   "kind": "apprentice_master",
   "level": 45,
   "skills": [
-    { "skillId": "xuanmen_sword", "level": 90 },
-    { "skillId": "xuanmen_dodge", "level": 80 },
-    { "skillId": "xuanmen_parry", "level": 80 }
+    {
+      "skillId": "xuanmen_sword",
+      "level": 90
+    },
+    {
+      "skillId": "xuanmen_dodge",
+      "level": 80
+    },
+    {
+      "skillId": "xuanmen_parry",
+      "level": 80
+    }
   ],
   "dialogue": [
     "师弟来得正好，我正缺个喂招的。剑法这东西，光看没用，得挨打挨出感觉来。",
     "掌门的话要听，但也别太死板——剑是活的，人是活的。"
-  ]
+  ],
+  "description": "青衫束发，腰悬长剑。山门里最出色的弟子，待人和气，剑上却有三分杀气。"
 }

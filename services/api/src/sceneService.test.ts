@@ -13,6 +13,13 @@ const PACK = {
     potential: { learnCostFactor: 1 },
     combat: { baseHitRate: 0.7, baseDodgeRate: 0.1, baseParryRate: 0.15 },
     afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
+    regen: {
+      qiPerMin: 0.02,
+      jingPerMin: 0.015,
+      jingliPerMin: 0.02,
+      neiliPerMin: 0.01,
+      maxWindowMinutes: 30,
+    },
     growth: {
       learnJingCostBase: 150,
       potentialCostPerLevel: 1,
@@ -89,6 +96,7 @@ const PACK = {
       id: "village_guard",
       name: "村口守卫",
       kind: "npc",
+      description: "粗布劲装，腰挎短刀。",
       skills: [],
       equipment: [],
       drops: [],
@@ -100,6 +108,7 @@ const PACK = {
       id: "general_shop",
       name: "杂货铺掌柜",
       kind: "vendor",
+      description: "胖乎乎，笑呵呵，柜台摆满油盐酱醋。",
       skills: [],
       equipment: [],
       drops: [],
@@ -147,6 +156,14 @@ function mockDb() {
       status: string;
       room_path: string;
       silver: number;
+      qi?: number;
+      jing?: number;
+      jingli?: number;
+      neili?: number;
+      food?: number;
+      water?: number;
+      attrs?: string;
+      last_heal_at?: string | null;
     }>,
     character_items: [] as Array<{
       id: string;
@@ -190,6 +207,33 @@ function mockDb() {
             .filter((s) => s.token === params[0])
             .map((s) => ({ account_id: s.account_id, expires_at: s.expires_at })) as unknown as T[],
         };
+      }
+      if (text.includes("SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at")) {
+        return {
+          rows: state.characters
+            .filter((c) => c.account_id === params[0] && c.status === "active")
+            .map((c) => ({
+              id: c.id,
+              qi: c.qi ?? 100,
+              jing: c.jing ?? 100,
+              jingli: c.jingli ?? 100,
+              neili: c.neili ?? 0,
+              food: c.food ?? 300,
+              water: c.water ?? 300,
+              attrs: c.attrs ?? '{"str":20,"int":20,"con":20,"dex":20}',
+              last_heal_at: c.last_heal_at ?? new Date().toISOString(),
+            })) as unknown as T[],
+        };
+      }
+      if (text.includes("UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4")) {
+        const character = state.characters.find((c) => c.id === params[4]);
+        if (character) {
+          character.qi = Number(params[0]);
+          character.jing = Number(params[1]);
+          character.jingli = Number(params[2]);
+          character.neili = Number(params[3]);
+        }
+        return { rows: [] as unknown as T[] };
       }
       if (text.includes("SELECT id, room_path, silver FROM characters")) {
         return {
@@ -428,6 +472,42 @@ describe("sceneService.act", () => {
       npc: { id: "general_shop", name: "杂货铺掌柜" },
       dialogue: ["要什么，自己瞧。"],
     });
+  });
+
+  it("观察返回当前房间 NPC/物品的外观描述（V2.12）", async () => {
+    const { scene } = await boot();
+    await scene.move("acc_1", "east");
+    await scene.move("acc_1", "east");
+    await expect(
+      scene.act("acc_1", { type: "observe", targetId: "general_shop" }),
+    ).resolves.toEqual({
+      kind: "observe",
+      targetType: "npc",
+      name: "杂货铺掌柜",
+      description: "胖乎乎，笑呵呵，柜台摆满油盐酱醋。",
+    });
+    await expect(scene.act("acc_1", { type: "observe", targetId: "dry_food" })).resolves.toEqual({
+      kind: "observe",
+      targetType: "item",
+      name: "干粮",
+      description: "硬得能砸核桃的干粮。",
+    });
+    await expect(scene.act("acc_1", { type: "observe", targetId: "nope" })).rejects.toMatchObject({
+      code: "target_not_here",
+    });
+  });
+
+  it("自然恢复：距上次结算 10 分钟后交互，qi/jing 按比例回升（V2.12）", async () => {
+    const { scene, state } = await boot();
+    const character = state.characters[0]!;
+    character.qi = 0;
+    character.jing = 0;
+    character.attrs = '{"str":20,"int":20,"con":20,"dex":20}';
+    character.last_heal_at = new Date(Date.now() - 10 * 60000).toISOString();
+    await scene.getScene("acc_1");
+    // maxQi=420：floor(420*0.02*10)=84；maxJing=420：floor(420*0.015*10)=63
+    expect(character.qi).toBe(84);
+    expect(character.jing).toBe(63);
   });
 
   it("拾取按角色一次性落入行囊，并从该角色的场景中移除", async () => {

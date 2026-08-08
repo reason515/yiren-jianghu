@@ -3,9 +3,24 @@
   "name": "野狗",
   "kind": "battle",
   "level": 1,
-  "skills": [{ "skillId": "basic_sword", "level": 0 }],
+  "skills": [
+    {
+      "skillId": "basic_sword",
+      "level": 0
+    }
+  ],
   "aggressive": true,
   "respawnSec": 30,
-  "drops": [{ "itemId": "dry_food", "chance": 0.4 }],
-  "battleRewards": { "exp": 5, "potential": 2, "silver": 2 }
+  "drops": [
+    {
+      "itemId": "dry_food",
+      "chance": 0.4
+    }
+  ],
+  "battleRewards": {
+    "exp": 5,
+    "potential": 2,
+    "silver": 2
+  },
+  "description": "灰毛土狗，呲着牙，涎水顺着嘴角淌。瘦是瘦，扑上来却不要命。"
 }

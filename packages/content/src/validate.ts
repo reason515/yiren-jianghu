@@ -143,6 +143,21 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         message: `NPC ${npc.id} 标记主动攻击但类型非 battle`,
       });
     }
+    for (const allyId of npc.battleAllies ?? []) {
+      if (!npcIds.has(allyId)) {
+        issues.push({
+          code: "broken_battle_ally",
+          severity: "error",
+          message: `NPC ${npc.id} battleAllies 引用不存在 NPC ${allyId}`,
+        });
+      } else if (allyId === npc.id) {
+        issues.push({
+          code: "self_battle_ally",
+          severity: "error",
+          message: `NPC ${npc.id} battleAllies 不可引用自身`,
+        });
+      }
+    }
   }
 
   // 绝招

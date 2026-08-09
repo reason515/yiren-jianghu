@@ -113,6 +113,9 @@ export function App(): JSX.Element {
   const [trade, setTrade] = useState<SceneTradeResult | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [combatOpen, setCombatOpen] = useState(false);
+  const [combatBusy, setCombatBusy] = useState(false);
+  const combatBusyRef = useRef(false);
+  const combatActionRef = useRef<(intent: CombatIntent) => void>(() => undefined);
   const [questData, setQuestData] = useState<QuestPanelData | null>(null);
   const [questOpen, setQuestOpen] = useState(false);
   const [afkStatus, setAfkStatus] = useState<AfkStatusView>({ active: false, message: "" });
@@ -923,6 +926,9 @@ export function App(): JSX.Element {
   };
 
   const onCombatAction = (intent: CombatIntent): void => {
+    if (combatBusyRef.current) return;
+    combatBusyRef.current = true;
+    setCombatBusy(true);
     void (async () => {
       try {
         const next = await api.combatAction(intent);
@@ -936,12 +942,29 @@ export function App(): JSX.Element {
       } catch (e) {
         // 服务端拒绝绝招时保留当前战局，反馈其权威文案。
         notify(e);
+      } finally {
+        combatBusyRef.current = false;
+        setCombatBusy(false);
       }
     })();
   };
+  combatActionRef.current = onCombatAction;
+
+  // 自动普攻节拍（DC-037）：面板收起后仍推进，重开只看战报。
+  useEffect(() => {
+    if (!combat?.inCombat) return;
+    const handle = window.setInterval(() => {
+      if (combatBusyRef.current) return;
+      combatActionRef.current({ action: "attack" });
+    }, 1250);
+    return () => window.clearInterval(handle);
+  }, [combat?.inCombat]);
 
   const closeCombat = (): void => {
-    if (combat?.inCombat) return;
+    if (combat?.inCombat) {
+      setCombatOpen(false);
+      return;
+    }
     setCombat(null);
     setCombatOpen(false);
   };
@@ -1294,8 +1317,13 @@ export function App(): JSX.Element {
       )}
 
       {combat && combatOpen && (
-        <Sheet open title="战局" onClose={closeCombat}>
-          <CombatView state={combat} onAction={onCombatAction} />
+        <Sheet open title={combat.inCombat ? "战局" : "战局已了"} onClose={closeCombat}>
+          <CombatView
+            state={combat}
+            onAction={onCombatAction}
+            onDismiss={closeCombat}
+            busy={combatBusy}
+          />
         </Sheet>
       )}
 

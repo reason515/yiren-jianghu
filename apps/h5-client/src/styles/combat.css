@@ -1,4 +1,4 @@
-/* 战斗视图样式（E4；全部 tokens） */
+/* 战斗视图：多敌血条 + 战报主阅读 + 悬浮动作条（DC-037/038） */
 
 .combat {
   border-top: 1px solid var(--line);
@@ -6,8 +6,14 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
 }
 .combat-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.combat-foes {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -20,6 +26,12 @@
 .combat-side.foe .combat-name {
   color: var(--cinnabar);
 }
+.combat-side.foe.down {
+  opacity: 0.45;
+}
+.combat-side.foe.down .combat-name {
+  color: var(--paper-faint);
+}
 .combat-side.self .combat-name {
   color: var(--paper-dim);
 }
@@ -29,25 +41,33 @@
   letter-spacing: 1px;
 }
 .combat-log {
-  max-height: 40vh;
+  max-height: 42vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 6px;
+  padding: 10px 0;
   border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .combat-line {
   margin: 0;
   color: var(--paper-dim);
-  line-height: 1.8;
-  font-size: 14px;
+  line-height: 1.85;
+  font-size: 15px;
 }
 .combat-line.hl {
   color: var(--jade-bright);
 }
 .combat-line.dg {
   color: var(--cinnabar);
+}
+.combat-result-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
 }
 .combat-result {
   margin: 0;
@@ -56,28 +76,46 @@
   font-size: 16px;
   letter-spacing: 2px;
   text-align: center;
-  padding: 8px 0;
 }
 .combat-reward {
-  margin: -4px 0 4px;
+  margin: 0;
   color: var(--paper-dim);
   font-size: 13px;
   line-height: 1.7;
   text-align: center;
 }
+.combat-leave {
+  min-height: var(--touch-min);
+  min-width: 7em;
+  margin-top: 4px;
+  font-family: var(--font-display);
+  letter-spacing: 3px;
+  background: linear-gradient(180deg, #3a3530, #2a2622);
+  color: var(--paper);
+  border: 1px solid var(--line);
+}
+.combat-float-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 0 -4px;
+  padding: 10px 4px calc(8px + var(--safe-b, 0px));
+  background: linear-gradient(180deg, transparent, var(--ink) 28%);
+}
+.combat-auto-hint {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--paper-faint);
+  letter-spacing: 1px;
+}
 .combat-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
 }
-/* 主攻击按钮（V2 收尾：实底玉色 + 书法字，战斗中最值得按的） */
-.combat-actions .chip.primary {
-  background: var(--jade);
-  border-color: transparent;
-  color: #f3eee2;
-  font-family: var(--font-display);
-  font-size: 16px;
-  letter-spacing: 3px;
-  box-shadow: var(--shadow-btn);
-  flex: 1.3;
+.combat-actions .chip.ghost {
+  opacity: 0.85;
+  background: transparent;
 }

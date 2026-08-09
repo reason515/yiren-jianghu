@@ -22,5 +22,6 @@
     "potential": 2,
     "silver": 2
   },
-  "description": "灰毛土狗，呲着牙，涎水顺着嘴角淌。瘦是瘦，扑上来却不要命。"
+  "description": "灰毛土狗，呲着牙，涎水顺着嘴角淌。瘦是瘦，扑上来却不要命。",
+  "battleAllies": ["wild_dog_mate"]
 }

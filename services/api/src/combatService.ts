@@ -3,7 +3,10 @@ import {
   canUsePerform,
   createBattleState,
   createSeededRng,
+  MAX_COMBAT_FOES,
+  normalizeBattleState,
   performToBattleAction,
+  PLAYER_ACTOR,
   rollDrops,
   type BattleAction,
   type BattleContext,
@@ -11,7 +14,7 @@ import {
   type BattleState,
   type PerformCooldownTracker,
 } from "@yjh/game-core";
-import type { ContentPack, Perform } from "@yjh/content";
+import type { ContentPack, Npc, Perform } from "@yjh/content";
 import type { Json } from "@yjh/shared";
 import { buildCharacterCombatant, buildNpcCombatant } from "./combatantFactory.js";
 import type { Db } from "./db.js";
@@ -30,6 +33,8 @@ export class CombatError extends Error {
 export interface CombatStatusView {
   id: string;
   targetId: string;
+  /** 本场全部敌方内容包 NPC id（有序）。 */
+  targetIds: string[];
   status: "ongoing" | "finished" | "abandoned";
   seed: number;
   state: BattleState;
@@ -42,10 +47,13 @@ export interface CombatStatusView {
 export interface CombatActionInput {
   action: string;
   performId?: string;
+  /** 敌方槽位键（如 b0）；缺省自动选气最低者。 */
+  targetId?: string;
 }
 
 export interface CombatService {
-  start(accountId: string, targetId: string): Promise<CombatStatusView>;
+  /** @param targetIds 主目标在前；服务端会并入同房 battleAllies。 */
+  start(accountId: string, targetIds: string[]): Promise<CombatStatusView>;
   status(accountId: string): Promise<CombatStatusView | null>;
   action(accountId: string, input: CombatActionInput): Promise<CombatStatusView>;
 }
@@ -71,8 +79,10 @@ type SessionRow = {
 
 function decodeState(state: string | BattleState): BattleState {
   const parsed = (typeof state === "string" ? JSON.parse(state) : state) as BattleState;
-  // 兼容 F0 状态列上线前创建的会话；新会话一律显式持久化冷却表。
-  return { ...parsed, performCooldowns: parsed.performCooldowns ?? {} };
+  return normalizeBattleState({
+    ...parsed,
+    performCooldowns: parsed.performCooldowns ?? {},
+  });
 }
 
 function actionError(check: ReturnType<typeof canUsePerform>): CombatError {
@@ -88,6 +98,45 @@ function actionError(check: ReturnType<typeof canUsePerform>): CombatError {
     default:
       return new CombatError("perform_unavailable", "此式暂不可用");
   }
+}
+
+/** 主目标 + 同房有效盟友，去重且不超过上限。 */
+export function resolveEncounterTargets(
+  content: ContentPack,
+  roomNpcIds: string[],
+  primaryIds: string[],
+): Npc[] {
+  const roomSet = new Set(roomNpcIds);
+  const ordered: string[] = [];
+  const push = (id: string): void => {
+    if (!roomSet.has(id) || ordered.includes(id)) return;
+    if (ordered.length >= MAX_COMBAT_FOES) return;
+    ordered.push(id);
+  };
+  for (const id of primaryIds) push(id);
+  for (const id of [...primaryIds]) {
+    const npc = content.npcs.find((entry) => entry.id === id);
+    if (!npc) continue;
+    for (const allyId of npc.battleAllies ?? []) push(allyId);
+  }
+  const npcs: Npc[] = [];
+  for (const id of ordered) {
+    const npc = content.npcs.find((entry) => entry.id === id);
+    if (!npc || npc.kind !== "battle") {
+      throw new CombatError("target_not_battle", "此人无意交锋");
+    }
+    npcs.push(npc);
+  }
+  if (npcs.length === 0) throw new CombatError("target_not_here", "此人不在眼前");
+  return npcs;
+}
+
+function targetIdsOf(state: BattleState, fallback: string): string[] {
+  const slots = state.foeIds ?? [];
+  if (state.foeNpcIds && slots.length > 0) {
+    return slots.map((slot) => state.foeNpcIds![slot] ?? fallback).filter(Boolean);
+  }
+  return [fallback];
 }
 
 export function createCombatService(
@@ -123,6 +172,17 @@ export function createCombatService(
       turn,
       get(actor) {
         const combatant = battleState.combatants[actor];
+        if (!combatant) {
+          return {
+            qi: 0,
+            maxQi: 0,
+            jing: 0,
+            maxJing: 0,
+            neili: 0,
+            maxNeili: 0,
+            stats: { attack: 0, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+          };
+        }
         return {
           qi: combatant.qi,
           maxQi: combatant.maxQi,
@@ -165,6 +225,7 @@ export function createCombatService(
     return {
       id: row.id,
       targetId: row.target_def_id,
+      targetIds: targetIdsOf(battleState, row.target_def_id),
       status: row.status,
       seed: row.seed,
       state: battleState,
@@ -177,7 +238,6 @@ export function createCombatService(
                 data?: BattleEvent["data"];
               })
             : (event.payload as { actor?: BattleEvent["actor"]; data?: BattleEvent["data"] });
-        // 兼容首个 battle_start 与历史裸 payload；新事件把 actor 与 data 一并封装。
         return {
           seq: event.seq,
           type: event.type,
@@ -211,6 +271,17 @@ export function createCombatService(
       turn,
       get(actor) {
         const combatant = state.combatants[actor];
+        if (!combatant) {
+          return {
+            qi: 0,
+            maxQi: 0,
+            jing: 0,
+            maxJing: 0,
+            neili: 0,
+            maxNeili: 0,
+            stats: { attack: 0, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+          };
+        }
         return {
           qi: combatant.qi,
           maxQi: combatant.maxQi,
@@ -237,15 +308,14 @@ export function createCombatService(
   };
 
   return {
-    async start(accountId, targetId) {
+    async start(accountId, targetIds) {
       const character = await activeCharacter(accountId);
       if (!character) throw new CombatError("no_character", "尚未立名闯江湖");
       const room = content.rooms.find((entry) => entry.id === character.room_path);
       if (!room) throw new CombatError("room_not_found", "此地的路数已乱，暂不可交手");
-      if (!room.npcIds.includes(targetId)) throw new CombatError("target_not_here", "此人不在眼前");
-      const target = content.npcs.find((npc) => npc.id === targetId);
-      if (!target || target.kind !== "battle") {
-        throw new CombatError("target_not_battle", "此人无意交锋");
+      if (!targetIds.length) throw new CombatError("target_not_here", "此人不在眼前");
+      for (const id of targetIds) {
+        if (!room.npcIds.includes(id)) throw new CombatError("target_not_here", "此人不在眼前");
       }
 
       const existing = await db.query<{ id: string }>(
@@ -254,26 +324,38 @@ export function createCombatService(
       );
       if (existing.rows[0]) throw new CombatError("combat_in_progress", "胜负未分，不可另起争端");
 
+      const encounter = resolveEncounterTargets(content, room.npcIds, targetIds);
       const skillLevels = await skillsOf(character.id);
       const state = createBattleState(
         buildCharacterCombatant(content, character, skillLevels, "current"),
-        buildNpcCombatant(content, target),
+        encounter.map((npc) => buildNpcCombatant(content, npc)),
+      );
+      state.foeNpcIds = Object.fromEntries(
+        (state.foeIds ?? []).map((slot, index) => [slot, encounter[index]!.id]),
       );
       const seed = Math.floor(Math.random() * 0x7fffffff);
+      const primary = encounter[0]!;
       const inserted = await db.query<SessionRow>(
         "INSERT INTO combat_sessions (character_id, kind, status, target_def_id, seed, state) VALUES ($1, 'pve', 'ongoing', $2, $3, $4) RETURNING id, target_def_id, status, seed, state",
-        [character.id, target.id, seed, JSON.stringify(state)],
+        [character.id, primary.id, seed, JSON.stringify(state)],
       );
       const session = inserted.rows[0]!;
       await db.query(
         "INSERT INTO combat_events (session_id, seq, type, payload) VALUES ($1, 0, 'battle_start', $2)",
-        [session.id, JSON.stringify({ seed })],
+        [
+          session.id,
+          JSON.stringify({
+            seed,
+            foeCount: encounter.length,
+            foeNames: encounter.map((npc) => npc.name),
+            foeNpcIds: encounter.map((npc) => npc.id),
+          }),
+        ],
       );
       return toView(session, skillLevels);
     },
 
     async action(accountId, input) {
-      // Pool 注入时以行锁串行化同一场战斗，避免双击/重试重复结算战利与任务进度。
       if (db.transaction) {
         return db.transaction((tx) =>
           createCombatService(tx, content, quests).action(accountId, input),
@@ -299,10 +381,11 @@ export function createCombatService(
         params: content.params,
         playerAction,
         opponentAction: { type: "attack" },
+        ...(input.targetId ? { targetId: input.targetId } : {}),
       });
       const finished = round.state.winner !== undefined;
       const result =
-        round.state.fled === "a"
+        round.state.fled === PLAYER_ACTOR
           ? "escape"
           : round.state.winner === "a"
             ? "win"
@@ -318,50 +401,63 @@ export function createCombatService(
       const events = [...round.events];
 
       if (result === "win") {
-        const target = content.npcs.find((npc) => npc.id === session.target_def_id)!;
+        const defeatedIds = targetIdsOf(nextState, session.target_def_id);
         const rng = createSeededRng(session.seed);
         for (let i = 0; i < nextState.rngCalls; i += 1) rng();
-        const drops = rollDrops(rng, target.drops, character.exp);
-        const dropsForEvent: Json[] = drops.map((drop) => ({
+        let totalExp = 0;
+        let totalPotential = 0;
+        let totalSilver = 0;
+        const allDrops: Array<{ itemId: string; count: number }> = [];
+        for (const npcId of defeatedIds) {
+          const target = content.npcs.find((npc) => npc.id === npcId);
+          if (!target) continue;
+          const drops = rollDrops(rng, target.drops, character.exp);
+          allDrops.push(...drops);
+          totalExp += target.battleRewards.exp;
+          totalPotential += target.battleRewards.potential;
+          totalSilver += target.battleRewards.silver;
+        }
+        const dropsForEvent: Json[] = allDrops.map((drop) => ({
           itemId: drop.itemId,
           count: drop.count,
         }));
-        const rewards = target.battleRewards;
         events.push({
           seq: nextState.nextSeq,
           type: "reward",
-          actor: "a",
+          actor: PLAYER_ACTOR,
           data: {
-            exp: rewards.exp,
-            potential: rewards.potential,
-            silver: rewards.silver,
+            exp: totalExp,
+            potential: totalPotential,
+            silver: totalSilver,
             drops: dropsForEvent,
           },
         });
         nextState.nextSeq += 1;
-        const progress = await quests?.recordProgress(accountId, "kill", target.id);
-        if (progress) {
-          events.push({
-            seq: nextState.nextSeq,
-            type: "quest_progress",
-            actor: "a",
-            data: progress,
-          });
-          nextState.nextSeq += 1;
+        for (const npcId of defeatedIds) {
+          const progress = await quests?.recordProgress(accountId, "kill", npcId);
+          if (progress) {
+            events.push({
+              seq: nextState.nextSeq,
+              type: "quest_progress",
+              actor: PLAYER_ACTOR,
+              data: progress,
+            });
+            nextState.nextSeq += 1;
+          }
         }
         await db.query(
           "UPDATE characters SET qi = $1, jing = $2, neili = $3, exp = exp + $4, potential = potential + $5, silver = silver + $6 WHERE id = $7",
           [
-            nextState.combatants.a.qi,
-            nextState.combatants.a.jing,
-            nextState.combatants.a.neili,
-            rewards.exp,
-            rewards.potential,
-            rewards.silver,
+            nextState.combatants[PLAYER_ACTOR]!.qi,
+            nextState.combatants[PLAYER_ACTOR]!.jing,
+            nextState.combatants[PLAYER_ACTOR]!.neili,
+            totalExp,
+            totalPotential,
+            totalSilver,
             character.id,
           ],
         );
-        for (const drop of drops) {
+        for (const drop of allDrops) {
           await db.query(
             "INSERT INTO character_items (character_id, item_def_id, quantity) VALUES ($1, $2, $3)",
             [character.id, drop.itemId, drop.count],
@@ -369,9 +465,9 @@ export function createCombatService(
         }
       } else {
         await db.query("UPDATE characters SET qi = $1, jing = $2, neili = $3 WHERE id = $4", [
-          nextState.combatants.a.qi,
-          nextState.combatants.a.jing,
-          nextState.combatants.a.neili,
+          nextState.combatants[PLAYER_ACTOR]!.qi,
+          nextState.combatants[PLAYER_ACTOR]!.jing,
+          nextState.combatants[PLAYER_ACTOR]!.neili,
           character.id,
         ]);
       }

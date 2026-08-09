@@ -52,7 +52,8 @@ export interface CombatantView {
 
 export interface BattleContext {
   turn: number;
-  get(actor: ActorKey): CombatantView;
+  /** 玩家为 `a`；敌方为 `b`/`b0`…（DC-038）。 */
+  get(actor: string): CombatantView;
 }
 
 export type PerformEffect =
@@ -84,9 +85,15 @@ export interface BattleInput {
 export interface BattleEvent {
   seq: number;
   type: string;
-  actor?: ActorKey;
+  /** 行动方：`a` 或敌方槽位键；1v1 runBattle 仍用 `a`/`b`。 */
+  actor?: string;
   data: Json;
 }
+
+/** PVE 同场敌方上限（DC-038）。 */
+export const MAX_COMBAT_FOES = 5;
+
+export const PLAYER_ACTOR = "a" as const;
 
 export interface BattleResult {
   winner: ActorKey | "draw";
@@ -294,30 +301,43 @@ export function runBattle(input: BattleInput): BattleResult {
   };
 }
 
-// ---------- 持久化逐回合推进（PVE 服务端） ----------
+// ---------- 持久化逐回合推进（PVE 服务端，支持 1vN / DC-038） ----------
 
 /**
  * 可序列化的战斗续算状态。seed 保存在调用方的会话记录中；rngCalls 让服务端
  * 每次从同一个 seed 恢复随机序列，而不把 RNG 闭包交给客户端。
  */
 export interface BattleState {
-  combatants: Record<ActorKey, Combatant>;
+  /** 玩家键恒为 `a`；敌方为 `b0`… 或旧会话的 `b`。 */
+  combatants: Record<string, Combatant>;
+  /** 敌方槽位键有序列表；缺省时由 normalizeBattleState 从 combatants 推导。 */
+  foeIds?: string[];
+  /** 敌方槽位 → 内容包 NPC id（结算/任务推进，DC-038）。 */
+  foeNpcIds?: Record<string, string>;
   turn: number;
   rngCalls: number;
   nextSeq: number;
   /** 已施展绝招的最近回合；由服务端持久化，断线恢复后仍遵守冷却。 */
   performCooldowns: Record<string, number>;
+  /** `a` 清场获胜；`b` 表示敌方获胜（玩家气尽）；draw 含逃跑成功。 */
   winner?: ActorKey | "draw";
-  fled?: ActorKey;
+  fled?: string;
 }
 
 export interface BattleRoundInput {
   /** 会话建立即固定的随机种子。 */
   seed: number;
   params: GameParams;
-  /** 玩家（a）与 NPC（b）在本回合的动作；客户端只能提交 playerAction。 */
+  /** 玩家本回合意图；客户端只能提交此字段。 */
   playerAction: BattleAction;
-  opponentAction: BattleAction;
+  /** 指定敌方槽位；缺省打气最低的存活敌人。 */
+  targetId?: string;
+  /**
+   * 每名存活敌人的动作（缺省普攻）。
+   * 兼容旧调用：若未传 foeActions，则全体敌人使用 opponentAction（默认 attack）。
+   */
+  opponentAction?: BattleAction;
+  foeActions?: Record<string, BattleAction>;
   maxTurns?: number;
 }
 
@@ -326,10 +346,67 @@ export interface BattleRoundResult {
   events: BattleEvent[];
 }
 
-/** 新开战斗的初始状态；battle_start 由调用方作为 seq=0 的首个事件持久化。 */
-export function createBattleState(a: Combatant, b: Combatant): BattleState {
+function cloneCombatant(c: Combatant): Combatant {
+  return { ...c, stats: { ...c.stats } };
+}
+
+/** 补全 foeIds，兼容仅有 `a`/`b` 的旧会话。 */
+export function normalizeBattleState(state: BattleState): BattleState {
+  if (state.foeIds && state.foeIds.length > 0) {
+    return state;
+  }
+  if (state.combatants.b) {
+    return { ...state, foeIds: ["b"] };
+  }
+  const foeIds = Object.keys(state.combatants)
+    .filter((key) => key !== PLAYER_ACTOR)
+    .sort();
+  return { ...state, foeIds };
+}
+
+export function aliveFoeIds(state: BattleState): string[] {
+  const normalized = normalizeBattleState(state);
+  return (normalized.foeIds ?? []).filter((id) => (normalized.combatants[id]?.qi ?? 0) > 0);
+}
+
+/** 气最低优先，并列按槽位键字典序（确定性）。 */
+export function pickAutoTarget(state: BattleState, preferred?: string): string | undefined {
+  const alive = aliveFoeIds(state);
+  if (alive.length === 0) return undefined;
+  if (preferred && alive.includes(preferred)) return preferred;
+  let best = alive[0]!;
+  let bestQi = state.combatants[best]!.qi;
+  for (const id of alive.slice(1)) {
+    const qi = state.combatants[id]!.qi;
+    if (qi < bestQi || (qi === bestQi && id < best)) {
+      best = id;
+      bestQi = qi;
+    }
+  }
+  return best;
+}
+
+/**
+ * 新开战斗的初始状态；battle_start 由调用方作为 seq=0 的首个事件持久化。
+ * `foes` 可为单人或数组（最多 MAX_COMBAT_FOES）。
+ */
+export function createBattleState(a: Combatant, foes: Combatant | Combatant[]): BattleState {
+  const list = (Array.isArray(foes) ? foes : [foes]).slice(0, MAX_COMBAT_FOES);
+  if (list.length === 0) {
+    throw new Error("createBattleState requires at least one foe");
+  }
+  const combatants: Record<string, Combatant> = {
+    [PLAYER_ACTOR]: cloneCombatant(a),
+  };
+  const foeIds: string[] = [];
+  list.forEach((foe, index) => {
+    const slot = `b${index}`;
+    foeIds.push(slot);
+    combatants[slot] = cloneCombatant(foe);
+  });
   return {
-    combatants: { a: { ...a, stats: { ...a.stats } }, b: { ...b, stats: { ...b.stats } } },
+    combatants,
+    foeIds,
     turn: 0,
     rngCalls: 0,
     nextSeq: 1,
@@ -338,16 +415,18 @@ export function createBattleState(a: Combatant, b: Combatant): BattleState {
 }
 
 /**
- * 推进一个完整回合：先处理玩家动作，再处理 NPC 动作。函数不做 IO，且不修改
- * 传入 state；同 state、seed 与动作输入必定得到同一状态与事件流。
+ * 推进一个完整回合：先处理玩家动作，再令全部存活敌人各动一次。
+ * 函数不做 IO，且不修改传入 state；同输入必定得到同一状态与事件流。
  */
 export function advanceBattleRound(state: BattleState, input: BattleRoundInput): BattleRoundResult {
   if (state.winner !== undefined) return { state, events: [] };
 
-  const combatants: Record<ActorKey, Combatant> = {
-    a: { ...state.combatants.a, stats: { ...state.combatants.a.stats } },
-    b: { ...state.combatants.b, stats: { ...state.combatants.b.stats } },
-  };
+  const base = normalizeBattleState(state);
+  const combatants: Record<string, Combatant> = {};
+  for (const [key, value] of Object.entries(base.combatants)) {
+    combatants[key] = cloneCombatant(value);
+  }
+  const foeIds = [...(base.foeIds ?? [])];
   const seeded = createSeededRng(input.seed);
   for (let i = 0; i < state.rngCalls; i += 1) seeded();
   let rngCalls = state.rngCalls;
@@ -358,39 +437,83 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
   const events: BattleEvent[] = [];
   let nextSeq = state.nextSeq;
   let winner: ActorKey | "draw" | undefined;
-  let fled: ActorKey | undefined;
+  let fled: string | undefined;
   const turn = state.turn + 1;
+  const defaultFoeAction: BattleAction = input.opponentAction ?? { type: "attack" };
 
-  const push = (type: string, actor?: ActorKey, data: Json = {}): void => {
+  const push = (type: string, actor?: string, data: Json = {}): void => {
     events.push({ seq: nextSeq++, type, actor, data });
   };
-  const view = (actor: ActorKey): CombatantView => ({
-    qi: combatants[actor].qi,
-    maxQi: combatants[actor].maxQi,
-    jing: combatants[actor].jing,
-    maxJing: combatants[actor].maxJing,
-    neili: combatants[actor].neili,
-    maxNeili: combatants[actor].maxNeili,
-    stats: combatants[actor].stats,
-  });
-  const act = (actor: ActorKey, action: BattleAction): void => {
-    const foe: ActorKey = actor === "a" ? "b" : "a";
+  const view = (actor: string): CombatantView => {
+    const c = combatants[actor]!;
+    return {
+      qi: c.qi,
+      maxQi: c.maxQi,
+      jing: c.jing,
+      maxJing: c.maxJing,
+      neili: c.neili,
+      maxNeili: c.maxNeili,
+      stats: c.stats,
+    };
+  };
+  const livingFoes = (): string[] => foeIds.filter((id) => (combatants[id]?.qi ?? 0) > 0);
+
+  const resolveTarget = (preferred?: string): string | undefined => {
+    const alive = livingFoes();
+    if (alive.length === 0) return undefined;
+    if (preferred && alive.includes(preferred)) return preferred;
+    let best = alive[0]!;
+    let bestQi = combatants[best]!.qi;
+    for (const id of alive.slice(1)) {
+      const qi = combatants[id]!.qi;
+      if (qi < bestQi || (qi === bestQi && id < best)) {
+        best = id;
+        bestQi = qi;
+      }
+    }
+    return best;
+  };
+
+  const markDownIfNeeded = (foeId: string, wasAlive: boolean): void => {
+    if (!wasAlive) return;
+    if ((combatants[foeId]?.qi ?? 0) > 0) return;
+    push("foe_down", foeId, { name: combatants[foeId]?.name ?? foeId });
+  };
+
+  const checkClearOrPlayerDown = (): void => {
+    if (livingFoes().length === 0) {
+      winner = "a";
+      push("victory", PLAYER_ACTOR, { cleared: true });
+      return;
+    }
+    if ((combatants[PLAYER_ACTOR]?.qi ?? 0) <= 0) {
+      winner = "b";
+      push("victory", livingFoes()[0] ?? foeIds[0], { target: PLAYER_ACTOR });
+    }
+  };
+
+  const actPlayer = (action: BattleAction): void => {
+    const actor = PLAYER_ACTOR;
     switch (action.type) {
       case "attack": {
+        const foe = resolveTarget(input.targetId);
+        if (!foe) break;
+        const wasAlive = combatants[foe]!.qi > 0;
         const outcome = resolveAttack(input.params, view(actor), view(foe), rng);
         if (outcome.type === "damage" || outcome.type === "parry") {
-          combatants[foe].qi = Math.max(0, combatants[foe].qi - outcome.damage);
+          combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - outcome.damage);
         }
-        push(outcome.type, actor, { ...outcome });
+        push(outcome.type, actor, { ...outcome, targetId: foe });
+        markDownIfNeeded(foe, wasAlive);
         break;
       }
       case "recover": {
         const gained = input.params.combat.recoverNeiliPerTurn;
-        combatants[actor].neili = Math.min(
-          combatants[actor].maxNeili,
-          combatants[actor].neili + gained,
+        combatants[actor]!.neili = Math.min(
+          combatants[actor]!.maxNeili,
+          combatants[actor]!.neili + gained,
         );
-        push("recover", actor, { gained, neili: combatants[actor].neili });
+        push("recover", actor, { gained, neili: combatants[actor]!.neili });
         break;
       }
       case "flee": {
@@ -405,49 +528,124 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
       case "perform": {
         const cost = action.cost;
         const hasCost =
-          combatants[actor].neili >= (cost.neili ?? 0) &&
-          combatants[actor].jing >= (cost.jing ?? 0) &&
-          combatants[actor].qi >= (cost.qi ?? 0);
+          combatants[actor]!.neili >= (cost.neili ?? 0) &&
+          combatants[actor]!.jing >= (cost.jing ?? 0) &&
+          combatants[actor]!.qi >= (cost.qi ?? 0);
         if (!hasCost) {
           push("perform_failed", actor, { reason: "insufficient_cost" });
           break;
         }
-        combatants[actor].neili -= cost.neili ?? 0;
-        combatants[actor].jing -= cost.jing ?? 0;
-        combatants[actor].qi -= cost.qi ?? 0;
+        combatants[actor]!.neili -= cost.neili ?? 0;
+        combatants[actor]!.jing -= cost.jing ?? 0;
+        combatants[actor]!.qi -= cost.qi ?? 0;
         if (action.effect.kind === "damage") {
+          const foe = resolveTarget(input.targetId);
+          if (!foe) break;
+          const wasAlive = combatants[foe]!.qi > 0;
           const damage = Math.max(1, Math.round(action.effect.flat));
-          combatants[foe].qi = Math.max(0, combatants[foe].qi - damage);
+          combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - damage);
           push("perform", actor, {
             damage,
             type: action.effect.type,
-            remainingNeili: combatants[actor].neili,
+            remainingNeili: combatants[actor]!.neili,
+            targetId: foe,
             ...(action.performId ? { performId: action.performId } : {}),
           });
+          markDownIfNeeded(foe, wasAlive);
         } else {
           const healed = Math.min(
             action.effect.flat,
-            combatants[actor].maxQi - combatants[actor].qi,
+            combatants[actor]!.maxQi - combatants[actor]!.qi,
           );
-          combatants[actor].qi += healed;
+          combatants[actor]!.qi += healed;
           push("perform", actor, {
             heal: healed,
-            qi: combatants[actor].qi,
+            qi: combatants[actor]!.qi,
             ...(action.performId ? { performId: action.performId } : {}),
           });
         }
         break;
       }
     }
-    if (combatants[foe].qi <= 0) {
-      winner = actor;
-      push("victory", actor, { target: foe });
+    if (winner === undefined) checkClearOrPlayerDown();
+  };
+
+  const actFoe = (foeId: string, action: BattleAction): void => {
+    if ((combatants[foeId]?.qi ?? 0) <= 0) return;
+    if ((combatants[PLAYER_ACTOR]?.qi ?? 0) <= 0) return;
+    const target = PLAYER_ACTOR;
+    switch (action.type) {
+      case "attack": {
+        const outcome = resolveAttack(input.params, view(foeId), view(target), rng);
+        if (outcome.type === "damage" || outcome.type === "parry") {
+          combatants[target]!.qi = Math.max(0, combatants[target]!.qi - outcome.damage);
+        }
+        push(outcome.type, foeId, { ...outcome, targetId: target });
+        break;
+      }
+      case "recover": {
+        const gained = input.params.combat.recoverNeiliPerTurn;
+        combatants[foeId]!.neili = Math.min(
+          combatants[foeId]!.maxNeili,
+          combatants[foeId]!.neili + gained,
+        );
+        push("recover", foeId, { gained, neili: combatants[foeId]!.neili });
+        break;
+      }
+      case "flee": {
+        push("flee", foeId, { success: false });
+        break;
+      }
+      case "perform": {
+        const cost = action.cost;
+        const hasCost =
+          combatants[foeId]!.neili >= (cost.neili ?? 0) &&
+          combatants[foeId]!.jing >= (cost.jing ?? 0) &&
+          combatants[foeId]!.qi >= (cost.qi ?? 0);
+        if (!hasCost) {
+          push("perform_failed", foeId, { reason: "insufficient_cost" });
+          break;
+        }
+        combatants[foeId]!.neili -= cost.neili ?? 0;
+        combatants[foeId]!.jing -= cost.jing ?? 0;
+        combatants[foeId]!.qi -= cost.qi ?? 0;
+        if (action.effect.kind === "damage") {
+          const damage = Math.max(1, Math.round(action.effect.flat));
+          combatants[target]!.qi = Math.max(0, combatants[target]!.qi - damage);
+          push("perform", foeId, {
+            damage,
+            type: action.effect.type,
+            remainingNeili: combatants[foeId]!.neili,
+            targetId: target,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
+        } else {
+          const healed = Math.min(
+            action.effect.flat,
+            combatants[foeId]!.maxQi - combatants[foeId]!.qi,
+          );
+          combatants[foeId]!.qi += healed;
+          push("perform", foeId, {
+            heal: healed,
+            qi: combatants[foeId]!.qi,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
+        }
+        break;
+      }
     }
+    if (winner === undefined) checkClearOrPlayerDown();
   };
 
   push("turn_start", undefined, { turn });
-  act("a", input.playerAction);
-  if (winner === undefined) act("b", input.opponentAction);
+  actPlayer(input.playerAction);
+  if (winner === undefined) {
+    for (const foeId of livingFoes()) {
+      if (winner !== undefined) break;
+      const action = input.foeActions?.[foeId] ?? defaultFoeAction;
+      actFoe(foeId, action);
+    }
+  }
   if (winner === undefined && turn >= (input.maxTurns ?? 100)) {
     winner = "draw";
     push("draw", undefined, { turns: turn });
@@ -456,6 +654,8 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
   return {
     state: {
       combatants,
+      foeIds,
+      ...(base.foeNpcIds ? { foeNpcIds: { ...base.foeNpcIds } } : {}),
       turn,
       rngCalls,
       nextSeq,

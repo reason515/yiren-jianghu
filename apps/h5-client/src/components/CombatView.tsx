@@ -1,18 +1,56 @@
-import type { JSX } from "react";
+import { useEffect, useRef, type JSX } from "react";
 import { Bar } from "./base/Bar.js";
 import { Chip } from "./base/Chip.js";
 import type { CombatResult, CombatViewProps } from "../lib/combatTypes.js";
+import { latestPerformLine } from "../lib/effects.js";
 
-/** 手动战斗视图（mobile-ui：看局势→抓时机；服务端结算，客户端只发动作意图）。 */
-export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | null {
+/** 自动战视图：看局势 → 抓时机放绝招/回气/逃跑；普攻由上层节拍提交（DC-037/038）。 */
+export function CombatView({
+  state,
+  onAction,
+  onDismiss,
+  busy = false,
+}: CombatViewProps): JSX.Element | null {
+  const logRef = useRef<HTMLDivElement>(null);
+  const flashId = latestPerformLine(state.log)?.id;
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [state.log.length]);
+
   if (!state.inCombat && !state.result) return null;
+
+  const enemies = state.enemies.length > 0 ? state.enemies : null;
 
   return (
     <div className="combat" data-testid="combat" role="region" aria-label="战局">
       <div className="combat-sides">
-        <div className="combat-side foe">
-          <span className="combat-name">{state.enemyName}</span>
-          <Bar value={state.enemyQi} max={state.enemyMaxQi} tone="qi" />
+        <div className="combat-foes" data-testid="combat-foes">
+          {(
+            enemies ?? [
+              {
+                id: "b0",
+                name: state.enemyName,
+                qi: state.enemyQi,
+                maxQi: state.enemyMaxQi,
+                down: state.enemyQi <= 0,
+              },
+            ]
+          ).map((foe) => (
+            <div
+              key={foe.id}
+              className={`combat-side foe${foe.down ? " down" : ""}`}
+              data-testid={`combat-foe-${foe.id}`}
+            >
+              <span className="combat-name">
+                {foe.name}
+                {foe.down ? " · 已伏" : ""}
+              </span>
+              <Bar value={foe.qi} max={foe.maxQi} tone="qi" />
+            </div>
+          ))}
         </div>
         <div className="combat-side self">
           <span className="combat-name">你</span>
@@ -22,11 +60,11 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
         </div>
       </div>
 
-      <div className="combat-log" aria-live="polite" data-testid="combat-log">
+      <div className="combat-log" aria-live="polite" data-testid="combat-log" ref={logRef}>
         {state.log.slice(-40).map((line) => (
           <p
             key={line.id}
-            className={`combat-line${line.kind === "perform" ? " hl" : ""}${line.kind === "danger" ? " dg" : ""}`}
+            className={`combat-line${line.kind === "perform" ? " hl" : ""}${line.kind === "danger" ? " dg" : ""}${flashId === line.id ? " perform-flash" : ""}`}
           >
             {line.text}
           </p>
@@ -34,7 +72,7 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
       </div>
 
       {state.result ? (
-        <>
+        <div className="combat-result-block">
           <p className="combat-result" data-testid="combat-result">
             {RESULT_TEXT[state.result]}
           </p>
@@ -44,26 +82,44 @@ export function CombatView({ state, onAction }: CombatViewProps): JSX.Element | 
               {state.reward.silver}
             </p>
           )}
-        </>
+          {onDismiss && (
+            <button
+              type="button"
+              className="btn combat-leave"
+              data-testid="combat-leave"
+              onClick={onDismiss}
+            >
+              离去
+            </button>
+          )}
+        </div>
       ) : (
-        <div className="combat-actions" data-testid="combat-actions">
-          <Chip
-            label="普攻"
-            variant="action"
-            className="primary"
-            onClick={() => onAction({ action: "attack" })}
-          />
-          {state.performs.map((p) => (
+        <div className="combat-float-bar" data-testid="combat-actions">
+          <p className="combat-auto-hint">交手自行推进 · 择机使招</p>
+          <div className="combat-actions">
+            {state.performs.map((p) => (
+              <Chip
+                key={p.id}
+                label={p.name}
+                variant="perform"
+                disabled={busy || !p.ready}
+                onClick={() => onAction({ action: "perform", performId: p.id })}
+              />
+            ))}
             <Chip
-              key={p.id}
-              label={p.name}
-              variant="perform"
-              disabled={!p.ready}
-              onClick={() => onAction({ action: "perform", performId: p.id })}
+              label="回气"
+              variant="action"
+              disabled={busy}
+              onClick={() => onAction({ action: "recover" })}
             />
-          ))}
-          <Chip label="回气" variant="action" onClick={() => onAction({ action: "recover" })} />
-          <Chip label="逃跑" variant="danger" onClick={() => onAction({ action: "flee" })} />
+            <Chip
+              label="逃跑"
+              variant="danger"
+              className="ghost"
+              disabled={busy}
+              onClick={() => onAction({ action: "flee" })}
+            />
+          </div>
         </div>
       )}
     </div>

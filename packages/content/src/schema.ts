@@ -157,6 +157,10 @@ export const npcSchema = z.object({
   drops: z.array(dropSchema).default([]),
   /** battle NPC 胜负结算奖励；数值随内容包版本调整。 */
   battleRewards: battleRewardSchema.default({ exp: 0, potential: 0, silver: 0 }),
+  /**
+   * 同场盟友（DC-038）：开战时若盟友亦在当前房间且为 battle，则一并入场（去重、计入上限）。
+   */
+  battleAllies: z.array(id).default([]),
   /** 商店库存（kind=vendor 时生效）：物品 + 买卖价。 */
   goods: z
     .array(

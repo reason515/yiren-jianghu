@@ -532,12 +532,17 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
   if (combat) {
     app.post("/combat/start", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
-      const body = (req.body ?? {}) as { targetId?: unknown };
-      if (typeof body.targetId !== "string" || !body.targetId) {
+      const body = (req.body ?? {}) as { targetId?: unknown; targetIds?: unknown };
+      const targetIds: string[] = Array.isArray(body.targetIds)
+        ? body.targetIds.filter((id): id is string => typeof id === "string" && id.length > 0)
+        : typeof body.targetId === "string" && body.targetId
+          ? [body.targetId]
+          : [];
+      if (targetIds.length === 0) {
         return envelope(reply, 400, "invalid_request", "缺少交手目标");
       }
       try {
-        return await combat.start(accountId, body.targetId);
+        return await combat.start(accountId, targetIds);
       } catch (err) {
         if (err instanceof CombatError) {
           const status =
@@ -554,11 +559,16 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
 
     app.post("/combat/action", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
-      const body = (req.body ?? {}) as { action?: unknown; performId?: unknown };
+      const body = (req.body ?? {}) as {
+        action?: unknown;
+        performId?: unknown;
+        targetId?: unknown;
+      };
       try {
         return await combat.action(accountId, {
           action: typeof body.action === "string" ? body.action : "",
           performId: typeof body.performId === "string" ? body.performId : undefined,
+          targetId: typeof body.targetId === "string" ? body.targetId : undefined,
         });
       } catch (err) {
         if (err instanceof CombatError) {

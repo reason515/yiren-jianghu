@@ -58,7 +58,7 @@ V2 不推翻 V1 设计语言（墨色武侠、阅读优先、动作从世界长�
 | xkx `web/app/src/styles/app.css` | **chip 分类色体系**：npc 朱砂系 / item 蓝灰系 / action 玉色系，`border-color + 背景 tint（0.12–0.18）+ 文字提亮`，选中态加深 | 动作 chip 增加分类色 tint 与 `:active` 态（保留本项目矩形轻边框，不用 xkx 胶囊圆角——遵循已定组件语言"矩形、轻边框"） | 借鉴配色语义，不照搬圆角 |
 | xkx `app.css .sheet` | **Sheet 入场动画**：`transform: translateY(16px)→0` + `transition 0.2s`；固定高度 `min(620px, 78dvh)` | `Sheet.tsx` 增加上滑入场（transform/opacity 双过渡） | 动效基线 §5.5 落地项 |
 | xkx `AttributeSheet` / `CharacterSheet` | **attr-card 规范**：左彩条属性色 + 数值"当前→新值" + 分配状态条 | 角色面板四维卡强化：彩条加粗（2px→3px）、底色分层（ink-soft→ink-lift 交替）、数值分级字号 | 已登记于 sibling-borrowings §4 |
-| xkx `FloatingPerfBar` | 战斗中屏底悬浮动作条 | CombatView 动作区强化（主次分明），战斗中保持屏底可及 | 已登记（E14.5） |
+| xkx `FloatingPerfBar` | 战斗中屏底悬浮动作条 | CombatView `.combat-float-bar`（绝招/回气/逃跑，无普攻；DC-037） | 已落地 |
 | xkx `index.html` | Google Fonts CDN 加载 ZCOOL/Noto | **改为自包 woff2**（Google Fonts 国内不可达，xkx 方案不可照搬） | 环境适配，见 §5.2 |
 | sanguo `mobile-uiux-v1.md` §4 | **烽火行旅簿视觉系统**：深漆墨底 + 宣纸字 + 铜金次级强调 + 玉色可行动 + 朱砂危险；背景要有"材质感"而非纯黑 | 全局墨底 + 宣纸纹理层 + 场景氛围层（§5.1） | 只取材质分层思想，不用汉末器物元素（漆器/封泥/五铢钱）——本项目是武侠而非汉代题材 |
 | sanguo §3 | **六个主场景 / 底部导航收敛** | 导航从 8–9 项收敛为「高频 5 项 + 更多抽屉」（§4） | **IA 变更，实施前需用户确认**（待确认项 #1） |
@@ -163,9 +163,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 
 ## 6.4 战斗（CombatView）
 
-- 现状：动作按钮主次不分（手动战斗中 attack/perform/flee 同类样式）。
-- 改动：主攻击玉色实底、绝招金色高亮（`--gold`，对应 perform 事件）、撤退/逃跑 ghost 弱化；双方状态 Bar 气血低值警示强化；战报文本行距 1.85 保持。
-- 验收：战斗中"该点哪个"一目了然；绝招冷却可读。
+- 现状（改造前）：逐次点「普攻」、单敌、进行中 × 无效、叙事模板偏薄。
+- 改动（DC-037/038）：自动普攻节拍 + 悬浮动作条（绝招金/回气/逃跑 ghost）；多敌血条与「已伏」；战报武侠短句轮换 + perform-flash；进行中 × 收起、结束后「离去」。
+- 验收：开战即读战报；能一眼看出谁快倒下、该不该放绝招；收起后重开战局仍在。
 
 ## 6.5 挂机 / 回响
 

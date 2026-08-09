@@ -9,5 +9,5 @@
     { "dir": "west", "roomId": "village_general" },
     { "dir": "north", "roomId": "city_gate" }
   ],
-  "npcIds": ["wild_dog"]
+  "npcIds": ["wild_dog", "wild_dog_mate"]
 }

@@ -298,7 +298,7 @@ describe("F3 全链路旅程", () => {
     let combat = start.json() as { status: string; events: Array<{ type: string }> };
     expect(combat.status).toBe("ongoing");
 
-    for (let turn = 0; turn < 24 && combat.status === "ongoing"; turn += 1) {
+    for (let turn = 0; turn < 40 && combat.status === "ongoing"; turn += 1) {
       const action = await app.inject({
         method: "POST",
         url: "/combat/action",

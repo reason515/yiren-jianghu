@@ -51,7 +51,7 @@ export interface ApiClient {
   getQuests(): Promise<QuestOverviewResponse>;
   acceptQuest(questId: string): Promise<unknown>;
   reportQuest(questId: string): Promise<unknown>;
-  startCombat(targetId: string): Promise<CombatStatusResponse>;
+  startCombat(targetId: string | string[]): Promise<CombatStatusResponse>;
   combatAction(intent: CombatIntent): Promise<CombatStatusResponse>;
   getCombatStatus(): Promise<CombatStatusResponse | { active: false }>;
   getAfkStatus(): Promise<AfkStatusResponse>;
@@ -132,7 +132,10 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     getQuests: () => get("/quests"),
     acceptQuest: (questId) => post("/quests/accept", { questId }),
     reportQuest: (questId) => post("/quests/report", { questId }),
-    startCombat: (targetId) => post("/combat/start", { targetId }),
+    startCombat: (targetId) =>
+      post("/combat/start", {
+        targetIds: Array.isArray(targetId) ? targetId : [targetId],
+      }),
     combatAction: (intent) => post("/combat/action", intent),
     getCombatStatus: () => get("/combat/status"),
     getAfkStatus: () => get("/afk/status"),

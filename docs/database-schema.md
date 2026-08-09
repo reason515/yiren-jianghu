@@ -112,9 +112,9 @@ PK `(vendor_id, day)`，`sell_received bigint CHECK >= 0`。向商贩卖出物�
 
 ## 3.6 combat_sessions / combat_events（战斗与战报事件流）
 
-combat_sessions：id、character_id、kind（pve/pvp）、status（ongoing/finished/abandoned）、target_def_id、seed（确定性随机）、`state`（PVE 可重演战斗状态：双方战斗体、回合、随机调用计数、绝招冷却表）、result（win/lose/escape）、started_at、finished_at。
+combat_sessions：id、character_id、kind（pve/pvp）、status（ongoing/finished/abandoned）、target_def_id（主目标 NPC，数组首项）、seed（确定性随机）、`state`（PVE 可重演：`combatants` 含玩家 `a` 与敌方 `b0`…、`foeIds`、回合、随机调用计数、绝招冷却表；同场最多 5 敌，DC-038）、result（win/lose/escape）、started_at、finished_at。
 
-combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、created_at；索引 `(session_id, seq)`。战报 = 该会话事件流的有序回放。手动 PVE 每次仅由客户端提交角色意图，服务端续算角色与 NPC 的回合并持久化状态；胜利时按 NPC 内容包 `battleRewards` 与 `drops` 结算，并写入 `reward` / `quest_progress` 事件（DC-023、DC-024）。
+combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、created_at；索引 `(session_id, seq)`。战报 = 该会话事件流的有序回放。手动 PVE 每次仅由客户端提交角色意图（可含自动普攻节拍，DC-037），服务端续算玩家动作后全部存活敌方回合并持久化；胜利时按本场击败的各 NPC `battleRewards`/`drops` 累加结算，并写入 `reward` / `quest_progress` 事件（DC-023、DC-024、DC-038）。
 
 ## 3.7 afk_jobs（挂机作业）
 

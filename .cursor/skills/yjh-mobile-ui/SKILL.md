@@ -64,7 +64,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`（全屏两步：序章引导 + 立名与根基，组合 ink-* 原语 + 卷轴 + 宣纸控件，见 §4.13）/ `DepartureOverlay`（起程过场：建角后进入场景前，水墨远景 + 宣纸卡横排叙事，对齐内容包初始房间与主线）
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）/ `StatusBar`（主界面顶栏：细轨进度条 + 双色读数 + 银两简牍印记，sticky 吸顶，V2.13）
-- 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（人物簿四页签：状态/武学/行囊/档案，行内展开动作）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
+- 战斗/模板：`CombatView`（自动普攻 + 多敌血条 + 战报演出 + 悬浮动作条 + 结果离去）/ `CharacterSheet`（人物簿四页签：状态/武学/行囊/档案，行内展开动作）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
 - 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `PvpView`（论剑：赛季余日 + 对手列表 + 邀战）+ `PvpReplayView`（战报叙事回放，与 PVE 共用 `battleEventLine`）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
@@ -84,10 +84,10 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **新手引导方法**（sanguo first-session-ux 思想）：首启引导走"登录→建角→第一条任务→学武→首次战斗"闭环；**首战为教学展示**（必胜、弱敌、时长短，目标是第一次完整感受战斗文本与气血回响而非挑战）；引导提示用轻量组件（GuideTip 式 text + onDismiss），不打断主流程。
 - **执行登记**：借鉴条目在 E14 各子任务执行记录登记来源（沿用 pkuxkx 登记纪律精神）。
 
-## 4.3 PVE 战斗接线契约（E14.5）
+## 4.3 PVE 战斗接线契约（E14.5 / DC-037 / DC-038）
 
-- 开战用 `POST /combat/start { targetId }`；战斗内刷新/恢复用 `GET /combat/status`；每次玩家选择只发 `POST /combat/action` 的受控意图：`attack` / `recover` / `flee`，或 `{ action: "perform", performId }`。客户端不得计算绝招效果、消耗、冷却、胜负或掉落。
-- `CombatView` 以服务端返回的 `state` 和有序 `events` 为唯一事实来源：`perform` 的 `performId` 驱动绝招高亮，`reward` 驱动收益摘要，`quest_progress` 后刷新 QuestPanel。不要从按钮点击本地预扣资源或乐观判定胜负。
+- 开战用 `POST /combat/start { targetIds }`（兼容 `{ targetId }`）；服务端并入同房 `battleAllies`，同场最多 5 敌。战斗内刷新/恢复用 `GET /combat/status`；玩家意图：`attack`（客户端自动节拍）/ `recover` / `flee`，或 `{ action: "perform", performId, targetId? }`。客户端不得计算绝招效果、消耗、冷却、胜负或掉落。
+- `CombatView`：多敌血条 + 战报主阅读 + 屏底悬浮动作条（绝招/回气/逃跑，无普攻按钮）；`state`/`events` 为唯一事实来源。进行中 × = 收起面板（自动普攻仍推进）；结束后 × /「离去」关闭。
 - 战斗结束后先收束结果横幅，再在同一叙事回合展示收益/任务推进；逃跑和落败只给状态结果，不伪造奖励。断线恢复时优先请求 status，存在 ongoing 会话才重开战局浮层。
 - 绝招按钮的可用态是服务端最终裁决；客户端可基于最近 state 做弱提示，但 400 错误须以 toast 显示服务端武侠文案，并保留当前战局。
 

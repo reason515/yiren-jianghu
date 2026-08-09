@@ -143,7 +143,7 @@ describe("combatService", () => {
       completed: true,
     });
     const service = createCombatService(db, makeContent(), { recordProgress });
-    const started = await service.start("acc_1", "dog");
+    const started = await service.start("acc_1", ["dog"]);
     expect(started.events[0]).toMatchObject({ seq: 0, type: "battle_start" });
     expect(started.performs).toEqual([
       expect.objectContaining({ id: "swift_slash", name: "疾风斩", ready: true }),
@@ -180,7 +180,7 @@ describe("combatService", () => {
   it("绝招由服务端校验：无目标绝招与未收录绝招均被拒绝", async () => {
     const { db } = mockDb();
     const service = createCombatService(db, makeContent());
-    await service.start("acc_1", "dog");
+    await service.start("acc_1", ["dog"]);
     await expect(service.action("acc_1", { action: "perform" })).rejects.toMatchObject({
       code: "perform_required",
     });
@@ -192,7 +192,7 @@ describe("combatService", () => {
   it("绝招冷却随会话状态持久化，不能连回合重复施展", async () => {
     const { db } = mockDb();
     const service = createCombatService(db, makeContent(1));
-    await service.start("acc_1", "dog");
+    await service.start("acc_1", ["dog"]);
     const first = await service.action("acc_1", { action: "perform", performId: "swift_slash" });
     expect(first.status).toBe("ongoing");
     await expect(
@@ -203,9 +203,50 @@ describe("combatService", () => {
   it("非同场战斗目标与无进行中战斗被拒绝", async () => {
     const { db } = mockDb();
     const service = createCombatService(db, makeContent());
-    await expect(service.start("acc_1", "ghost")).rejects.toMatchObject({
+    await expect(service.start("acc_1", ["ghost"])).rejects.toMatchObject({
       code: "target_not_here",
     });
     await expect(service.action("acc_1", { action: "attack" })).rejects.toBeInstanceOf(CombatError);
+  });
+
+  it("同场多敌：开战并入盟友，清场累加收益", async () => {
+    const content = makeContent(999);
+    content.rooms[0]!.npcIds = ["dog", "pup"];
+    content.npcs = [
+      {
+        ...content.npcs[0]!,
+        battleAllies: ["pup"],
+      },
+      {
+        id: "pup",
+        name: "幼犬",
+        kind: "battle",
+        level: 1,
+        attrs: { str: 0, int: 0, con: -6, dex: 0 },
+        skills: [],
+        drops: [],
+        battleRewards: { exp: 2, potential: 1, silver: 1 },
+        battleAllies: [],
+      },
+    ] as ContentPack["npcs"];
+    const { db, character } = mockDb();
+    const recordProgress = vi.fn().mockResolvedValue(null);
+    const service = createCombatService(db, content, { recordProgress });
+    const started = await service.start("acc_1", ["dog"]);
+    expect(started.targetIds).toEqual(["dog", "pup"]);
+    expect(started.state.foeIds).toEqual(["b0", "b1"]);
+    const after = await service.action("acc_1", { action: "perform", performId: "swift_slash" });
+    // 一招 999 可能只清一只；继续打到结束
+    let current = after;
+    for (let i = 0; i < 6 && current.status === "ongoing"; i += 1) {
+      current = await service
+        .action("acc_1", { action: "perform", performId: "swift_slash" })
+        .catch(async () => service.action("acc_1", { action: "attack" }));
+    }
+    expect(current.status).toBe("finished");
+    expect(current.state.winner).toBe("a");
+    expect(character.exp).toBeGreaterThan(10);
+    expect(recordProgress).toHaveBeenCalledWith("acc_1", "kill", "dog");
+    expect(recordProgress).toHaveBeenCalledWith("acc_1", "kill", "pup");
   });
 });

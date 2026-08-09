@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
 import {
   advanceBattleRound,
+  aliveFoeIds,
   attackOnly,
   attackOrRecover,
   createBattleState,
@@ -9,6 +10,7 @@ import {
   dodgeRate,
   hitRate,
   parryRate,
+  pickAutoTarget,
   resolveAttack,
   runBattle,
   type BattleInput,
@@ -220,6 +222,7 @@ describe("advanceBattleRound（持久化逐回合）", () => {
     expect(first.events.map((event) => event.type)[0]).toBe("turn_start");
     expect(first.state.turn).toBe(1);
     expect(first.state.rngCalls).toBeGreaterThan(0);
+    expect(first.state.foeIds).toEqual(["b0"]);
 
     const second = advanceBattleRound(first.state, input);
     expect(second.state.turn).toBe(2);
@@ -247,6 +250,78 @@ describe("advanceBattleRound（持久化逐回合）", () => {
         opponentAction: { type: "attack" },
       }),
     ).toEqual({ state: ended.state, events: [] });
+  });
+
+  it("1vN：玩家一动后全部存活敌人各动；清场才胜", () => {
+    const initial = createBattleState(fighter("hero", { qi: 500, maxQi: 500 }), [
+      fighter("dog1", { qi: 5, maxQi: 5, stats: { ...fighter("x").stats, attack: 1 } }),
+      fighter("dog2", { qi: 5, maxQi: 5, stats: { ...fighter("x").stats, attack: 1 } }),
+    ]);
+    expect(initial.foeIds).toEqual(["b0", "b1"]);
+    const first = advanceBattleRound(initial, {
+      seed: 9,
+      params: DEFAULT_PARAMS,
+      playerAction: {
+        type: "perform",
+        effect: { kind: "damage", type: "physical", flat: 5 },
+        cost: {},
+      },
+      opponentAction: { type: "attack" },
+    });
+    // 只打倒一只，尚未清场
+    expect(first.state.winner).toBeUndefined();
+    expect(aliveFoeIds(first.state).length).toBe(1);
+    expect(first.events.some((e) => e.type === "foe_down")).toBe(true);
+    // 双方敌人若仍存活会各攻击一次 → 至少两条敌方出手或一条（若一只已倒）
+    const foeActs = first.events.filter((e) => e.actor === "b0" || e.actor === "b1");
+    expect(foeActs.length).toBeGreaterThanOrEqual(1);
+
+    const second = advanceBattleRound(first.state, {
+      seed: 9,
+      params: DEFAULT_PARAMS,
+      playerAction: {
+        type: "perform",
+        effect: { kind: "damage", type: "physical", flat: 5 },
+        cost: {},
+      },
+      opponentAction: { type: "attack" },
+    });
+    expect(second.state.winner).toBe("a");
+    expect(aliveFoeIds(second.state)).toEqual([]);
+  });
+
+  it("自动目标：并列气量时按槽位键字典序", () => {
+    const state = createBattleState(fighter("a"), [
+      fighter("x", { qi: 10, maxQi: 10 }),
+      fighter("y", { qi: 10, maxQi: 10 }),
+    ]);
+    expect(pickAutoTarget(state)).toBe("b0");
+    state.combatants.b1!.qi = 3;
+    expect(pickAutoTarget(state)).toBe("b1");
+  });
+
+  it("兼容旧会话 combatants.a/b 无 foeIds", () => {
+    const legacy = {
+      combatants: {
+        a: fighter("a"),
+        b: fighter("b", { qi: 1, maxQi: 1 }),
+      },
+      turn: 0,
+      rngCalls: 0,
+      nextSeq: 1,
+      performCooldowns: {},
+    };
+    const ended = advanceBattleRound(legacy, {
+      seed: 2,
+      params: DEFAULT_PARAMS,
+      playerAction: {
+        type: "perform",
+        effect: { kind: "damage", type: "physical", flat: 10 },
+        cost: {},
+      },
+    });
+    expect(ended.state.winner).toBe("a");
+    expect(ended.state.foeIds).toEqual(["b"]);
   });
 });
 

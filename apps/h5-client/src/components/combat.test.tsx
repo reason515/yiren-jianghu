@@ -22,6 +22,7 @@ const STATE: CombatState = {
   enemyName: "劫道匪徒",
   enemyQi: 80,
   enemyMaxQi: 120,
+  enemies: [{ id: "b0", name: "劫道匪徒", qi: 80, maxQi: 120, down: false }],
   playerQi: 180,
   playerMaxQi: 200,
   playerJing: 90,
@@ -39,25 +40,40 @@ const STATE: CombatState = {
   inCombat: true,
 };
 
-describe("CombatView（手动战斗）", () => {
-  it("渲染双方状态与战报，动作按钮发命令", () => {
+describe("CombatView（自动战 + 抓时机）", () => {
+  it("渲染双方状态与战报；无普攻，绝招/逃跑发意图", () => {
     const commands: Array<{ action: string; performId?: string }> = [];
     const { host } = render(<CombatView state={STATE} onAction={(c) => commands.push(c)} />);
     expect(host.textContent).toContain("劫道匪徒");
     expect(host.textContent).toContain("气 180/200");
+    expect(host.textContent).toContain("交手自行推进");
     expect(host.querySelector("[data-testid=combat-log]")?.textContent).toContain("追风破");
+    expect([...host.querySelectorAll(".chip")].some((c) => c.textContent === "普攻")).toBe(false);
 
     const chips = [
       ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-actions] .chip"),
     ];
-    act(() => chips.find((c) => c.textContent === "普攻")!.click());
     act(() => chips.find((c) => c.textContent === "疾风斩")!.click());
     act(() => chips.find((c) => c.textContent === "逃跑")!.click());
-    expect(commands).toEqual([
-      { action: "attack" },
-      { action: "perform", performId: "swift_slash" },
-      { action: "flee" },
-    ]);
+    expect(commands).toEqual([{ action: "perform", performId: "swift_slash" }, { action: "flee" }]);
+  });
+
+  it("多敌并列血条，倒下者标已伏", () => {
+    const { host } = render(
+      <CombatView
+        state={{
+          ...STATE,
+          enemyName: "野狗、瘦狗",
+          enemies: [
+            { id: "b0", name: "野狗", qi: 10, maxQi: 50, down: false },
+            { id: "b1", name: "瘦狗", qi: 0, maxQi: 40, down: true },
+          ],
+        }}
+        onAction={() => undefined}
+      />,
+    );
+    expect(host.querySelector("[data-testid=combat-foe-b0]")?.textContent).toContain("野狗");
+    expect(host.querySelector("[data-testid=combat-foe-b1]")?.textContent).toContain("已伏");
   });
 
   it("绝招未就绪（冷却/消耗）禁用；逃跑为危险动作", () => {
@@ -71,7 +87,8 @@ describe("CombatView（手动战斗）", () => {
     expect(chips.find((c) => c.textContent === "逃跑")!.classList.contains("danger")).toBe(true);
   });
 
-  it("结果横幅收束（wuxia 文案），不再显示动作按钮", () => {
+  it("结果横幅收束（wuxia 文案），离去可点", () => {
+    let dismissed = false;
     const { host } = render(
       <CombatView
         state={{
@@ -81,11 +98,16 @@ describe("CombatView（手动战斗）", () => {
           reward: { exp: 6, potential: 2, silver: 3, drops: [] },
         }}
         onAction={() => undefined}
+        onDismiss={() => {
+          dismissed = true;
+        }}
       />,
     );
     expect(host.querySelector("[data-testid=combat-result]")?.textContent).toContain("尘埃落定");
     expect(host.querySelector("[data-testid=combat-actions]")).toBeNull();
     expect(host.querySelector("[data-testid=combat-reward]")?.textContent).toContain("阅历 6");
+    act(() => host.querySelector<HTMLButtonElement>("[data-testid=combat-leave]")!.click());
+    expect(dismissed).toBe(true);
   });
 
   it("非战斗状态不渲染", () => {

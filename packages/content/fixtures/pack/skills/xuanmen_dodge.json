@@ -1,7 +1,9 @@
 {
   "id": "xuanmen_dodge",
   "name": "玄门身法",
+  "kind": "special",
   "category": "dodge",
-  "description": "步法含太极之意，进如游鱼，退如飘絮，于方寸之间腾挪。",
+  "enableSlots": ["dodge"],
+  "description": "步法如云，进退有度。",
   "maxLevel": 300
 }

@@ -27,12 +27,16 @@ function makeContent(performDamage = 999): ContentPack {
         level: 1,
         attrs: { str: 0, int: 0, con: performDamage > 10 ? -6 : 20, dex: 0 },
         skills: [],
+        equipment: [],
         drops: [{ itemId: "dry_food", chance: 1, min: 1, max: 1 }],
         battleRewards: { exp: 5, potential: 2, silver: 3 },
       },
     ],
     items: [{ id: "dry_food", name: "干粮", kind: "food", stackable: true }],
-    skills: [{ id: "basic_sword", name: "基础剑法", category: "weapon" }],
+    skills: [
+      { id: "basic_sword", name: "基础剑法", kind: "basic", category: "sword", enableSlots: [] },
+    ],
+    moves: [],
     performs: [
       {
         id: "swift_slash",
@@ -73,6 +77,9 @@ function mockDb() {
       }
       if (text.includes("FROM character_skills")) {
         return { rows: [{ skill_id: "basic_sword", level: 1 }] as unknown as T[] };
+      }
+      if (text.includes("SELECT perform_id FROM character_performs")) {
+        return { rows: [{ perform_id: "swift_slash" }] as unknown as T[] };
       }
       if (text.includes("SELECT id FROM combat_sessions")) {
         return {
@@ -224,6 +231,7 @@ describe("combatService", () => {
         level: 1,
         attrs: { str: 0, int: 0, con: -6, dex: 0 },
         skills: [],
+        equipment: [],
         drops: [],
         battleRewards: { exp: 2, potential: 1, silver: 1 },
         battleAllies: [],

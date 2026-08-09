@@ -46,7 +46,16 @@ const PACK = {
   rooms: [],
   npcs: [],
   items: [],
-  skills: [{ id: "basic_sword", name: "基础剑法", category: "weapon", maxLevel: 100 }],
+  skills: [
+    {
+      id: "basic_sword",
+      name: "基础剑法",
+      kind: "basic",
+      category: "sword",
+      enableSlots: [],
+      maxLevel: 100,
+    },
+  ],
   performs: [
     {
       id: "swift_slash",

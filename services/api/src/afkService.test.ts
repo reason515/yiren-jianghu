@@ -45,7 +45,16 @@ const PACK = {
   rooms: [],
   npcs: [{ id: "wild_dog", name: "野狗", kind: "battle", skills: [], battleRewards: {} }],
   items: [],
-  skills: [{ id: "basic_sword", name: "基础剑法", category: "weapon", maxLevel: 100 }],
+  skills: [
+    {
+      id: "basic_sword",
+      name: "基础剑法",
+      kind: "basic",
+      category: "sword",
+      enableSlots: [],
+      maxLevel: 100,
+    },
+  ],
   performs: [],
   quests: [
     {

@@ -164,6 +164,18 @@ export const recruitSchema = z.object({
   minSkills: z.array(z.object({ skillId: id, level: z.number().int().positive() })).default([]),
 });
 
+/** 基本技能槽（可 enable）；knowledge 仅展示/门槛，不可激发（DC-041）。 */
+export const enableSlotSchema = z.enum(["force", "dodge", "parry", "unarmed", "sword", "blade"]);
+export const skillCategorySchema = z.enum([
+  "force",
+  "dodge",
+  "parry",
+  "unarmed",
+  "sword",
+  "blade",
+  "knowledge",
+]);
+
 export const npcSchema = z.object({
   id,
   name: z.string().min(1),
@@ -175,6 +187,11 @@ export const npcSchema = z.object({
     .object({ str: z.number(), int: z.number(), con: z.number(), dex: z.number() })
     .optional(),
   skills: z.array(skillRefSchema).default([]),
+  /**
+   * NPC 战斗激发图（DC-041）：槽 → 特殊功 id。
+   * 缺省时服务端按「可激发该槽且等级最高的特殊功」自动挂。
+   */
+  skillEnable: z.record(enableSlotSchema, id).optional(),
   equipment: z.array(id).default([]),
   drops: z.array(dropSchema).default([]),
   /** battle NPC 胜负结算奖励；数值随内容包版本调整。 */
@@ -244,14 +261,39 @@ export const itemSchema = z.object({
     .optional(),
 });
 
-// ---------- 技能 ----------
+// ---------- 技能（DC-041：基本功 / 特殊功 + 激发槽） ----------
 export const skillSchema = z.object({
   id,
   name: z.string().min(1),
-  category: z.enum(["force", "weapon", "dodge", "parry", "knowledge"]),
+  /** basic = 槽本身；special = 可挂到 enableSlots。 */
+  kind: z.enum(["basic", "special"]),
+  /** 主分类（基本功即其槽；特殊功为展示主系）。 */
+  category: skillCategorySchema,
+  /**
+   * 特殊功可激发的基本槽（对齐 xkx valid_enable）。
+   * 基本功必须为空；knowledge 特殊功亦为空。
+   */
+  enableSlots: z.array(enableSlotSchema).default([]),
   description: z.string().default(""),
   maxLevel: z.number().int().positive().default(500),
   baseLevel: z.number().int().nonnegative().default(0),
+});
+
+// ---------- 招式（DC-041：挂在特殊功上，达级解锁，普攻自动抽） ----------
+export const moveSchema = z.object({
+  id,
+  skillId: id,
+  name: z.string().min(1),
+  /** 所属特殊功原级 ≥ 此值时解锁。 */
+  minLevel: z.number().int().nonnegative(),
+  /** 伤害百分比加成（对齐 xkx action.damage）。 */
+  damage: z.number().int().nonnegative().default(0),
+  /** 内功发力加成（对齐 xkx action.force）。 */
+  force: z.number().int().nonnegative().default(0),
+  /** 身法修正（可为负）。 */
+  dodge: z.number().int().default(0),
+  /** 战报/请教展示用招式描写（武侠文案）。 */
+  description: z.string().min(1),
 });
 
 // ---------- 绝招 ----------
@@ -266,6 +308,10 @@ export const performSchema = z.object({
   id,
   skillId: id,
   name: z.string().min(1),
+  /** 学会门槛：所属技能原级（DC-041）。 */
+  learnMinLevel: z.number().int().nonnegative().default(0),
+  /** 额外学会门槛（如需内功原级）。 */
+  learnRequires: z.array(z.object({ skillId: id, level: z.number().int().positive() })).default([]),
   cost: z.object({
     qi: z.number().int().nonnegative().default(0),
     jing: z.number().int().nonnegative().default(0),
@@ -367,6 +413,7 @@ export const contentPackSchema = z.object({
   npcs: z.array(npcSchema).default([]),
   items: z.array(itemSchema).default([]),
   skills: z.array(skillSchema).default([]),
+  moves: z.array(moveSchema).default([]),
   performs: z.array(performSchema).default([]),
   quests: z.array(questSchema).default([]),
   story: z.array(storySchema).default([]),
@@ -380,6 +427,7 @@ export type Room = z.infer<typeof roomSchema>;
 export type Npc = z.infer<typeof npcSchema>;
 export type Item = z.infer<typeof itemSchema>;
 export type Skill = z.infer<typeof skillSchema>;
+export type Move = z.infer<typeof moveSchema>;
 export type Perform = z.infer<typeof performSchema>;
 export type Quest = z.infer<typeof questSchema>;
 export type StoryNode = z.infer<typeof storySchema>;
@@ -387,3 +435,5 @@ export type Manifest = z.infer<typeof manifestSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;
 export type WorldMapNode = z.infer<typeof worldMapNodeSchema>;
 export type WorldMapRoad = z.infer<typeof worldMapRoadSchema>;
+export type EnableSlot = z.infer<typeof enableSlotSchema>;
+export type SkillCategory = z.infer<typeof skillCategorySchema>;

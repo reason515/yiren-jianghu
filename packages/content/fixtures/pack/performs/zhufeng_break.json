@@ -2,6 +2,8 @@
   "id": "zhufeng_break",
   "skillId": "xuanmen_sword",
   "name": "追风破",
+  "learnMinLevel": 60,
+  "learnRequires": [{ "skillId": "xuanmen_force", "level": 50 }],
   "cost": { "neili": 20 },
   "cooldownTurns": 8,
   "conditions": [{ "type": "enemy_qi_below_pct", "value": 30 }],

@@ -1,0 +1,8 @@
+{
+  "id": "basic_unarmed",
+  "name": "基本拳脚",
+  "kind": "basic",
+  "category": "unarmed",
+  "description": "拳打脚踢的根基，空手对敌时靠它撑场面。",
+  "maxLevel": 200
+}

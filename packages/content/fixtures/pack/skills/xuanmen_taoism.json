@@ -1,7 +1,9 @@
 {
   "id": "xuanmen_taoism",
   "name": "玄门道学",
+  "kind": "special",
   "category": "knowledge",
-  "description": "道经与剑理相参，明心见性，武学方能登堂入室。",
+  "enableSlots": [],
+  "description": "心性之学，不入激发，却是入门根基。",
   "maxLevel": 300
 }

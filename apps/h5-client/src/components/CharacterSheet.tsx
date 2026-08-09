@@ -46,9 +46,11 @@ const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
 
 const SKILL_CLASS: Record<SkillCategory, string> = {
   force: "skill-force",
-  weapon: "skill-weapon",
+  sword: "skill-sword",
+  blade: "skill-blade",
   dodge: "skill-dodge",
   parry: "skill-parry",
+  unarmed: "skill-unarmed",
   knowledge: "skill-knowledge",
 };
 

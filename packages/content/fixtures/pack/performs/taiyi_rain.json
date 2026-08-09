@@ -2,6 +2,8 @@
   "id": "taiyi_rain",
   "skillId": "xuanmen_sword",
   "name": "太乙剑雨",
+  "learnMinLevel": 40,
+  "learnRequires": [{ "skillId": "xuanmen_force", "level": 30 }],
   "cost": { "jing": 8, "neili": 12 },
   "cooldownTurns": 6,
   "conditions": [{ "type": "skill_level_at_least", "value": 40 }],

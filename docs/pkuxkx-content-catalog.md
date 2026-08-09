@@ -56,6 +56,9 @@
 | 门派拜师收徒 | `cmds/skill/apprentice.c`、门派 `attempt_apprentice` | 正式收徒写入师门；本门可请教 | 门派内容 | 机制借鉴 | 纳入（DC-039：落库 master/sect，首版无叛师） |
 | 战术模板 | xkx2001 `web/app/src/lib/ruleEngine.ts`（客户端触发器） | 结构化「条件 → 动作 → 冷却 → 优先级」，服务端校验执行 | 绝招契约 | 机制借鉴 | 纳入（服务端权威，不开放脚本） |
 | 数值参数表 | pkuxkx 各公式（对照列） | 经验/潜能/奖励/挂机收益曲线，移动端会话重设计 | — | 机制借鉴 | 纳入（重设计 + 集中参数） |
+| 武学激发（enable） | `cmds/skill/enable.c`、`include/combat/valid_enable.h` | 特殊功挂到基本功槎位（`valid_enable`），有效等级取基本/特殊组合；命令行改为人物簿 GUI | 战斗契约、技能制成长 | 机制借鉴 | 纳入（DC-041：`skill_enable` jsonb + `assertCanEnable`，无命令行） |
+| 招式解锁（action） | `kungfu/skill/<技能>/action.c` | 特殊功达 `min_level` 解锁招式，普攻按已解锁+已激发自动抽式（damage/force/dodge 修正） | 武学激发 | 机制借鉴 | 纳入（DC-041：`character_moves` + `pickMove`） |
+| 命中 skill_power 分段 | `include/combat/combatd.h`（skill_power A/(A+B) 分段） | 命中率不再线性，改用 skill_power 分段公式对照双方技能差 | 战斗契约 | 机制借鉴 | 纳入（DC-041：`skillPower.ts`；旧线性系数保留作伤害基底） |
 
 ## 3.2 玩法层
 

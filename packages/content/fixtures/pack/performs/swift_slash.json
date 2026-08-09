@@ -2,6 +2,7 @@
   "id": "swift_slash",
   "skillId": "basic_sword",
   "name": "疾风斩",
+  "learnMinLevel": 20,
   "cost": { "qi": 0, "jing": 5, "neili": 10 },
   "cooldownTurns": 3,
   "conditions": [{ "type": "self_neili_above_pct", "value": 30 }],

@@ -1,7 +1,9 @@
 {
   "id": "xuanmen_sword",
   "name": "玄门剑法",
-  "category": "weapon",
-  "description": "玄门剑宗入门剑法，看似朴拙，实则暗藏机变。",
+  "kind": "special",
+  "category": "sword",
+  "enableSlots": ["sword", "parry"],
+  "description": "玄门看家剑法，可攻可守，剑意清正。",
   "maxLevel": 300
 }

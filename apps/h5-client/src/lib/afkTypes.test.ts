@@ -8,7 +8,9 @@ describe("挂机数据适配", () => {
         {
           id: "basic_sword",
           name: "基础剑法",
-          category: "weapon",
+          category: "sword",
+          kind: "basic",
+          enableSlots: [],
           level: 8,
           maxLevel: 100,
           practicePoints: 0,

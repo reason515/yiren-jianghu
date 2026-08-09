@@ -1,0 +1,9 @@
+{
+  "id": "xuanmen_unarmed",
+  "name": "玄门掌法",
+  "kind": "special",
+  "category": "unarmed",
+  "enableSlots": ["unarmed"],
+  "description": "掌力中正平和，近身时可卸可打。",
+  "maxLevel": 300
+}

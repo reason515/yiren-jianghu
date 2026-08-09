@@ -74,9 +74,11 @@
 
   /* 武功门类 */
   --skill-force: #8fbfa6;
-  --skill-weapon: #d09080;
+  --skill-sword: #d09080;
+  --skill-blade: #c46a5a;
   --skill-dodge: #7a9eb0;
   --skill-parry: #a09080;
+  --skill-unarmed: #b08a5c;
   --skill-knowledge: #c4a35a;
   --skill-misc: #b9ad98;
 

@@ -26,7 +26,9 @@ describe("toCharacterView", () => {
         {
           id: "xuanmen_sword",
           name: "玄门剑法",
-          category: "weapon",
+          category: "sword",
+          kind: "special",
+          enableSlots: ["sword"],
           level: 0,
           maxLevel: 300,
           practicePoints: 0,

@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_xian",
+  "skillId": "xuanmen_sword",
+  "name": "仙人指路",
+  "minLevel": 80,
+  "damage": 70,
+  "force": 280,
+  "dodge": 5,
+  "description": "左实右虚，剑花一团，逼向咽喉前三分。指尖未到，寒意先至。"
+}

@@ -14,33 +14,29 @@
   },
   "level": 60,
   "skills": [
-    {
-      "skillId": "xuanmen_force",
-      "level": 120
-    },
-    {
-      "skillId": "xuanmen_sword",
-      "level": 100
-    },
-    {
-      "skillId": "xuanmen_taoism",
-      "level": 100
-    }
+    { "skillId": "basic_force", "level": 100 },
+    { "skillId": "basic_sword", "level": 100 },
+    { "skillId": "xuanmen_force", "level": 120 },
+    { "skillId": "xuanmen_sword", "level": 100 },
+    { "skillId": "xuanmen_unarmed", "level": 90 },
+    { "skillId": "xuanmen_dodge", "level": 90 },
+    { "skillId": "xuanmen_parry", "level": 90 },
+    { "skillId": "xuanmen_taoism", "level": 100 }
   ],
+  "skillEnable": {
+    "force": "xuanmen_force",
+    "sword": "xuanmen_sword",
+    "parry": "xuanmen_sword",
+    "dodge": "xuanmen_dodge",
+    "unarmed": "xuanmen_unarmed"
+  },
   "teaches": [
-    {
-      "skillId": "xuanmen_force",
-      "maxLevel": 100
-    },
-    {
-      "skillId": "xuanmen_sword",
-      "maxLevel": 80
-    },
-    {
-      "skillId": "xuanmen_taoism",
-      "maxLevel": 80
-    }
+    { "skillId": "xuanmen_force", "maxLevel": 100 },
+    { "skillId": "xuanmen_sword", "maxLevel": 80 },
+    { "skillId": "xuanmen_unarmed", "maxLevel": 70 },
+    { "skillId": "xuanmen_taoism", "maxLevel": 80 }
   ],
+  "equipment": ["cubu_yi", "iron_sword"],
   "dialogue": [
     "我玄门剑宗，入门先正心。门外之人，且去跟凌霄把根基打牢。",
     "内功是本，剑法是用。根基不牢，剑再快也是空中楼阁。",

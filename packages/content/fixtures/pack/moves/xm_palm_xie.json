@@ -1,0 +1,10 @@
+{
+  "id": "xm_palm_xie",
+  "skillId": "xuanmen_unarmed",
+  "name": "卸力推",
+  "minLevel": 20,
+  "damage": 28,
+  "force": 130,
+  "dodge": 20,
+  "description": "掌缘一抹，来力偏了方向。对手脚步一乱，你已贴身跟上一掌。"
+}

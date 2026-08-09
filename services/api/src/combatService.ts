@@ -6,15 +6,19 @@ import {
   MAX_COMBAT_FOES,
   normalizeBattleState,
   performToBattleAction,
+  pickMove,
   PLAYER_ACTOR,
   rollDrops,
   type BattleAction,
   type BattleContext,
   type BattleEvent,
   type BattleState,
+  type CombatStats,
+  type MoveInfo,
   type PerformCooldownTracker,
+  type SkillEnableMap,
 } from "@yjh/game-core";
-import type { ContentPack, Npc, Perform } from "@yjh/content";
+import type { ContentPack, Move, Npc, Perform } from "@yjh/content";
 import type { Json } from "@yjh/shared";
 import { buildCharacterCombatant, buildNpcCombatant } from "./combatantFactory.js";
 import type { Db } from "./db.js";
@@ -30,6 +34,23 @@ export class CombatError extends Error {
   }
 }
 
+/** 全零占位战力（无战斗体时的兜底视图，避免可选链散落各处）。 */
+export const EMPTY_COMBAT_STATS: CombatStats = {
+  attack: 0,
+  defense: 0,
+  dodge: 0,
+  parry: 0,
+  weaponLevel: 0,
+  forceLevel: 0,
+  attackSkillLevel: 0,
+  dodgeSkillLevel: 0,
+  parrySkillLevel: 0,
+  combatExp: 0,
+  str: 0,
+  dex: 0,
+  con: 0,
+};
+
 export interface CombatStatusView {
   id: string;
   targetId: string;
@@ -39,7 +60,7 @@ export interface CombatStatusView {
   seed: number;
   state: BattleState;
   events: BattleEvent[];
-  /** 当前角色已习得绝招的服务端可用态；客户端仅作展示提示，action 仍会复核。 */
+  /** 当前角色已学绝招（character_performs）的服务端可用态；客户端仅作展示提示，action 仍会复核。 */
   performs: Array<{ id: string; name: string; ready: boolean }>;
 }
 
@@ -67,6 +88,7 @@ type CharacterRow = {
   jing: number;
   neili: number;
   room_path: string;
+  skill_enable: SkillEnableMap | string | null;
 };
 
 type SessionRow = {
@@ -77,12 +99,36 @@ type SessionRow = {
   state: string | BattleState;
 };
 
+/** 角色本场战斗所需的技能/激发/招式上下文（DC-041）；start/action/status 共用一份加载逻辑。 */
+interface CombatContext {
+  skillLevels: Map<string, number>;
+  enableMap: SkillEnableMap;
+  hasWeapon: boolean;
+  learnedMoveIds: Set<string>;
+  learnedPerformIds: Set<string>;
+}
+
 function decodeState(state: string | BattleState): BattleState {
   const parsed = (typeof state === "string" ? JSON.parse(state) : state) as BattleState;
   return normalizeBattleState({
     ...parsed,
     performCooldowns: parsed.performCooldowns ?? {},
   });
+}
+
+function decodeEnableMap(raw: SkillEnableMap | string | null): SkillEnableMap {
+  if (!raw) return {};
+  return typeof raw === "string" ? (JSON.parse(raw) as SkillEnableMap) : raw;
+}
+
+function toMoveInfo(move: Move): MoveInfo {
+  return {
+    id: move.id,
+    name: move.name,
+    damage: move.damage,
+    force: move.force,
+    dodge: move.dodge,
+  };
 }
 
 function actionError(check: ReturnType<typeof canUsePerform>): CombatError {
@@ -146,7 +192,7 @@ export function createCombatService(
 ): CombatService {
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
-      "SELECT id, name, attrs, exp, qi, jing, neili, room_path FROM characters WHERE account_id = $1 AND status = 'active'",
+      "SELECT id, name, attrs, exp, qi, jing, neili, room_path, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     const row = rows.rows[0];
@@ -162,10 +208,47 @@ export function createCombatService(
     return new Map(rows.rows.map((row) => [row.skill_id, row.level]));
   };
 
-  const toView = async (
-    row: SessionRow,
-    skillLevels: Map<string, number>,
-  ): Promise<CombatStatusView> => {
+  const hasEquippedWeapon = async (characterId: string): Promise<boolean> => {
+    const rows = await db.query<{ id: string }>(
+      "SELECT id FROM character_items WHERE character_id = $1 AND slot = 'weapon' LIMIT 1",
+      [characterId],
+    );
+    return rows.rows.length > 0;
+  };
+
+  const learnedMoveIdsOf = async (characterId: string): Promise<Set<string>> => {
+    const rows = await db.query<{ move_id: string }>(
+      "SELECT move_id FROM character_moves WHERE character_id = $1",
+      [characterId],
+    );
+    return new Set(rows.rows.map((row) => row.move_id));
+  };
+
+  const learnedPerformIdsOf = async (characterId: string): Promise<Set<string>> => {
+    const rows = await db.query<{ perform_id: string }>(
+      "SELECT perform_id FROM character_performs WHERE character_id = $1",
+      [characterId],
+    );
+    return new Set(rows.rows.map((row) => row.perform_id));
+  };
+
+  const contextOf = async (character: CharacterRow): Promise<CombatContext> => {
+    const [skillLevels, hasWeapon, learnedMoveIds, learnedPerformIds] = await Promise.all([
+      skillsOf(character.id),
+      hasEquippedWeapon(character.id),
+      learnedMoveIdsOf(character.id),
+      learnedPerformIdsOf(character.id),
+    ]);
+    return {
+      skillLevels,
+      enableMap: decodeEnableMap(character.skill_enable),
+      hasWeapon,
+      learnedMoveIds,
+      learnedPerformIds,
+    };
+  };
+
+  const toView = async (row: SessionRow, ctx: CombatContext): Promise<CombatStatusView> => {
     const battleState = decodeState(row.state);
     const turn = battleState.turn + 1;
     const battle: BattleContext = {
@@ -180,7 +263,7 @@ export function createCombatService(
             maxJing: 0,
             neili: 0,
             maxNeili: 0,
-            stats: { attack: 0, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+            stats: EMPTY_COMBAT_STATS,
           };
         }
         return {
@@ -201,20 +284,19 @@ export function createCombatService(
       },
       markUsed() {},
     };
+    // DC-041：绝招须已学（character_performs），不再以技能等级 > 0 作为可用依据。
     const performs = content.performs
-      .filter((perform) => (skillLevels.get(perform.skillId) ?? 0) > 0)
-      .map((perform) => ({
-        id: perform.id,
-        name: perform.name,
-        ready:
-          performToBattleAction(perform) !== null &&
-          canUsePerform(
-            perform,
-            { battle, actor: "a", skillLevel: skillLevels.get(perform.skillId)! },
-            turn,
-            cooldown,
-          ).ok,
-      }));
+      .filter((perform) => ctx.learnedPerformIds.has(perform.id))
+      .map((perform) => {
+        const skillLevel = ctx.skillLevels.get(perform.skillId) ?? 0;
+        return {
+          id: perform.id,
+          name: perform.name,
+          ready:
+            performToBattleAction(perform, skillLevel) !== null &&
+            canUsePerform(perform, { battle, actor: "a", skillLevel }, turn, cooldown).ok,
+        };
+      });
     const eventRows = await db.query<{
       seq: number;
       type: string;
@@ -248,13 +330,45 @@ export function createCombatService(
     };
   };
 
+  /** 玩家「攻击」时按 DC-041 从已解锁 + 已激发的招式中抽一式；无可用招式落回纯基础攻击。 */
+  const resolveAttackAction = (
+    state: BattleState,
+    ctx: CombatContext,
+    seed: number,
+  ): { action: BattleAction; rngCallsUsed: number } => {
+    const enabledSpecialIds = Object.values(ctx.enableMap).filter((id): id is string =>
+      Boolean(id),
+    );
+    const base = createSeededRng(seed);
+    for (let i = 0; i < state.rngCalls; i += 1) base();
+    let rngCallsUsed = 0;
+    const countingRng = (): number => {
+      rngCallsUsed += 1;
+      return base();
+    };
+    const move = pickMove({
+      moves: content.moves,
+      learnedMoveIds: ctx.learnedMoveIds,
+      enabledSpecialIds,
+      rng: countingRng,
+    });
+    return {
+      action: { type: "attack", ...(move ? { move: toMoveInfo(move) } : {}) },
+      rngCallsUsed,
+    };
+  };
+
   const resolvePlayerAction = (
     input: CombatActionInput,
     state: BattleState,
-    skillLevels: Map<string, number>,
-  ): { action: BattleAction; usedPerformId?: string } => {
-    if (input.action === "attack" || input.action === "recover" || input.action === "flee") {
-      return { action: { type: input.action } };
+    ctx: CombatContext,
+    seed: number,
+  ): { action: BattleAction; usedPerformId?: string; rngCallsUsed: number } => {
+    if (input.action === "attack") {
+      return resolveAttackAction(state, ctx, seed);
+    }
+    if (input.action === "recover" || input.action === "flee") {
+      return { action: { type: input.action }, rngCallsUsed: 0 };
     }
     if (input.action !== "perform") {
       throw new CombatError("invalid_action", "这一式尚未练成");
@@ -263,8 +377,11 @@ export function createCombatService(
 
     const perform = content.performs.find((entry) => entry.id === input.performId);
     if (!perform) throw new CombatError("perform_not_found", "此式未在江湖谱中");
-    const skillLevel = skillLevels.get(perform.skillId) ?? 0;
-    if (skillLevel <= 0) throw new CombatError("perform_not_learned", "此式尚未参悟");
+    // DC-041：绝招须已在 character_performs 学会，技能等级仅用于效果放大。
+    if (!ctx.learnedPerformIds.has(perform.id)) {
+      throw new CombatError("perform_not_learned", "此式尚未参悟");
+    }
+    const skillLevel = ctx.skillLevels.get(perform.skillId) ?? 0;
 
     const turn = state.turn + 1;
     const battle: BattleContext = {
@@ -279,7 +396,7 @@ export function createCombatService(
             maxJing: 0,
             neili: 0,
             maxNeili: 0,
-            stats: { attack: 0, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+            stats: EMPTY_COMBAT_STATS,
           };
         }
         return {
@@ -302,9 +419,9 @@ export function createCombatService(
     };
     const check = canUsePerform(perform, { battle, actor: "a", skillLevel }, turn, cooldown);
     if (!check.ok) throw actionError(check);
-    const action = performToBattleAction(perform);
+    const action = performToBattleAction(perform, skillLevel);
     if (!action) throw new CombatError("perform_unsupported", "此式变化未成，暂难施展");
-    return { action, usedPerformId: perform.id };
+    return { action, usedPerformId: perform.id, rngCallsUsed: 0 };
   };
 
   return {
@@ -325,9 +442,16 @@ export function createCombatService(
       if (existing.rows[0]) throw new CombatError("combat_in_progress", "胜负未分，不可另起争端");
 
       const encounter = resolveEncounterTargets(content, room.npcIds, targetIds);
-      const skillLevels = await skillsOf(character.id);
+      const ctx = await contextOf(character);
       const state = createBattleState(
-        buildCharacterCombatant(content, character, skillLevels, "current"),
+        buildCharacterCombatant(
+          content,
+          character,
+          ctx.skillLevels,
+          "current",
+          ctx.enableMap,
+          ctx.hasWeapon,
+        ),
         encounter.map((npc) => buildNpcCombatant(content, npc)),
       );
       state.foeNpcIds = Object.fromEntries(
@@ -352,7 +476,7 @@ export function createCombatService(
           }),
         ],
       );
-      return toView(session, skillLevels);
+      return toView(session, ctx);
     },
 
     async action(accountId, input) {
@@ -370,13 +494,14 @@ export function createCombatService(
       const session = rows.rows[0];
       if (!session) throw new CombatError("combat_not_found", "眼前并无未了的争斗");
       const state = decodeState(session.state);
-      const skillLevels = await skillsOf(character.id);
-      const { action: playerAction, usedPerformId } = resolvePlayerAction(
-        input,
-        state,
-        skillLevels,
-      );
-      const round = advanceBattleRound(state, {
+      const ctx = await contextOf(character);
+      const {
+        action: playerAction,
+        usedPerformId,
+        rngCallsUsed,
+      } = resolvePlayerAction(input, state, ctx, session.seed);
+      const stateForRound: BattleState = { ...state, rngCalls: state.rngCalls + rngCallsUsed };
+      const round = advanceBattleRound(stateForRound, {
         seed: session.seed,
         params: content.params,
         playerAction,
@@ -489,7 +614,7 @@ export function createCombatService(
       }
       return toView(
         { ...session, status: finished ? "finished" : "ongoing", state: nextState },
-        skillLevels,
+        ctx,
       );
     },
 
@@ -501,7 +626,7 @@ export function createCombatService(
         [character.id],
       );
       const row = rows.rows[0];
-      return row ? toView(row, await skillsOf(character.id)) : null;
+      return row ? toView(row, await contextOf(character)) : null;
     },
   };
 }

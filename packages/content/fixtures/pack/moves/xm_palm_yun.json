@@ -1,0 +1,10 @@
+{
+  "id": "xm_palm_yun",
+  "skillId": "xuanmen_unarmed",
+  "name": "云手连环",
+  "minLevel": 40,
+  "damage": 40,
+  "force": 160,
+  "dodge": 15,
+  "description": "双手如云，连绵不绝。一掌未尽，二掌已至，把人逼进角落。"
+}

@@ -2,6 +2,7 @@
   "id": "qiankun_gather",
   "skillId": "xuanmen_force",
   "name": "乾坤聚气",
+  "learnMinLevel": 30,
   "cost": { "neili": 15 },
   "cooldownTurns": 5,
   "conditions": [{ "type": "self_qi_below_pct", "value": 60 }],

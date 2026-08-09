@@ -9,32 +9,30 @@
   },
   "level": 45,
   "skills": [
-    {
-      "skillId": "xuanmen_sword",
-      "level": 90
-    },
-    {
-      "skillId": "xuanmen_dodge",
-      "level": 80
-    },
-    {
-      "skillId": "xuanmen_parry",
-      "level": 80
-    }
+    { "skillId": "basic_sword", "level": 80 },
+    { "skillId": "basic_force", "level": 70 },
+    { "skillId": "basic_dodge", "level": 70 },
+    { "skillId": "basic_parry", "level": 70 },
+    { "skillId": "xuanmen_sword", "level": 90 },
+    { "skillId": "xuanmen_dodge", "level": 80 },
+    { "skillId": "xuanmen_parry", "level": 80 },
+    { "skillId": "xuanmen_force", "level": 50 }
   ],
+  "skillEnable": {
+    "sword": "xuanmen_sword",
+    "parry": "xuanmen_sword",
+    "dodge": "xuanmen_dodge",
+    "force": "xuanmen_force"
+  },
   "teaches": [
-    {
-      "skillId": "xuanmen_sword",
-      "maxLevel": 70
-    },
-    {
-      "skillId": "xuanmen_dodge",
-      "maxLevel": 60
-    },
-    {
-      "skillId": "xuanmen_parry",
-      "maxLevel": 60
-    }
+    { "skillId": "basic_force", "maxLevel": 50 },
+    { "skillId": "basic_sword", "maxLevel": 60 },
+    { "skillId": "basic_dodge", "maxLevel": 50 },
+    { "skillId": "basic_parry", "maxLevel": 50 },
+    { "skillId": "xuanmen_sword", "maxLevel": 70 },
+    { "skillId": "xuanmen_dodge", "maxLevel": 60 },
+    { "skillId": "xuanmen_parry", "maxLevel": 60 },
+    { "skillId": "xuanmen_force", "maxLevel": 40 }
   ],
   "equipment": ["cubu_yi", "iron_sword"],
   "dialogue": [

@@ -24,6 +24,7 @@ import { ForumError, createForumService } from "./forumService.js";
 import { createSessionService } from "./sessionService.js";
 import { CombatError, createCombatService } from "./combatService.js";
 import type { ContentPack } from "@yjh/content";
+import type { EnableSlot } from "@yjh/game-core";
 import type { Db } from "./db.js";
 
 /**
@@ -410,6 +411,13 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       return list;
     });
 
+    app.get("/skills/mastery", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const mastery = await skills.getMastery(accountId);
+      if (!mastery) return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+      return mastery;
+    });
+
     app.get("/skills/teach-offer", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
       const npcId = (req.query as { npcId?: unknown }).npcId;
@@ -456,6 +464,66 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         throw err;
       }
     });
+
+    app.post("/skills/enable", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { slot?: unknown; skillId?: unknown };
+      if (typeof body.slot !== "string" || !body.slot) {
+        return envelope(reply, 400, "invalid_request", "缺少激发槎位");
+      }
+      if (body.skillId !== null && typeof body.skillId !== "string") {
+        return envelope(reply, 400, "invalid_request", "武功 id 须为字符串或 null");
+      }
+      try {
+        return await skills.enable(accountId, {
+          slot: body.slot as EnableSlot,
+          skillId: body.skillId,
+        });
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "skill_not_found" ? 404 : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post(
+      "/skills/learn-perform",
+      { preHandler: requireAuth(verifyToken) },
+      async (req, reply) => {
+        const accountId = authContexts.get(req)?.accountId ?? "";
+        const body = (req.body ?? {}) as { performId?: unknown; npcId?: unknown };
+        if (typeof body.performId !== "string" || !body.performId) {
+          return envelope(reply, 400, "invalid_request", "缺少绝招 id");
+        }
+        if (typeof body.npcId !== "string" || !body.npcId) {
+          return envelope(reply, 400, "invalid_request", "缺少师父 id");
+        }
+        try {
+          return await skills.learnPerform(accountId, {
+            performId: body.performId,
+            npcId: body.npcId,
+          });
+        } catch (err) {
+          if (err instanceof SkillsError)
+            return envelope(
+              reply,
+              err.code === "no_character" ||
+                err.code === "perform_not_found" ||
+                err.code === "npc_not_found"
+                ? 404
+                : 409,
+              err.code,
+              err.message,
+            );
+          throw err;
+        }
+      },
+    );
 
     app.post("/skills/apprentice", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";

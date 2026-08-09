@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_dian",
+  "skillId": "xuanmen_sword",
+  "name": "蜻蜓点水",
+  "minLevel": 0,
+  "damage": 25,
+  "force": 120,
+  "dodge": 20,
+  "description": "剑尖轻颤，一点即收。没有声势，只有腕上一抖——对手胸前衣褶已裂一线。"
+}

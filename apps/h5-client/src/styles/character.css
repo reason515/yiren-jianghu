@@ -288,14 +288,20 @@
 .char-skill-name.skill-force {
   color: var(--skill-force);
 }
-.char-skill-name.skill-weapon {
-  color: var(--skill-weapon);
+.char-skill-name.skill-sword {
+  color: var(--skill-sword);
+}
+.char-skill-name.skill-blade {
+  color: var(--skill-blade);
 }
 .char-skill-name.skill-dodge {
   color: var(--skill-dodge);
 }
 .char-skill-name.skill-parry {
   color: var(--skill-parry);
+}
+.char-skill-name.skill-unarmed {
+  color: var(--skill-unarmed);
 }
 .char-skill-name.skill-knowledge {
   color: var(--skill-knowledge);

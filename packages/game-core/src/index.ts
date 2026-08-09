@@ -16,6 +16,7 @@ export * from "./enable.js";
 export * from "./movePick.js";
 export * from "./combat.js";
 export * from "./combatant.js";
+export * from "./combatantFactory.js";
 export * from "./perform.js";
 export * from "./growth.js";
 export * from "./tactic.js";

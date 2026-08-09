@@ -26,6 +26,7 @@ type CharacterRow = {
   neili?: number;
   food?: number;
   water?: number;
+  skill_enable?: Record<string, string> | null;
 };
 
 /** 内存 mock DB：具体的角色详情 SELECT 必须在单角色检查分支之前。 */
@@ -74,6 +75,7 @@ function mockDb() {
               master_npc_id: null,
               sect_id: null,
               generation: null,
+              skill_enable: character.skill_enable ?? null,
             })) as unknown as T[],
         };
       }
@@ -166,9 +168,18 @@ const CONTENT = {
     },
   },
   skills: [
-    { id: "xuanmen_force", name: "玄门心法", category: "force" },
-    { id: "basic_sword", name: "基础剑法", category: "weapon" },
+    {
+      id: "xuanmen_force",
+      name: "玄门心法",
+      kind: "special",
+      category: "force",
+      enableSlots: ["force"],
+    },
+    { id: "basic_sword", name: "基础剑法", kind: "basic", category: "sword", enableSlots: [] },
   ],
+  moves: [],
+  performs: [],
+  npcs: [],
 } as unknown as ContentPack;
 
 describe("validateAttrs", () => {

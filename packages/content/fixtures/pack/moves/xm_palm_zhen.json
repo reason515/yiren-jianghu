@@ -1,0 +1,10 @@
+{
+  "id": "xm_palm_zhen",
+  "skillId": "xuanmen_unarmed",
+  "name": "震字诀",
+  "minLevel": 60,
+  "damage": 55,
+  "force": 220,
+  "dodge": 5,
+  "description": "掌心贴胸，真气一震。对方眼前一黑，脚下根力散了半寸。"
+}

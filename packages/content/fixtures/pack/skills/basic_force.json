@@ -1,0 +1,8 @@
+{
+  "id": "basic_force",
+  "name": "基本内功",
+  "kind": "basic",
+  "category": "force",
+  "description": "调息吐纳的入门功夫，立身之本。",
+  "maxLevel": 200
+}

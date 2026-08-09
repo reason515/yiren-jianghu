@@ -4,21 +4,22 @@
   "kind": "tuition_teacher",
   "level": 30,
   "skills": [
-    {
-      "skillId": "basic_sword",
-      "level": 60
-    }
+    { "skillId": "basic_sword", "level": 60 },
+    { "skillId": "basic_unarmed", "level": 50 },
+    { "skillId": "basic_force", "level": 40 },
+    { "skillId": "basic_dodge", "level": 40 },
+    { "skillId": "basic_parry", "level": 45 }
   ],
   "teaches": [
-    {
-      "skillId": "basic_sword",
-      "maxLevel": 40,
-      "tuitionSilver": 2
-    }
+    { "skillId": "basic_sword", "maxLevel": 40, "tuitionSilver": 2 },
+    { "skillId": "basic_unarmed", "maxLevel": 40, "tuitionSilver": 2 },
+    { "skillId": "basic_force", "maxLevel": 30, "tuitionSilver": 2 },
+    { "skillId": "basic_dodge", "maxLevel": 30, "tuitionSilver": 2 },
+    { "skillId": "basic_parry", "maxLevel": 30, "tuitionSilver": 2 }
   ],
   "equipment": ["cubu_yi", "iron_sword"],
   "dialogue": [
-    "老夫姓王，村里人唤一声王师傅。想学剑，缴点学费，我便教你把这路基础剑法练扎实。",
+    "老夫姓王，村里人唤一声王师傅。想学剑、学拳、学个站桩吐纳，缴点学费，我便教你把根基打扎实。",
     "练武之人，根基最要紧。心浮气躁，学什么都白搭。",
     "剑是死的，人是活的。招式要练进骨头里，临敌才能想都不想就用出来。"
   ],

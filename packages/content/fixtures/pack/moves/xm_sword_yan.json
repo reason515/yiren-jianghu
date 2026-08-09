@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_yan",
+  "skillId": "xuanmen_sword",
+  "name": "燕子掠波",
+  "minLevel": 20,
+  "damage": 40,
+  "force": 170,
+  "dodge": 15,
+  "description": "剑自上而下划出一个大弧，平势横来。风过之处，水纹未起，人已矮了半寸。"
+}

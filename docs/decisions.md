@@ -59,6 +59,7 @@
 | DC-038 | 2026-08 | PVE 真·同场 1vN | 一场会话可含多名敌人（上限 5）；回合序为玩家一动后全部存活敌人各一动；默认集火气最低者；胜=清场、败=主角气尽；收益与任务按击败名单累加。NPC 可选 `battleAllies` 同房拉入。PVP/行侠本轮仍 1v1 | 群战手感与内容扩展；引擎/协议一次到位，挂机与论剑边界不变 | combat.ts、protocol.md §5、database-schema §3.6、content schema | ✅ |
 | DC-039 | 2026-08 | 武功双轨学艺（收费请教 / 门派拜师） | ①村里教头（`tuition_teacher`）当面按次缴银请教，不拜师不入门；②门派掌门（`apprentice_master`）正式拜师落库 `master_npc_id`/`sect_id`，本门请教免学费。请教一律同房、读 NPC `teaches`；每次耗精+潜能，收费轨另扣银（默认 `learnTuitionBase=2`，可被 `teaches.tuitionSilver` 覆盖）；0 级首学精耗 ×2。废除人物簿远程万能请教；建角赠 10 两起步银 | 对齐 xkx 武馆教头交银学武与门派收徒分流；无指令 GUI 用按次扣银；打通首学闭环 | numeric-baseline §2.1、protocol.md、database-schema §3.2、content schema、skillsService、h5 TeachSheet | ✅ |
 | DC-040 | 2026-08 | 门派拜师辈分阶梯（拜谁学谁） | 门派请教仅向当前师父（`master_npc_id`）；NPC/角色有 `generation`（越小越尊，弟子=师父+1）。入门须拜 `recruit.acceptOutsiders` 的师兄（大师兄）；同门可改拜更高辈师父，门槛为 `recruit.minSkills`（首版用武功等级，门派贡献可后续加）。跨门派仍禁止 | 对齐 xkx `is_apprentice_of` + generation；先入门后升师 | protocol.md §8、database-schema、content schema、skillsService、EntitySheet | ✅ |
+| DC-041 | 2026-08 | xkx 式武学全套（激发/招式/绝招学会/skill_power） | ①基本功+特殊功；人物簿 GUI 激发（有效等级=基本/2+特殊）；②招式挂特殊功达级解锁，普攻自动抽；③绝招须学会后手动（挂机模板仅已学）；④命中改 skill_power 分段 A/(A+B)；⑤可查看师父武功。无 prepare/完整 exert。升级可清空库 | 对齐 xkx enable/action/perform/combatd；GUI 无命令行 | numeric-baseline §2.3、protocol.md、database-schema、content schema、game-core、skillsService、CombatView/CharacterSheet | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -71,6 +72,8 @@
 | DC-010 手动战斗全手动按钮 | DC-037 | 改为自动普攻 + 手动绝招/回气/逃跑；挂机模板自动不变 |
 | DC-035「请教归属本轮不动」中远程请教路径 | DC-039 | 请教改为当面请教（收费/拜师双轨）；人物簿不再远程 learn |
 | DC-039 门派「同门任一师父可请教」 | DC-040 | 改为仅向当前师父请教；先大师兄后掌门 |
+| DC-035「不借 enable」与门类最高级进战斗 | DC-041 | GUI 激发 + 有效等级；命中改 skill_power；招式/绝招学会制 |
+| DC-020 战斗线性命中/伤害简化口径（对照列）中「生效列仍为线性」 | DC-041 | 生效列改为 skill_power + 招式系数；params 旧线性系数保留作伤害基底 |
 
 # 4. 一致性检查
 

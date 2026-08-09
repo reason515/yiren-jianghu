@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_yue",
+  "skillId": "xuanmen_sword",
+  "name": "三环套月",
+  "minLevel": 60,
+  "damage": 60,
+  "force": 240,
+  "dodge": 10,
+  "description": "剑划三圈，圈圈相套，锋芒却从圈心直出。绵里藏针——等第三圈合拢，人已在剑下。"
+}

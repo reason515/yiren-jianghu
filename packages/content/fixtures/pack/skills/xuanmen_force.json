@@ -1,7 +1,9 @@
 {
   "id": "xuanmen_force",
-  "name": "玄门内功",
+  "name": "玄门心法",
+  "kind": "special",
   "category": "force",
-  "description": "玄门剑宗镇派内功，根基稳固，绵长不绝。",
+  "enableSlots": ["force"],
+  "description": "玄门吐纳之要，清浊自化，真气绵长。",
   "maxLevel": 300
 }

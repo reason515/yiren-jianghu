@@ -80,7 +80,16 @@ function basePack(): ContentPack {
       },
     ],
     items: [{ id: "iron_sword", name: "铁剑", kind: "weapon", stats: { attack: 5 } }],
-    skills: [{ id: "basic_sword", name: "基础剑法", category: "weapon" }],
+    skills: [
+      {
+        id: "basic_sword",
+        name: "基本剑法",
+        kind: "basic",
+        category: "sword",
+        enableSlots: [],
+      },
+    ],
+    moves: [],
     performs: [],
     quests: [
       {

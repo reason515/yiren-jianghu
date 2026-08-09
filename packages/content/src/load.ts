@@ -13,7 +13,16 @@ import { contentPackSchema, type ContentPack } from "./schema.js";
  * 支持 .json 与 .yaml/.yml 文件。
  */
 
-const COLLECTIONS = ["rooms", "npcs", "items", "skills", "performs", "quests", "story"] as const;
+const COLLECTIONS = [
+  "rooms",
+  "npcs",
+  "items",
+  "skills",
+  "moves",
+  "performs",
+  "quests",
+  "story",
+] as const;
 
 async function readJson(file: string): Promise<unknown> {
   const raw = await readFile(file, "utf8");
@@ -63,6 +72,7 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
     npcs: loaded.npcs,
     items: loaded.items,
     skills: loaded.skills,
+    moves: loaded.moves,
     performs: loaded.performs,
     quests: loaded.quests,
     story: loaded.story,

@@ -510,6 +510,7 @@ describe("sceneService.act", () => {
         "身上穿着粗布衣。",
         "腰间悬着铁剑。",
       ],
+      skills: [],
     });
     await scene.move("acc_1", "east");
     await expect(
@@ -524,6 +525,7 @@ describe("sceneService.act", () => {
         "身上穿着粗布衣。",
       ].join("\n"),
       lines: ["胖乎乎，笑呵呵，柜台摆满油盐酱醋。", "气息寻常，看不出深浅。", "身上穿着粗布衣。"],
+      skills: [],
     });
     await expect(scene.act("acc_1", { type: "observe", targetId: "dry_food" })).resolves.toEqual({
       kind: "observe",

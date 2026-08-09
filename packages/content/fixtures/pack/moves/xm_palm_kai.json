@@ -1,0 +1,10 @@
+{
+  "id": "xm_palm_kai",
+  "skillId": "xuanmen_unarmed",
+  "name": "开山掌",
+  "minLevel": 0,
+  "damage": 20,
+  "force": 100,
+  "dodge": 10,
+  "description": "一掌拍出，正大光明。没有虚晃，只有沉甸甸的力道砸在胸口。"
+}

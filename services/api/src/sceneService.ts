@@ -87,6 +87,10 @@ export interface ObserveView {
   description: string;
   /** V2.16：观察多行（外形 / 武功 / 衣着），客户端串行入见闻。 */
   lines?: string[];
+  /** DC-041：结构化武功列表（供人物簿/EntitySheet 展示，取代只读等级数组）。 */
+  skills?: Array<{ id: string; name: string; level: number }>;
+  /** 教习类 NPC 的可教清单摘要（DC-039，只读展示；报价另走 /skills/teach-offer）。 */
+  teaches?: Array<{ skillId: string; skillName: string; maxLevel: number }>;
 }
 
 export type SceneActionInput =
@@ -519,12 +523,28 @@ export function createSceneService(
             skillLevels: npc.skills.map((s) => s.level),
             gear,
           });
+          // DC-041：结构化武功列表（供 EntitySheet 展示），与教习摘要（不含报价，报价走 /skills/teach-offer）。
+          const skillsView = npc.skills.flatMap((ref) => {
+            const def = content.skills.get(ref.skillId);
+            return def ? [{ id: ref.skillId, name: def.name, level: ref.level }] : [];
+          });
+          const teachesView =
+            npc.kind === "tuition_teacher" || npc.kind === "apprentice_master"
+              ? npc.teaches.flatMap((teach) => {
+                  const def = content.skills.get(teach.skillId);
+                  return def
+                    ? [{ skillId: teach.skillId, skillName: def.name, maxLevel: teach.maxLevel }]
+                    : [];
+                })
+              : undefined;
           return {
             kind: "observe",
             targetType: "npc",
             name: npc.name,
             description: lines.join("\n"),
             lines,
+            skills: skillsView,
+            ...(teachesView ? { teaches: teachesView } : {}),
           };
         }
         if (room.itemIds.includes(input.targetId)) {

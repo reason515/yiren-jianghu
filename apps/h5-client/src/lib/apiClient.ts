@@ -1,6 +1,13 @@
 import { ApiError } from "./authApi.js";
 import type { CombatIntent, CombatStatusResponse } from "./combatTypes.js";
-import type { CharacterProfile, InvItemView, SkillRowView } from "./characterTypes.js";
+import type {
+  CharacterProfile,
+  EnableSlot,
+  InvItemView,
+  MasteryView,
+  SkillEnableMap,
+  SkillRowView,
+} from "./characterTypes.js";
 import type { QuestOverviewResponse } from "./questTypes.js";
 import type { AfkJobData, AfkReportData, AfkStartConfig, AfkStatusResponse } from "./afkTypes.js";
 import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
@@ -63,6 +70,18 @@ export interface ApiClient {
     skillId: string,
     count?: number,
   ): Promise<{ jingSpent: number; leveled: boolean; iterations: number }>;
+  /** 人物簿 GUI 激发（DC-041）：槎 → 特殊功 id；null 清空该槎。 */
+  enableSkill(
+    slot: EnableSlot,
+    skillId: string | null,
+  ): Promise<{ skillEnable: SkillEnableMap; effective: Partial<Record<EnableSlot, number>> }>;
+  /** 学会绝招（DC-041）：须同房师父/教头当面传授。 */
+  learnPerform(
+    performId: string,
+    npcId: string,
+  ): Promise<{ performId: string; performName: string; teacher: { id: string; name: string } }>;
+  /** 武学页一站式视图：技能 + 激发 + 有效等级 + 已学招式/绝招（DC-041）。 */
+  getMastery(): Promise<MasteryView>;
   getQuests(): Promise<QuestOverviewResponse>;
   acceptQuest(questId: string): Promise<unknown>;
   reportQuest(questId: string): Promise<unknown>;
@@ -146,6 +165,9 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     apprentice: (npcId) => post("/skills/apprentice", { npcId }),
     practiceSkill: (skillId, count = 1) => post("/skills/practice", { skillId, count }),
     studySkill: (skillId, count = 1) => post("/skills/study", { skillId, count }),
+    enableSkill: (slot, skillId) => post("/skills/enable", { slot, skillId }),
+    learnPerform: (performId, npcId) => post("/skills/learn-perform", { performId, npcId }),
+    getMastery: () => get("/skills/mastery"),
     getQuests: () => get("/quests"),
     acceptQuest: (questId) => post("/quests/accept", { questId }),
     reportQuest: (questId) => post("/quests/report", { questId }),

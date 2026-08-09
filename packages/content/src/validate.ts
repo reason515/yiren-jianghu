@@ -42,9 +42,42 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
   issues.push(...dup(pack.npcs, "npcs"));
   issues.push(...dup(pack.items, "items"));
   issues.push(...dup(pack.skills, "skills"));
+  issues.push(...dup(pack.moves ?? [], "moves"));
   issues.push(...dup(pack.performs, "performs"));
   issues.push(...dup(pack.quests, "quests"));
   issues.push(...dup(pack.story, "story"));
+
+  // 技能（DC-041）
+  for (const skill of pack.skills) {
+    if (skill.kind === "basic") {
+      if (skill.enableSlots.length > 0) {
+        issues.push({
+          code: "basic_skill_enable_slots",
+          severity: "error",
+          message: `基本功 ${skill.id} 不得配置 enableSlots`,
+        });
+      }
+      if (skill.category === "knowledge") {
+        issues.push({
+          code: "basic_knowledge",
+          severity: "error",
+          message: `knowledge 不可作基本功：${skill.id}`,
+        });
+      }
+    } else if (skill.category === "knowledge" && skill.enableSlots.length > 0) {
+      issues.push({
+        code: "knowledge_enable_slots",
+        severity: "error",
+        message: `道学类特殊功 ${skill.id} 不可激发`,
+      });
+    } else if (skill.category !== "knowledge" && skill.enableSlots.length === 0) {
+      issues.push({
+        code: "special_no_enable_slots",
+        severity: "warning",
+        message: `特殊功 ${skill.id} 未配置 enableSlots（无法激发进战斗）`,
+      });
+    }
+  }
 
   // 房间
   const oneWayReported = new Set<string>();
@@ -146,6 +179,26 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         });
       }
     }
+    if (npc.skillEnable) {
+      for (const [slot, skillId] of Object.entries(npc.skillEnable)) {
+        if (!skillIds.has(skillId)) {
+          issues.push({
+            code: "broken_skill_enable",
+            severity: "error",
+            message: `NPC ${npc.id} skillEnable.${slot} 引用不存在技能 ${skillId}`,
+          });
+          continue;
+        }
+        const sk = pack.skills.find((s) => s.id === skillId);
+        if (sk && !sk.enableSlots.includes(slot as (typeof sk.enableSlots)[number])) {
+          issues.push({
+            code: "skill_enable_slot_mismatch",
+            severity: "error",
+            message: `NPC ${npc.id} skillEnable.${slot} 指向的 ${skillId} 不能激发该槽`,
+          });
+        }
+      }
+    }
     for (const good of npc.goods) {
       if (!itemIds.has(good.itemId)) {
         issues.push({
@@ -202,6 +255,26 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
     }
   }
 
+  // 招式（DC-041）
+  for (const move of pack.moves ?? []) {
+    if (!skillIds.has(move.skillId)) {
+      issues.push({
+        code: "broken_move_skill",
+        severity: "error",
+        message: `招式 ${move.id} 引用不存在技能 ${move.skillId}`,
+      });
+    } else {
+      const sk = pack.skills.find((s) => s.id === move.skillId);
+      if (sk?.kind !== "special") {
+        issues.push({
+          code: "move_not_special",
+          severity: "error",
+          message: `招式 ${move.id} 须挂在特殊功上（当前 ${move.skillId}）`,
+        });
+      }
+    }
+  }
+
   // 绝招
   for (const perform of pack.performs) {
     if (!skillIds.has(perform.skillId)) {
@@ -210,6 +283,15 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         severity: "error",
         message: `绝招 ${perform.id} 引用不存在技能 ${perform.skillId}`,
       });
+    }
+    for (const req of perform.learnRequires ?? []) {
+      if (!skillIds.has(req.skillId)) {
+        issues.push({
+          code: "broken_perform_learn_req",
+          severity: "error",
+          message: `绝招 ${perform.id} learnRequires 引用不存在技能 ${req.skillId}`,
+        });
+      }
     }
     if (perform.effect.type === "buff") {
       issues.push({

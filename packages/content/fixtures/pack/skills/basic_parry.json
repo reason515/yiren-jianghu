@@ -1,0 +1,8 @@
+{
+  "id": "basic_parry",
+  "name": "基本招架",
+  "kind": "basic",
+  "category": "parry",
+  "description": "格挡化解的根基。",
+  "maxLevel": 200
+}

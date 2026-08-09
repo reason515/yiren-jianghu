@@ -43,9 +43,10 @@
 
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
-| 命中基础 | `calc_damage` 内 hit 判定（`include/combat/damage.h`） | `baseHitRate=0.7` + 差值×0.01 | 首版基调偏中；封测按手感调 |
-| 躲闪/招架 | `do_attack_result`（0命中/1躲闪/2招架） | `baseDodgeRate=0.1`、`baseParryRate=0.15` | 招架略高于躲闪，保留招架减伤 70% |
-| 伤害 | 武器+武功+内功−防御（damage.h calc_damage） | `weaponDmgPerLevel=0.5`、`forceDmgPerLevel=0.4`、`defenseReduce=0.5`、浮动 ±10% | 线性简化；封测调曲线 |
+| 有效等级 | `query_skill`：基本/2+特殊（`feature/skill.c`） | 同式；GUI 激发（DC-041） | 对齐 xkx；无人物 level 阶梯加成 |
+| 命中 | `skill_power` + `random(ap+dp)<dp` 躲 / 再架（`probable.h`/`combatd.c`） | 同式分段立方+exp（无 apply 因子） | DC-041 起生效；旧 baseHitRate 仅残留 params |
+| 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架减伤 70% | 对齐 combatd；去掉独立「未命中」态 |
+| 伤害 | 武器+action%+内功−防御 | 基底 `weaponDmgPerLevel=0.5` 等 + 招式 damage/force% + 浮动 ±10% | 招式进伤害；绝招按原级缩放 |
 | 逃跑 | flee 判定 | `fleeBaseChance=0.7` | PvE 逃生友好 |
 
 ## 2.4 挂机（afk）

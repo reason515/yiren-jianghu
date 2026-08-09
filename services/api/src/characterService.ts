@@ -3,6 +3,8 @@ import {
   effectivePotential,
   maxFoodCapacity,
   maxWaterCapacity,
+  resolveEnableMap,
+  type SkillEnableMap,
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
@@ -51,6 +53,12 @@ export interface CharacterSummary {
   generation: number | null;
   /** 师父名号（内容包解析；无则 null）。 */
   masterName: string | null;
+  /** 激发图（DC-041：槎 → 特殊功 id；缺省槎已按 autoEnableMap 补齐）。 */
+  skillEnable: SkillEnableMap;
+  /** 已学招式（DC-041，character_moves）。 */
+  moves: Array<{ id: string; name: string; skillId: string }>;
+  /** 已学绝招（DC-041，character_performs）。 */
+  performs: Array<{ id: string; name: string; skillId: string }>;
 }
 
 export const ATTR_MIN = 10;
@@ -151,8 +159,9 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         master_npc_id: string | null;
         sect_id: string | null;
         generation: number | null;
+        skill_enable: SkillEnableMap | string | null;
       }>(
-        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id, generation FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id, generation, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0];
@@ -183,13 +192,18 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         food: 0,
         water: 0,
       };
+      // DC-041：激发图与已学招式/绝招（缺省槎按 autoEnableMap 补齐）；无内容包时全空兜底。
+      let skillEnable: SkillEnableMap = {};
+      let moves: CharacterSummary["moves"] = [];
+      let performs: CharacterSummary["performs"] = [];
       if (content) {
         const skillsById = new Map(content.skills.map((skill) => [skill.id, skill]));
-        const forceRows = await db.query<{ skill_id: string; level: number }>(
+        const skillRows = await db.query<{ skill_id: string; level: number }>(
           "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
           [row.id],
         );
-        const forceLevels = forceRows.rows
+        const skillLevels = new Map(skillRows.rows.map((skill) => [skill.skill_id, skill.level]));
+        const forceLevels = skillRows.rows
           .filter((skill) => skillsById.get(skill.skill_id)?.category === "force")
           .map((skill) => skill.level);
         const forceLevel = forceLevels.length > 0 ? Math.max(...forceLevels) : 0;
@@ -208,6 +222,31 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           food: maxFoodCapacity(content.params, attrs.con.cur),
           water: maxWaterCapacity(content.params, attrs.dex.cur),
         };
+        const storedEnable =
+          typeof row.skill_enable === "string"
+            ? (JSON.parse(row.skill_enable) as SkillEnableMap)
+            : (row.skill_enable ?? {});
+        skillEnable = resolveEnableMap(content, skillLevels, storedEnable);
+        const [moveRows, performRows] = await Promise.all([
+          db.query<{ move_id: string }>(
+            "SELECT move_id FROM character_moves WHERE character_id = $1",
+            [row.id],
+          ),
+          db.query<{ perform_id: string }>(
+            "SELECT perform_id FROM character_performs WHERE character_id = $1",
+            [row.id],
+          ),
+        ]);
+        const movesById = new Map(content.moves.map((move) => [move.id, move]));
+        const performsById = new Map(content.performs.map((perform) => [perform.id, perform]));
+        moves = moveRows.rows.flatMap((r) => {
+          const def = movesById.get(r.move_id);
+          return def ? [{ id: def.id, name: def.name, skillId: def.skillId }] : [];
+        });
+        performs = performRows.rows.flatMap((r) => {
+          const def = performsById.get(r.perform_id);
+          return def ? [{ id: def.id, name: def.name, skillId: def.skillId }] : [];
+        });
       }
       return {
         id: row.id,
@@ -227,6 +266,9 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         exp: Number(row.exp),
         effectivePotential: effectivePotential(Number(row.potential), Number(row.learned_points)),
         silver: Number(row.silver),
+        skillEnable,
+        moves,
+        performs,
         masterNpcId: row.master_npc_id,
         sectId: row.sect_id,
         generation: row.generation == null ? null : Number(row.generation),

@@ -1,7 +1,9 @@
 {
   "id": "xuanmen_parry",
   "name": "玄门剑屏",
+  "kind": "special",
   "category": "parry",
-  "description": "以剑作屏，画圆卸力，四两拨千斤的招架之法。",
+  "enableSlots": ["parry"],
+  "description": "以剑为屏，格挡化解。",
   "maxLevel": 300
 }

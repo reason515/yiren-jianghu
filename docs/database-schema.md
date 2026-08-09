@@ -67,6 +67,7 @@ erDiagram
 | master_npc_id | text | NULL | 当前师父 NPC id（DC-039/040）；收费请教不写；请教须匹配此人 |
 | sect_id | text | NULL | 门派 id（如 `xuanmen`）；与师父同落库 |
 | generation | integer | NULL | 门派辈分（DC-040）；越小越尊；拜师后 = 师父 generation + 1 |
+| skill_enable | jsonb | NULL | 激发图（DC-041）：`{ [slot]: skillId \| null }`；槎位缺省按 `autoEnableMap` 补齐，显式 `null` 表示强制回退基本功 |
 | current_content_version | text | NOT NULL | 该角色加载的内容包版本 |
 | discarded_at | timestamptz | NULL | 放弃时间（30 天冻结计时） |
 
@@ -82,6 +83,15 @@ erDiagram
 | practice_points | integer | NOT NULL DEFAULT 0，演练/参悟积累的进度点 |
 
 PK `(character_id, skill_id)`。
+
+### 3.3.1 character_moves / character_performs（已解锁招式 / 已学绝招，DC-041）
+
+| 表 | 列 | 说明 |
+|---|---|---|
+| character_moves | character_id, move_id, learned_at | 特殊功达 `move.minLevel` 时自动写入（`learn`/`practice`/`study` 升级后统一走 `unlockMoves`）；普攻 `pickMove` 只从已解锁 + 已激发的招式中抽取 |
+| character_performs | character_id, perform_id, learned_at | 须同房师父/教头当面传授（`POST /skills/learn-perform`），校验 `learnMinLevel` + `learnRequires`；战斗中 `resolvePlayerAction` 只认此表已学绝招 |
+
+两表 PK 均为 `(character_id, *_id)`，FK→characters CASCADE。
 
 ## 3.4 character_items（物品实例）
 

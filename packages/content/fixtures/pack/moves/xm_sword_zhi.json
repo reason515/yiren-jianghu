@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_zhi",
+  "skillId": "xuanmen_sword",
+  "name": "指南针",
+  "minLevel": 0,
+  "damage": 30,
+  "force": 140,
+  "dodge": 15,
+  "description": "左手剑诀，右手直刺。中宫一条线，快得像从时间里剪去一截。"
+}

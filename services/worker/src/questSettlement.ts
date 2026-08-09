@@ -1,11 +1,13 @@
 import {
-  buildCombatant,
+  buildCharacterCombatant,
+  buildNpcCombatant,
   createSeededRng,
   createTacticSelector,
   rollDrops,
   runBattle,
   tacticTemplateSchema,
   type Combatant,
+  type SkillEnableMap,
   type TacticTemplate,
 } from "@yjh/game-core";
 import type { ContentPack, Npc } from "@yjh/content";
@@ -43,24 +45,6 @@ export function seedForQuestJob(
   return hash >>> 0;
 }
 
-function combatantForNpc(content: ContentPack, npc: Npc): Combatant {
-  const categories = new Map(content.skills.map((skill) => [skill.id, skill.category]));
-  const attrs = npc.attrs ?? {
-    str: 10 + (npc.level ?? 1),
-    int: 10,
-    con: 10 + (npc.level ?? 1),
-    dex: 10 + (npc.level ?? 1),
-  };
-  return buildCombatant(
-    content.params,
-    { id: `npc:${npc.id}`, name: npc.name, attrs },
-    npc.skills.flatMap((skill) => {
-      const category = categories.get(skill.skillId);
-      return category ? [{ category, level: skill.level }] : [];
-    }),
-  );
-}
-
 /** 一次行侠战斗：角色资源与战术均来自作业启动时的服务端快照。 */
 export function settleQuestBattle(input: {
   content: ContentPack;
@@ -68,6 +52,10 @@ export function settleQuestBattle(input: {
   killIndex: number;
   character: QuestCombatCharacter;
   skillLevels: Map<string, number>;
+  /** 激发图（DC-041）；缺省按 autoEnableMap 补齐。 */
+  skillEnable?: SkillEnableMap | null;
+  /** 是否持有兵器；缺省 true（多数玩家已装备兵器，与旧行为兼容）。 */
+  hasWeapon?: boolean;
   templateSnapshot: unknown;
   target: Npc;
 }): QuestBattleResult {
@@ -76,24 +64,29 @@ export function settleQuestBattle(input: {
     return {
       won: false,
       reason: "invalid_template",
-      combatant: buildCombatant(input.content.params, input.character, [], "current"),
+      combatant: buildCharacterCombatant(
+        input.content,
+        input.character,
+        input.skillLevels,
+        "current",
+        input.skillEnable,
+        input.hasWeapon ?? true,
+      ),
       turns: 0,
       drops: [],
     };
   }
-  const categories = new Map(input.content.skills.map((skill) => [skill.id, skill.category]));
-  const player = buildCombatant(
-    input.content.params,
+  const player = buildCharacterCombatant(
+    input.content,
     input.character,
-    [...input.skillLevels].flatMap(([skillId, level]) => {
-      const category = categories.get(skillId);
-      return category ? [{ category, level }] : [];
-    }),
+    input.skillLevels,
     "current",
+    input.skillEnable,
+    input.hasWeapon ?? true,
   );
   const battle = runBattle({
     a: player,
-    b: combatantForNpc(input.content, input.target),
+    b: buildNpcCombatant(input.content, input.target),
     selectors: {
       a: createTacticSelector(template.data as TacticTemplate, {
         performs: new Map(input.content.performs.map((perform) => [perform.id, perform])),

@@ -99,18 +99,23 @@ const PACK = {
     {
       id: "basic_sword",
       name: "基础剑法",
-      category: "weapon",
+      kind: "basic",
+      category: "sword",
+      enableSlots: [],
       maxLevel: 100,
       description: "入门剑法",
     },
     {
       id: "trivial_art",
       name: "粗浅功夫",
+      kind: "basic",
       category: "parry",
+      enableSlots: [],
       maxLevel: 1,
       description: "一招半式",
     },
   ],
+  moves: [],
   performs: [],
   quests: [],
   story: [],
@@ -131,6 +136,7 @@ interface CharState {
   sect_id: string | null;
   generation: number | null;
   attrs: { str: number; int: number; con: number; dex: number };
+  skill_enable?: Record<string, string> | null;
 }
 
 interface SkillState {
@@ -177,9 +183,8 @@ function mockDb() {
         };
       }
       if (
-        text.includes(
-          "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, generation, attrs FROM characters",
-        )
+        text.includes("SELECT id, exp, potential, learned_points") &&
+        text.includes("FROM characters")
       ) {
         return {
           rows: state.characters
@@ -197,6 +202,7 @@ function mockDb() {
               sect_id: c.sect_id,
               generation: c.generation,
               attrs: c.attrs,
+              skill_enable: c.skill_enable ?? null,
             })) as unknown as T[],
         };
       }
@@ -257,6 +263,11 @@ function mockDb() {
         if (c) c.jing -= Number(params[0]);
         return { rows: [] as unknown as T[] };
       }
+      if (text.includes("UPDATE characters SET skill_enable")) {
+        const c = state.characters.find((ch) => ch.id === params[1]);
+        if (c) c.skill_enable = JSON.parse(String(params[0]));
+        return { rows: [] as unknown as T[] };
+      }
       return { rows: [] as unknown as T[] };
     },
   };
@@ -280,6 +291,7 @@ function boot(over: Partial<CharState> = {}) {
     sect_id: null,
     generation: null,
     attrs: { str: 20, int: 30, con: 20, dex: 10 },
+    skill_enable: null,
     ...over,
   });
   const skills = createSkillsService(db, PACK);

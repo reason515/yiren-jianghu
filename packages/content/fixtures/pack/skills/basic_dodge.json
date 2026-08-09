@@ -1,0 +1,8 @@
+{
+  "id": "basic_dodge",
+  "name": "基本轻功",
+  "kind": "basic",
+  "category": "dodge",
+  "description": "闪避挪步的根基。",
+  "maxLevel": 200
+}

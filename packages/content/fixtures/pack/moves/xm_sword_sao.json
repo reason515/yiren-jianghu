@@ -1,0 +1,10 @@
+{
+  "id": "xm_sword_sao",
+  "skillId": "xuanmen_sword",
+  "name": "左右拦扫",
+  "minLevel": 40,
+  "damage": 50,
+  "force": 190,
+  "dodge": 10,
+  "description": "一右一左，剑锋平指，两扫连成一线。对方退无可退，只听见剑鸣贴着耳廓掠过。"
+}

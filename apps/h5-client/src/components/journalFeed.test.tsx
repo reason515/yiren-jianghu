@@ -77,4 +77,27 @@ describe("JournalFeed（见闻动态流）", () => {
     expect(host.querySelector("[data-typing='1']")).toBeNull();
     expect(settled).toContain(4);
   });
+
+  it("展开/收起不重播打字机，仅全文切换", () => {
+    vi.useFakeTimers();
+    const settled: number[] = [];
+    const withNew = [...entries, { id: 4, text: "村口守卫：站住，你从哪里来？" }];
+    const onSettled = (id: number): void => {
+      settled.push(id);
+    };
+    const { host, root } = render(<JournalFeed entries={entries} onEntrySettled={onSettled} />);
+    act(() => root.render(<JournalFeed entries={withNew} onEntrySettled={onSettled} />));
+    expect(host.querySelector("[data-typing='1']")).not.toBeNull();
+
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="journal-feed"]')!.click());
+    expect(host.querySelector(".journal-panel")).not.toBeNull();
+    expect(host.querySelector("[data-typing='1']")).toBeNull();
+    expect(host.textContent).toContain("你从哪里来？");
+    expect(settled).toContain(4);
+
+    act(() => host.querySelector<HTMLButtonElement>(".journal-expand-close")!.click());
+    expect(host.querySelector('[data-testid="journal-feed"]')).not.toBeNull();
+    expect(host.querySelector("[data-typing='1']")).toBeNull();
+    expect(host.textContent).toContain("你从哪里来？");
+  });
 });

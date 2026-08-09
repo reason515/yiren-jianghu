@@ -197,13 +197,21 @@ export function JournalFeed({ entries, onClose, onEntrySettled }: JournalFeedPro
   const baseline = baselineRef.current;
   const latestFew = entries.slice(-SUMMARY_COUNT);
   const panelEntries = entries.slice(-100);
-  /** 数据层保证同时最多一条新行；本组件只打末行。 */
-  const typingTargetId = lastId > baseline ? lastId : null;
+  /**
+   * 仅对新触发且尚未 settled 的末行打字。
+   * 展开/收起会卸载重挂行组件——已 settled 的绝不再 active，避免打字机重播。
+   */
+  const typingTargetId = lastId > baseline && !settledRef.current.has(lastId) ? lastId : null;
 
   const reportSettled = (id: number): void => {
     if (settledRef.current.has(id)) return;
     settledRef.current.add(id);
     onSettledRef.current?.(id);
+  };
+
+  /** 展开/收起：打断打字并全文展示，不重播打字机。 */
+  const settleTypingForToggle = (): void => {
+    if (lastId > baseline) reportSettled(lastId);
   };
 
   // 首屏历史 / 无需打字的末行：立刻 settled，避免上层队列卡死
@@ -238,12 +246,14 @@ export function JournalFeed({ entries, onClose, onEntrySettled }: JournalFeedPro
   }, [expanded, lastId, panelEntries.length, latestFew.length]);
 
   const openLog = (): void => {
+    settleTypingForToggle();
     followingRef.current = true;
     setFollowing(true);
     setExpanded(true);
   };
 
   const closeLog = (): void => {
+    settleTypingForToggle();
     setExpanded(false);
     onClose?.();
   };

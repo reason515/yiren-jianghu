@@ -163,7 +163,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **顶栏细轨 + 交谈只入见闻（V2.13，DC-033）**：①顶栏由「色点 + 纯文本」改为「display 标签 + 当前/上限双色 digit + 3px 细墨轨道填充」（2×2 grid 保留）；低值低于 30% 时 fill 与当前值转朱砂；银两竖排简牍印记（禁现代 pill/发光色点）；②**交谈去弹窗**：`talk` 只 `addJournal` 逐行入见闻（首行 `人名：`），不再开对话 Sheet；交易仍开 Shop（需买卖）。
 - **见闻打字机 + 串行入队（V2.14 / DC-034，V2.14.2）**：
   - **数据层** `useJournalLog`：`enqueue` 一行或多行；`entries` 同时最多新增一行，`onEntrySettled` 后才放出下一行——交谈多句与观察同一队列（**禁止** `dialogue.forEach(addJournal)` 一次写入）。
-  - **展示层** `JournalFeed`：只对末行（id > 首屏 baseline）打字机（每批 2 字 / ~32ms，`.jl-typing` + `.jl-caret`）；打完回调 `onEntrySettled`；`prefers-reduced-motion` 跳过仍须 settled。
+  - **展示层** `JournalFeed`：只对末行（id > 首屏 baseline 且尚未 settled）打字机（每批 2 字 / ~32ms，`.jl-typing` + `.jl-caret`）；打完回调 `onEntrySettled`；`prefers-reduced-motion` 跳过仍须 settled。**展开/收起只切换视图、不重播打字机**（切换时 settle 当前行并全文展示）。
 - **折叠见闻换行滚动**：折叠卡 `.journal-summary-line` **禁止** `-webkit-line-clamp`/单行 ellipsis——正文正常换行；`.journal-summary-text` 固定 `max-height` + `overflow-y: auto`，新内容/打字推进时滚到最新。
 - **字体体系（V2.11，DC-031）：三字体分工 + button 继承**：①`--font-display` ZCOOL XiaoWei=标题/装饰（**数字不等宽 305–584，勿用于数值列**）；`--font-body` Noto Serif SC=正文/界面；**`--font-digit` LXGW WenKai 数字子集（4.6KB，楷体笔意 + 全数字等宽 600）专供数值**——状态栏双值/银两/经验潜能/见闻数字；②**`<button>` 不继承 body 字体（UA 默认 Arial）**——base.css 全局 `button,input,select,textarea { font-family: inherit }` 根治；新增按钮类若需 display/digit 需显式覆盖；**新 UI 元素必须探针 `getComputedStyle().fontFamily` 防 Arial 回退**（V2.10 见闻/Tab 曾静默 Arial）；③字号层级：标题 22 / 章节 14 / 正文 15（行高 1.85）/ 交互 14–15 / 状态标签 12 / **状态数值 13** / 辅助 11–12；④**见闻关键字高亮**：人名前缀（`名字：`）`--jade-bright`、数字 `--gold` + digit 字体（`renderRich` 正则拆分，勿全文同色）；⑤按钮规范见 `docs/design-system.md` §3.4：chip/exit-cell 分类 tint 渐变 + 内阴影 + 按压位移，方向钮 min-width 48px。
 

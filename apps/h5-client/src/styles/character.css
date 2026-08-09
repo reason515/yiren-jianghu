@@ -51,6 +51,45 @@
   margin-bottom: 8px;
 }
 
+/* 人物簿页签：对齐场景 Tab（无边框 + 玉色下划线），略缩小 */
+.char-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+.char-tabs button {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--paper-dim);
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.char-tabs button:active {
+  color: var(--paper);
+}
+.char-tabs button.on {
+  color: var(--jade-bright);
+  border-bottom-color: var(--jade);
+}
+
+/* 固定内容区高度，切换页签不跳动 */
+.char-tab-panel {
+  height: min(52vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 4px;
+}
+
 .char-section {
   border-top: 1px solid var(--line);
   padding: 10px 0;
@@ -419,6 +458,22 @@
 .char-profile-line strong {
   color: var(--paper);
   font-weight: 600;
+}
+.char-look {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--paper-faint);
+  background: var(--ink-soft);
+  border-radius: 0 6px 6px 0;
+}
+.char-look p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--paper-dim);
 }
 .char-rename {
   display: flex;

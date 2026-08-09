@@ -36,7 +36,7 @@
 | **ShopView**（交易面板） | **缺**（E14.1 交易） | 结构借鉴：商品列表/买入/卖出/库存/货币；本项目用 content `goods` + economy API |
 | **ChoiceRow**（泛型分段按钮，禁 select） | AttributeAllocator 有类似 | 抽成通用 `ChoiceRow<T>`（E14.10 易用性） |
 | **TrainSheet / buildPracticeOptions** | 缺（E14.2 学武面板） | 结构借鉴：可学武功选项/学/练动作；本项目 learn/practice/study API |
-| **CharacterSheet 五页签 + 行内展开** | V2.15 四页签人物簿（DC-035） | 借鉴页签分层与点开再动手；本项目定为身势/武学/行囊/档案，不借 enable/prepare/wimpy/命令刷面板 |
+| **CharacterSheet 五页签 + 行内展开** | V2.15 四页签人物簿（DC-035） | 借鉴页签分层与点开再动手；本项目定为状态/武学/行囊/档案，不借 enable/prepare/wimpy/命令刷面板；仪容短述借鉴 look me 结构 |
 | **FloatingPerfBar**（战斗悬浮绝招，战斗中屏底） | CombatView 手动按钮 | 交互借鉴：战斗中悬浮动作条 + 可收起（E14.5） |
 | **GrindBanner**（挂机状态条 + 停止原因） | 已有 | 对照：停止原因「知道了」关闭模式（本项目已类似） |
 | **GuideTip**（轻量引导提示） | 缺（E14.11） | 简单组件：text + onDismiss，配首日引导流程 |
@@ -66,7 +66,7 @@
 
 - E14.1 交易面板 → 借鉴 xkx ShopView（登记：sibling/xkx ShopView）
 - E14.2 学武面板 → xkx TrainSheet/buildPracticeOptions
-- V2.15 人物簿四页签 → xkx CharacterSheet（页签分层 + 行内展开；不借 MUD enable/命令）
+- V2.15 人物簿四页签 → xkx CharacterSheet（页签分层 + 行内展开 + 仪容结构；不借 MUD enable/命令）
 - E14.5 战斗悬浮 → xkx FloatingPerfBar
 - E14.10 易用性 → xkx ChoiceRow / attr-card / toast 约定
 - E14.11 新手引导 → sanguo first-session-ux-v3（改写）

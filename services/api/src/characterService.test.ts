@@ -33,6 +33,12 @@ function mockDb() {
   const state = {
     characters: [] as CharacterRow[],
     skills: [] as Array<{ id: string; character_id: string; skill_id: string; level: number }>,
+    items: [] as Array<{
+      character_id: string;
+      item_def_id: string;
+      quantity: number;
+      slot: string | null;
+    }>,
   };
   const db: Db = {
     async query<T extends DbRow>(text: string, params: unknown[] = []): Promise<{ rows: T[] }> {
@@ -96,6 +102,15 @@ function mockDb() {
           status: "active",
         });
         return { rows: [{ id }] as unknown as T[] };
+      }
+      if (text.includes("INSERT INTO character_items")) {
+        state.items.push({
+          character_id: String(params[0]),
+          item_def_id: String(params[1]),
+          quantity: 1,
+          slot: String(params[2]),
+        });
+        return { rows: [] as unknown as T[] };
       }
       if (text.includes("UPDATE characters SET status = 'discarded'")) {
         const character = state.characters.find(
@@ -167,6 +182,9 @@ describe("characterService", () => {
     const service = createCharacterService(db, CONTENT);
     await service.createCharacter("acc_1", INPUT);
     expect(state.characters[0]).toMatchObject({ room_path: "village_start", name: "陆小风" });
+    expect(state.items).toEqual([
+      { character_id: "char_1", item_def_id: "cubu_yi", quantity: 1, slot: "armor" },
+    ]);
     expect(await service.getCharacter("acc_1")).toMatchObject({
       name: "陆小风",
       attrs: { str: { cur: 25, base: 25 } },

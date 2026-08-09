@@ -5,7 +5,7 @@ import type { VitalKey } from "../lib/characterTypes.js";
  * 主界面顶栏生存状态（V2.13：细轨进度条 + 双色读数，取代色点 HUD）。
  * - 生存项（气/精/精力/内力）：标签 +「当前/上限」双色数字 + 细墨轨道填充；
  * - 银两：货币非状态，右侧竖排简牍印记，与状态组视觉隔离。
- * - 整条可点打开人物簿（默认身势页签）。
+ * - 整条可点打开人物簿（默认状态页签）。
  * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {

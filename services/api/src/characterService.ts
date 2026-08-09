@@ -50,6 +50,9 @@ export const ATTR_MAX = 30;
 export const ATTR_BUDGET = 80;
 export const MAX_NAME_LENGTH = 8;
 export const START_ROOM = "village_start";
+/** 建角赠送并默认穿戴的衣甲（内容包 items/cubu_yi；对齐 xkx 开局布衣）。 */
+export const START_CLOTH_ITEM_ID = "cubu_yi";
+export const START_CLOTH_SLOT = "armor";
 
 /** 属性分配校验：每项整数 10–30，总和 = 80。返回 null 表示通过。 */
 export function validateAttrs(attrs: {
@@ -108,6 +111,13 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       );
       const characterId = created.rows[0]?.id;
       if (!characterId) throw new CharacterError("character_create_failed", "立名失败");
+
+      // 开局默认衣甲：避免“未着寸缕”；粗布衣已装备于 armor 槽（与护具同类，同槽互斥）
+      await db.query(
+        "INSERT INTO character_items (character_id, item_def_id, quantity, slot) VALUES ($1, $2, 1, $3)",
+        [characterId, START_CLOTH_ITEM_ID, START_CLOTH_SLOT],
+      );
+
       return { characterId };
     },
 

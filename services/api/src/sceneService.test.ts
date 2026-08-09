@@ -128,6 +128,15 @@ const PACK = {
       description: "粗铁长剑。",
     },
     {
+      id: "cubu_yi",
+      name: "粗布衣",
+      kind: "armor",
+      value: 5,
+      weight: 2,
+      stackable: false,
+      description: "粗麻织就的短褐。",
+    },
+    {
       id: "dry_food",
       name: "干粮",
       kind: "food",
@@ -281,12 +290,15 @@ function mockDb() {
         };
       }
       if (text.includes("INSERT INTO character_items")) {
+        // 建角赠衣：VALUES ($1, $2, 1, $3) → [charId, defId, slot]
+        // 拾取/购买：VALUES ($1, $2, 1|$3) → [charId, defId, qty?]
+        const withSlot = text.includes(", slot)");
         state.character_items.push({
           id: `ci_${state.character_items.length + 1}`,
           character_id: String(params[0]),
           item_def_id: String(params[1]),
-          quantity: Number(params[2]),
-          slot: null,
+          quantity: withSlot ? 1 : Number(params[2] ?? 1),
+          slot: withSlot ? String(params[2]) : null,
         });
         return { rows: [] as unknown as T[] };
       }
@@ -378,7 +390,7 @@ async function boot(quests?: {
   const chars = createCharacterService(db);
   const { characterId } = await chars.createCharacter("acc_1", INPUT);
   state.character_items.push({
-    id: "ci_1",
+    id: `ci_${state.character_items.length + 1}`,
     character_id: characterId,
     item_def_id: "iron_sword",
     quantity: 1,
@@ -566,7 +578,8 @@ describe("sceneService.getInventory", () => {
     const { scene } = await boot();
     const inv = await scene.getInventory("acc_1");
     expect(inv).toEqual([
-      { id: "ci_1", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
+      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
+      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
     ]);
     expect(await scene.getInventory("acc_x")).toBeNull();
   });
@@ -632,6 +645,7 @@ describe("app 集成（scene/inventory 路由）", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(inv.json()).toEqual([
+      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
       { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
     ]);
 

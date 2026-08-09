@@ -122,6 +122,23 @@ describe("toCombatState", () => {
       reward: { exp: 6, potential: 2, silver: 3 },
     });
   });
+
+  it("每个回合结束后插入空行分隔", () => {
+    const state = toCombatState({
+      ...RESPONSE,
+      events: [
+        { seq: 0, type: "battle_start", data: {} },
+        { seq: 1, type: "turn_start", data: { turn: 1 } },
+        { seq: 2, type: "damage", actor: "a", data: { targetId: "b", damage: 5 } },
+        { seq: 3, type: "turn_start", data: { turn: 2 } },
+        { seq: 4, type: "damage", actor: "b", data: { targetId: "a", damage: 4 } },
+      ],
+    });
+    const spacerAt = state.log.findIndex((line) => line.kind === "spacer");
+    expect(spacerAt).toBeGreaterThan(0);
+    expect(state.log[spacerAt]?.text).toBe("");
+    expect(combatLineClassName("spacer")).toBe(" spacer");
+  });
 });
 
 describe("battleEventLine 关键字着色与兽性", () => {

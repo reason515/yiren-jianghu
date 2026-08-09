@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
 import { renderCombatSegments } from "./combatRender.js";
-import { battleEventLine, combatLineClassName } from "../lib/combatTypes.js";
+import { combatLineClassName, eventsToCombatLines } from "../lib/combatTypes.js";
 import type { PvpMatchDetail } from "../lib/pvpTypes.js";
 import { pvpResultView } from "../lib/pvpTypes.js";
 
@@ -39,15 +39,13 @@ export function PvpReplayView({ open, match, onClose }: PvpReplayViewProps): JSX
             {match.events.length === 0 ? (
               <p className="pvp-replay-empty">此战已归档，招式的余韵早已散尽。</p>
             ) : (
-              match.events.map((event) => {
-                const line = battleEventLine(event, match.challengerName, match.defenderName);
-                if (!line) return null;
-                return (
+              eventsToCombatLines(match.events, match.challengerName, match.defenderName).map(
+                (line) => (
                   <p key={line.id} className={`combat-line${combatLineClassName(line.kind)}`}>
                     {renderCombatSegments(line, { foeNames: [match.defenderName] })}
                   </p>
-                );
-              })
+                ),
+              )
             )}
           </div>
         </div>

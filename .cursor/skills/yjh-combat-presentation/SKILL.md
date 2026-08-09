@@ -74,6 +74,7 @@ description: 《一人江湖》(yiren-jianghu) 战斗过程呈现规范——战
 | 血条 HUD | 顶部紧凑常驻          | 仅气/内力（精不参战则不显示）；滚战报时 HUD 不跟着滚走   |
 | 敌我分色 | 「你」玉色 / 敌名朱砂 | `paintActorNames` → `.cm-self` / `.cm-foe`               |
 | 所得配色 | 阅历/潜能/银两        | 对齐人物簿：`--stat-exp` / `--stat-potential` / `--gold` |
+| 回合分隔 | 空行 spacer           | 下一 `turn_start` 前插入；计入逐行显现，形成回合间停顿   |
 
 改节奏时同步验收：弱敌短战仍能读完关键句；多敌局不因闲笔爆炸。
 

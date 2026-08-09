@@ -148,6 +148,15 @@
   letter-spacing: 1px;
   font-size: 14px;
 }
+.combat-line.spacer {
+  min-height: 0.85em;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
 .cm-hit {
   color: var(--jade-bright);
   font-weight: 600;

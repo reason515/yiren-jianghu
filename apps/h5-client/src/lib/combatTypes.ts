@@ -33,7 +33,8 @@ export type CombatLineKind =
   | "recover"
   | "danger"
   | "down"
-  | "victory";
+  | "victory"
+  | "spacer";
 
 /** 整行 class 仅保留开场/收束气质；命中类颜色改走 `.cm-*` 关键字。 */
 export function combatLineClassName(kind?: CombatLineKind): string {
@@ -44,6 +45,8 @@ export function combatLineClassName(kind?: CombatLineKind): string {
       return " victory";
     case "down":
       return " down-line";
+    case "spacer":
+      return " spacer";
     default:
       return "";
   }
@@ -204,6 +207,31 @@ export function battleEventLine(
   });
 }
 
+/** 回合交界插入空行：每个新 `turn_start`（非首回合）前加 spacer。 */
+export function eventsToCombatLines(
+  events: ServerCombatEvent[],
+  playerName: string,
+  enemyName: string,
+  names?: (actor: string | undefined) => string,
+  combatantOf?: (actor: string | undefined) => NarrativeCombatant | undefined,
+  performs: PerformButton[] = [],
+): CombatLine[] {
+  const lines: CombatLine[] = [];
+  let turnSeen = false;
+  for (const raw of events) {
+    const event = resolvePerformLabel(raw, performs);
+    if (event.type === "turn_start") {
+      if (turnSeen) {
+        lines.push({ id: -Math.abs(event.seq || 1), text: "", kind: "spacer", segments: [] });
+      }
+      turnSeen = true;
+    }
+    const line = battleEventLine(event, playerName, enemyName, names, combatantOf);
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
 function rewardOf(events: ServerCombatEvent[]): CombatReward | undefined {
   let event: ServerCombatEvent | undefined;
   for (const candidate of events) {
@@ -305,24 +333,20 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
     playerMaxJing: player.maxJing,
     playerNeili: player.neili,
     playerMaxNeili: player.maxNeili,
-    log: response.events
-      .map((event) => resolvePerformLabel(event, response.performs))
-      .map((event) =>
-        battleEventLine(
-          event,
-          player.name,
-          primary?.name ?? "对手",
-          (actor) => nameOf(response, actor, player.name),
-          (actor) => {
-            if (!actor) return undefined;
-            if ((actor === "b" || actor === "b0") && primarySlot) {
-              return narrativeOf(response, primarySlot, player.name);
-            }
-            return narrativeOf(response, actor, player.name);
-          },
-        ),
-      )
-      .filter((line): line is CombatLine => line !== null),
+    log: eventsToCombatLines(
+      response.events,
+      player.name,
+      primary?.name ?? "对手",
+      (actor) => nameOf(response, actor, player.name),
+      (actor) => {
+        if (!actor) return undefined;
+        if ((actor === "b" || actor === "b0") && primarySlot) {
+          return narrativeOf(response, primarySlot, player.name);
+        }
+        return narrativeOf(response, actor, player.name);
+      },
+      response.performs,
+    ),
     performs: response.performs,
     inCombat: response.status === "ongoing",
     ...(result ? { result } : {}),

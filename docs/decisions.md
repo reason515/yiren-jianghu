@@ -57,6 +57,7 @@
 | DC-036 | 2026-08 | 观察 NPC 多行仪容（V2.16） | `observe` NPC 返回 `lines`：外形（`description`）+ 武功水平阶位（`game-core` `buildNpcObserveLines`，与人物簿境界同档）+ 衣着/兵器（`equipment`→weapon/armor 名）；无装备不写空衣甲。客户端按 `lines` 串行入见闻。关键 NPC 补 equipment，外形文案与装备解耦 | 观察仅吐单行 description，与档案仪容结构不对齐；玩家打量对方应同步感知外形/武功/装束 | protocol.md §7、game-core/look.ts、sceneService、yjh-mobile-ui | ✅ |
 | DC-037 | 2026-08 | 手动 PVE：自动普攻 + 手动高价值动作 | 探索开战后普攻由客户端按节拍提交 `attack` 意图、服务端逐回合权威结算；玩家只点绝招/回气/逃跑。不隐式自动施法（绝招须玩家点）。挂机仍按战术模板全自动（DC-009/026） | 对齐「看局势—抓时机」体验；与挂机分层清晰；保留服务端权威与可重演 | charter §5.1、protocol.md §5、yjh-mobile-ui §4.3、CombatView | ✅ |
 | DC-038 | 2026-08 | PVE 真·同场 1vN | 一场会话可含多名敌人（上限 5）；回合序为玩家一动后全部存活敌人各一动；默认集火气最低者；胜=清场、败=主角气尽；收益与任务按击败名单累加。NPC 可选 `battleAllies` 同房拉入。PVP/行侠本轮仍 1v1 | 群战手感与内容扩展；引擎/协议一次到位，挂机与论剑边界不变 | combat.ts、protocol.md §5、database-schema §3.6、content schema | ✅ |
+| DC-039 | 2026-08 | 武功双轨学艺（收费请教 / 门派拜师） | ①村里教头（`tuition_teacher`）当面按次缴银请教，不拜师不入门；②门派掌门（`apprentice_master`）正式拜师落库 `master_npc_id`/`sect_id`，本门请教免学费。请教一律同房、读 NPC `teaches`；每次耗精+潜能，收费轨另扣银（默认 `learnTuitionBase=2`，可被 `teaches.tuitionSilver` 覆盖）；0 级首学精耗 ×2。废除人物簿远程万能请教；建角赠 10 两起步银 | 对齐 xkx 武馆教头交银学武与门派收徒分流；无指令 GUI 用按次扣银；打通首学闭环 | numeric-baseline §2.1、protocol.md、database-schema §3.2、content schema、skillsService、h5 TeachSheet | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -67,6 +68,7 @@
 | 微信小程序首发 | DC-001 | 改为 H5 邀请制封测优先（用户调整发布路径） |
 | 首发考虑 TapTap 小游戏 | DC-001 | 列为 H5→微信之后的后续渠道 |
 | DC-010 手动战斗全手动按钮 | DC-037 | 改为自动普攻 + 手动绝招/回气/逃跑；挂机模板自动不变 |
+| DC-035「请教归属本轮不动」中远程请教路径 | DC-039 | 请教改为当面请教（收费/拜师双轨）；人物簿不再远程 learn |
 
 # 4. 一致性检查
 

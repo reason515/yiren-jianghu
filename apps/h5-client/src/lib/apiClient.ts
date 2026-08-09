@@ -7,6 +7,7 @@ import type { SceneActionInput, SceneActionResult } from "./sceneTypes.js";
 import type { PvpMatchDetail } from "./pvpTypes.js";
 import type { ForumComment, ForumPost, ForumSection } from "./forumTypes.js";
 import type { MapData } from "./mapTypes.js";
+import type { TeachOfferData } from "./teachTypes.js";
 
 /**
  * H5 API 客户端：统一 fetch + 错误信封解析（服务端权威，客户端只发意图）。
@@ -39,7 +40,21 @@ export interface ApiClient {
   equipInventory(itemId: string): Promise<{ ok: true }>;
   unequipInventory(itemId: string): Promise<{ ok: true }>;
   useInventory(itemId: string): Promise<{ ok: true; effect: string }>;
-  learnSkill(skillId: string): Promise<unknown>;
+  learnSkill(
+    skillId: string,
+    npcId: string,
+  ): Promise<{
+    skill: { id: string; name: string; level: number };
+    spent: { potential: number; jing: number; silver: number };
+    teacher: { id: string; name: string };
+  }>;
+  getTeachOffer(npcId: string): Promise<TeachOfferData>;
+  apprentice(npcId: string): Promise<{
+    masterNpcId: string;
+    masterName: string;
+    sectId: string;
+    message: string;
+  }>;
   practiceSkill(
     skillId: string,
     count?: number,
@@ -126,7 +141,9 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     equipInventory: (itemId) => post("/inventory/equip", { itemId }),
     unequipInventory: (itemId) => post("/inventory/unequip", { itemId }),
     useInventory: (itemId) => post("/inventory/use", { itemId }),
-    learnSkill: (skillId) => post("/skills/learn", { skillId }),
+    learnSkill: (skillId, npcId) => post("/skills/learn", { skillId, npcId }),
+    getTeachOffer: (npcId) => get(`/skills/teach-offer?npcId=${encodeURIComponent(npcId)}`),
+    apprentice: (npcId) => post("/skills/apprentice", { npcId }),
     practiceSkill: (skillId, count = 1) => post("/skills/practice", { skillId, count }),
     studySkill: (skillId, count = 1) => post("/skills/study", { skillId, count }),
     getQuests: () => get("/quests"),

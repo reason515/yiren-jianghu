@@ -48,7 +48,9 @@ export const API_MANIFEST: ApiRoute[] = [
   { method: "POST", path: "/inventory/use", auth: true, domain: "inventory" },
   // 技能成长
   { method: "GET", path: "/skills", auth: true, domain: "skills" },
+  { method: "GET", path: "/skills/teach-offer", auth: true, domain: "skills" },
   { method: "POST", path: "/skills/learn", auth: true, domain: "skills" },
+  { method: "POST", path: "/skills/apprentice", auth: true, domain: "skills" },
   { method: "POST", path: "/skills/practice", auth: true, domain: "skills" },
   { method: "POST", path: "/skills/study", auth: true, domain: "skills" },
   // 任务

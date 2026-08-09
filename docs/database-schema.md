@@ -61,9 +61,11 @@ erDiagram
 | gender | text | CHECK male/female | |
 | status | text | CHECK active/discarded/frozen | 见 §4 状态机 |
 | attrs | jsonb | NOT NULL | `{ str, int, con, dex: { cur, base } }` |
-| exp / potential / learned_points / silver | bigint | NOT NULL | 有效潜能 = potential − learned_points |
+| exp / potential / learned_points / silver | bigint | NOT NULL | 有效潜能 = potential − learned_points；建角默认赠银 10（DC-039） |
 | qi/jing/jingli/neili/food/water/eff_qi/eff_jing | integer | NOT NULL | 当前值持久化（上限由 C2 动态计算） |
 | room_path / safe_room_id | text | NOT NULL | 当前位置与安全点（内容包房间 id） |
+| master_npc_id | text | NULL | 正式拜师的师父 NPC id（DC-039）；收费请教不写 |
+| sect_id | text | NULL | 门派 id（如 `xuanmen`）；与师父同落库 |
 | current_content_version | text | NOT NULL | 该角色加载的内容包版本 |
 | discarded_at | timestamptz | NULL | 放弃时间（30 天冻结计时） |
 

@@ -137,6 +137,7 @@ describe("CharacterSheet（角色面板）", () => {
     const { host } = render(<CharacterSheet open character={empty} onClose={() => undefined} />);
     clickTab(host, "武学");
     expect(host.textContent).toContain("你尚未学会任何武功");
+    expect(host.textContent).toContain("当面请教");
   });
 
   it("行囊页：衣甲佩挂置顶；行囊展开后提交意图", () => {

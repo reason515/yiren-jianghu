@@ -71,6 +71,8 @@ function mockDb() {
               neili: character.neili ?? 0,
               food: character.food ?? 300,
               water: character.water ?? 300,
+              master_npc_id: null,
+              sect_id: null,
             })) as unknown as T[],
         };
       }
@@ -99,6 +101,7 @@ function mockDb() {
           gender: String(params[2]),
           attrs: String(params[3]),
           room_path: String(params[4]),
+          silver: Number(params[5] ?? 10),
           status: "active",
         });
         return { rows: [{ id }] as unknown as T[] };

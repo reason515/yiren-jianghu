@@ -33,7 +33,7 @@ const ROOM: SceneRoom = {
     { dir: "east", roomId: "village_general" },
   ],
   npcs: [
-    { id: "master_wang", name: "王师傅", kind: "apprentice_master" },
+    { id: "master_wang", name: "王师傅", kind: "tuition_teacher" },
     { id: "village_guard", name: "村口守卫", kind: "npc" },
   ],
   items: [{ id: "iron_sword", name: "铁剑", kind: "weapon" }],
@@ -139,17 +139,42 @@ describe("EntitySheet（能力→动作）", () => {
     return labels;
   };
 
-  it("商贩→观察+交易；师父→观察+交谈+拜师；任务→观察+请托；战斗→观察+较量；物品→观察+拾取", () => {
+  it("商贩→交易；教头→请教；掌门未入门→拜师；已入门→请教；任务→请托；战斗→较量；物品→拾取", () => {
     expect(actions({ id: "general_shop", name: "杂货铺掌柜", kind: "vendor" })).toEqual([
       "观察",
       "交谈",
       "交易",
     ]);
-    expect(actions({ id: "master_wang", name: "王师傅", kind: "apprentice_master" })).toEqual([
+    expect(actions({ id: "master_wang", name: "王师傅", kind: "tuition_teacher" })).toEqual([
+      "观察",
+      "交谈",
+      "请教",
+    ]);
+    expect(actions({ id: "sect_master", name: "玄真道长", kind: "apprentice_master" })).toEqual([
       "观察",
       "交谈",
       "拜师",
     ]);
+    const { host: apprenticed } = render(
+      <EntitySheet
+        open
+        entity={{
+          id: "sect_master",
+          name: "玄真道长",
+          kind: "apprentice_master",
+          sectId: "xuanmen",
+        }}
+        sectId="xuanmen"
+        onAction={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(
+      [
+        ...apprenticed.querySelectorAll<HTMLButtonElement>("[data-testid=entity-actions] .chip"),
+      ].map((b) => b.textContent ?? ""),
+    ).toEqual(["观察", "交谈", "请教"]);
+    apprenticed.remove();
     expect(actions({ id: "shen_buotou", name: "沈捕头", kind: "quest_giver" })).toEqual([
       "观察",
       "交谈",

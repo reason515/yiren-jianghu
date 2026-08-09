@@ -104,6 +104,32 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         });
       }
     }
+    for (const teach of npc.teaches ?? []) {
+      if (!skillIds.has(teach.skillId)) {
+        issues.push({
+          code: "broken_teach_ref",
+          severity: "error",
+          message: `NPC ${npc.id} teaches 引用不存在技能 ${teach.skillId}`,
+        });
+      }
+    }
+    if (npc.kind === "tuition_teacher" && (npc.teaches?.length ?? 0) === 0) {
+      issues.push({
+        code: "tuition_teacher_no_teaches",
+        severity: "error",
+        message: `NPC ${npc.id} 为 tuition_teacher 但未配置 teaches`,
+      });
+    }
+    if (npc.kind === "apprentice_master" && !npc.sectId) {
+      issues.push({
+        code: "apprentice_master_no_sect",
+        severity: (npc.teaches?.length ?? 0) > 0 ? "error" : "warning",
+        message:
+          (npc.teaches?.length ?? 0) > 0
+            ? `NPC ${npc.id} 可传功（有 teaches）但未配置 sectId`
+            : `NPC ${npc.id} 为 apprentice_master 但未配置 sectId（无法拜师落库）`,
+      });
+    }
     for (const good of npc.goods) {
       if (!itemIds.has(good.itemId)) {
         issues.push({

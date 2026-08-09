@@ -292,7 +292,12 @@ export function createSceneService(
       npcs: room.npcIds
         .map((id) => content.npcs.get(id))
         .filter((n): n is Npc => Boolean(n))
-        .map((n) => ({ id: n.id, name: n.name, kind: n.kind })),
+        .map((n) => ({
+          id: n.id,
+          name: n.name,
+          kind: n.kind,
+          ...(n.sectId ? { sectId: n.sectId } : {}),
+        })),
       items: room.itemIds
         .filter((id) => !taken.has(id))
         .map((id) => content.items.get(id))

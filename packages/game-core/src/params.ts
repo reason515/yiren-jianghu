@@ -59,6 +59,7 @@ export const DEFAULT_PARAMS: GameParams = {
   },
   growth: {
     learnJingCostBase: 150,
+    learnTuitionBase: 2,
     potentialCostPerLevel: 1,
     expGateExponent: 3,
     expGateDivisor: 10,

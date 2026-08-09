@@ -2,6 +2,7 @@
   "id": "sect_master",
   "name": "玄真道长",
   "kind": "apprentice_master",
+  "sectId": "xuanmen",
   "level": 60,
   "skills": [
     {
@@ -15,6 +16,20 @@
     {
       "skillId": "xuanmen_taoism",
       "level": 100
+    }
+  ],
+  "teaches": [
+    {
+      "skillId": "xuanmen_force",
+      "maxLevel": 100
+    },
+    {
+      "skillId": "xuanmen_sword",
+      "maxLevel": 80
+    },
+    {
+      "skillId": "xuanmen_taoism",
+      "maxLevel": 80
     }
   ],
   "dialogue": [

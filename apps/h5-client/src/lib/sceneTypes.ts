@@ -9,7 +9,9 @@ export interface SceneExit {
 export interface SceneNpc {
   id: string;
   name: string;
-  kind: "battle" | "vendor" | "apprentice_master" | "quest_giver" | "npc";
+  kind: "battle" | "vendor" | "tuition_teacher" | "apprentice_master" | "quest_giver" | "npc";
+  /** 门派 id（apprentice_master）；场景可选带回。 */
+  sectId?: string;
 }
 
 export interface SceneItem {

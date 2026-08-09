@@ -20,9 +20,11 @@
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
 | exp 门槛 | 武功³/10 > 实战经验 无法深造（`feature/skill.c`、learn 检查） | `expGateExponent=3, expGateDivisor=10`（同式） | 曲线合理且与 pkuxkx 对齐，直接沿用 |
-| 学习精耗 | `150/int`（learn.c） | `learnJingCostBase=150` ÷ int | 沿用 pkuxkx 比例，int 驱动教学节奏 |
+| 学习精耗 | `150/int`（learn.c）；0 级首学 ×2 | `learnJingCostBase=150` ÷ int；**0 级 ×2**（DC-039） | 沿用 pkuxkx 比例；首学加倍对齐 learn.c |
+| 学费（银两） | 武馆教头：交银充学习次数（jiaotou.c，每两银约 10 次） | **按次扣银**：`learnTuitionBase=2`；NPC `teaches.tuitionSilver` 可覆盖；门派请教强制 0（DC-039） | GUI 无 give 指令；按次报价更直观；机制借鉴教头非村武师 |
 | 潜能上限 | `max_potential = 100+sqrt(exp)/10`（updated.c，已废弃） | 无硬上限 + 有效潜能 = potential − learned_points | 移动端免于"刷潜能上限"挫败；已定修正（DC-017） |
 | 学习潜能成本 | learn 随等级递增（learn.c 多路径） | `potentialCostPerLevel=1` × 目标等级 | 简单可预期；封测再调 |
+| 请教场所 | 须 `recognize_apprentice` / 拜师 | 须同房 NPC；收费教头或本门师父（DC-039） | 废除远程万能请教；双轨分流 |
 | 练习 | practice 消耗气血（practice.c） | `practiceQiBase=20 + 等级×1`；攒够 level+1 点升 1 级 | 保留"自练变强"挂机点；数值为初值 |
 | 读书/领悟 | study 消耗精（study.c） | `studyJingBase=80 + 等级` | 同 practice 机制，精资源 |
 
@@ -72,3 +74,9 @@
 
 - 封测调参只改 `params.json`（+ 同步 5 处：schema/fixtures×2/DEFAULT_PARAMS/validate.test），不碰代码公式（yjh-content-pack 常见坑 #5）。
 - 每次调整在 本文件"变更记录"登记（日期 + 项 + 新值 + 理由），保持可追溯。
+
+# 4. 变更记录
+
+| 日期 | 项 | 新值 | 理由 |
+|---|---|---|---|
+| 2026-08-09 | 学习首学精耗 ×2；学费 `learnTuitionBase=2`；建角赠银 10 | DC-039 双轨学艺 | 对齐 xkx learn 首学加倍 + 武馆教头交银语义（按次 GUI） |

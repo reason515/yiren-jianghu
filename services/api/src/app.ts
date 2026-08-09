@@ -410,19 +410,66 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       return list;
     });
 
-    app.post("/skills/learn", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+    app.get("/skills/teach-offer", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
-      const body = (req.body ?? {}) as { skillId?: unknown };
-      if (typeof body.skillId !== "string" || !body.skillId) {
-        return envelope(reply, 400, "invalid_request", "缺少武功 id");
+      const npcId = (req.query as { npcId?: unknown }).npcId;
+      if (typeof npcId !== "string" || !npcId) {
+        return envelope(reply, 400, "invalid_request", "缺少师父 id");
       }
       try {
-        return await skills.learn(accountId, body.skillId);
+        return await skills.getTeachOffer(accountId, npcId);
       } catch (err) {
         if (err instanceof SkillsError)
           return envelope(
             reply,
-            err.code === "no_character" ? 404 : err.code === "skill_not_found" ? 404 : 409,
+            err.code === "no_character" || err.code === "npc_not_found" ? 404 : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/skills/learn", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { skillId?: unknown; npcId?: unknown };
+      if (typeof body.skillId !== "string" || !body.skillId) {
+        return envelope(reply, 400, "invalid_request", "缺少武功 id");
+      }
+      if (typeof body.npcId !== "string" || !body.npcId) {
+        return envelope(reply, 400, "invalid_request", "缺少师父 id");
+      }
+      try {
+        return await skills.learn(accountId, body.skillId, body.npcId);
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "no_character" ||
+              err.code === "skill_not_found" ||
+              err.code === "npc_not_found"
+              ? 404
+              : 409,
+            err.code,
+            err.message,
+          );
+        throw err;
+      }
+    });
+
+    app.post("/skills/apprentice", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { npcId?: unknown };
+      if (typeof body.npcId !== "string" || !body.npcId) {
+        return envelope(reply, 400, "invalid_request", "缺少师父 id");
+      }
+      try {
+        return await skills.apprentice(accountId, body.npcId);
+      } catch (err) {
+        if (err instanceof SkillsError)
+          return envelope(
+            reply,
+            err.code === "no_character" || err.code === "npc_not_found" ? 404 : 409,
             err.code,
             err.message,
           );

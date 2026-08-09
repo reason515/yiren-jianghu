@@ -1,7 +1,7 @@
 {
   "id": "master_wang",
   "name": "王师傅",
-  "kind": "apprentice_master",
+  "kind": "tuition_teacher",
   "level": 30,
   "skills": [
     {
@@ -9,11 +9,18 @@
       "level": 60
     }
   ],
+  "teaches": [
+    {
+      "skillId": "basic_sword",
+      "maxLevel": 40,
+      "tuitionSilver": 2
+    }
+  ],
   "equipment": ["cubu_yi", "iron_sword"],
   "dialogue": [
-    "老夫姓王，村里人唤一声王师傅。想学拳，先跟我把这路基础剑法练扎实。",
+    "老夫姓王，村里人唤一声王师傅。想学剑，缴点学费，我便教你把这路基础剑法练扎实。",
     "练武之人，根基最要紧。心浮气躁，学什么都白搭。",
     "剑是死的，人是活的。招式要练进骨头里，临敌才能想都不想就用出来。"
   ],
-  "description": "武馆师傅，双臂粗壮，指节全是老茧。一招一式透着几十年功底，性子直，讲究武以德为先。"
+  "description": "武馆教头，双臂粗壮，指节全是老茧。一招一式透着几十年功底，性子直，讲究武以德为先。"
 }

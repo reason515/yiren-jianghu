@@ -4,7 +4,7 @@ import { SkillsError, createSkillsService } from "./skillsService.js";
 import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
 
-/** 最小内容包：growth 参数 + 两门武功（满级 100 / 满级 1）。 */
+/** 最小内容包：含村武馆教头与一门可教武功（DC-039）。 */
 const PACK = {
   manifest: { version: "0.0.0", name: "test" },
   params: {
@@ -14,6 +14,7 @@ const PACK = {
     afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
     growth: {
       learnJingCostBase: 150,
+      learnTuitionBase: 2,
       potentialCostPerLevel: 1,
       expGateExponent: 3,
       expGateDivisor: 10,
@@ -43,8 +44,34 @@ const PACK = {
     pvp: { dailyChallengeLimit: 5, kFactor: 32, seasonWeeks: 6 },
     economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
   },
-  rooms: [],
-  npcs: [],
+  rooms: [
+    { id: "village_dojo", area: "newbie", name: "武馆", npcIds: ["master_wang"], exits: [] },
+    { id: "village_elsewhere", area: "newbie", name: "别处", npcIds: [], exits: [] },
+    {
+      id: "sect_hall",
+      area: "xuanmen",
+      name: "祖师堂",
+      npcIds: ["sect_master"],
+      exits: [],
+    },
+  ],
+  npcs: [
+    {
+      id: "master_wang",
+      name: "王师傅",
+      kind: "tuition_teacher",
+      skills: [{ skillId: "basic_sword", level: 60 }],
+      teaches: [{ skillId: "basic_sword", maxLevel: 40, tuitionSilver: 2 }],
+    },
+    {
+      id: "sect_master",
+      name: "玄真道长",
+      kind: "apprentice_master",
+      sectId: "xuanmen",
+      skills: [{ skillId: "basic_sword", level: 80 }],
+      teaches: [{ skillId: "basic_sword", maxLevel: 50 }],
+    },
+  ],
   items: [],
   skills: [
     {
@@ -76,6 +103,10 @@ interface CharState {
   learned_points: number;
   jing: number;
   qi: number;
+  silver: number;
+  room_path: string;
+  master_npc_id: string | null;
+  sect_id: string | null;
   attrs: { str: number; int: number; con: number; dex: number };
 }
 
@@ -95,7 +126,6 @@ function mockDb() {
   };
   const db: Db = {
     async query<T extends DbRow>(text: string, params: unknown[] = []): Promise<{ rows: T[] }> {
-      // 具体 SELECT 必须在通用分支前（见 conventions 常见坑 #15）
       if (text.includes("FROM accounts WHERE invite_code")) {
         return {
           rows: state.accounts
@@ -124,7 +154,9 @@ function mockDb() {
         };
       }
       if (
-        text.includes("SELECT id, exp, potential, learned_points, jing, qi, attrs FROM characters")
+        text.includes(
+          "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, attrs FROM characters",
+        )
       ) {
         return {
           rows: state.characters
@@ -136,6 +168,10 @@ function mockDb() {
               learned_points: c.learned_points,
               jing: c.jing,
               qi: c.qi,
+              silver: c.silver,
+              room_path: c.room_path,
+              master_npc_id: c.master_npc_id,
+              sect_id: c.sect_id,
               attrs: c.attrs,
             })) as unknown as T[],
         };
@@ -169,11 +205,20 @@ function mockDb() {
         return { rows: [] as unknown as T[] };
       }
       if (text.includes("UPDATE characters SET potential")) {
-        const c = state.characters.find((ch) => ch.id === params[2]);
+        const c = state.characters.find((ch) => ch.id === params[3]);
         if (c) {
           c.potential -= Number(params[0]);
           c.learned_points += Number(params[0]);
           c.jing -= Number(params[1]);
+          c.silver -= Number(params[2]);
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE characters SET master_npc_id")) {
+        const c = state.characters.find((ch) => ch.id === params[2]);
+        if (c) {
+          c.master_npc_id = String(params[0]);
+          c.sect_id = String(params[1]);
         }
         return { rows: [] as unknown as T[] };
       }
@@ -204,6 +249,10 @@ function boot(over: Partial<CharState> = {}) {
     learned_points: 0,
     jing: 500,
     qi: 500,
+    silver: 20,
+    room_path: "village_dojo",
+    master_npc_id: null,
+    sect_id: null,
     attrs: { str: 20, int: 30, con: 20, dex: 10 },
     ...over,
   });
@@ -228,56 +277,107 @@ describe("skillsService.getSkills", () => {
   });
 });
 
-describe("skillsService.learn", () => {
-  it("学习成功：升 1 级，扣潜能与精，learned_points 同步", async () => {
+describe("skillsService.learn（当面请教）", () => {
+  it("向教头请教成功：升 1 级，扣潜能/精/银；首学精×2", async () => {
     const { skills, state } = boot();
-    const res = await skills.learn("acc_1", "basic_sword");
+    const res = await skills.learn("acc_1", "basic_sword", "master_wang");
     expect(res.skill).toMatchObject({ id: "basic_sword", level: 1 });
-    expect(res.spent).toEqual({ potential: 1, jing: 5 }); // 150/30(int)=5
+    // 150/30=5，首学 ×2 → 10；学费 2
+    expect(res.spent).toEqual({ potential: 1, jing: 10, silver: 2 });
+    expect(res.teacher.name).toBe("王师傅");
     const ch = state.characters[0]!;
     expect(ch.potential).toBe(99);
     expect(ch.learned_points).toBe(1);
-    expect(ch.jing).toBe(495);
-    expect(state.skills[0]).toMatchObject({
-      skill_id: "basic_sword",
-      level: 1,
-      practice_points: 0,
+    expect(ch.jing).toBe(490);
+    expect(ch.silver).toBe(18);
+  });
+
+  it("不在同房 → not_in_room", async () => {
+    const { skills } = boot({ room_path: "village_elsewhere" });
+    await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
+      code: "not_in_room",
+    });
+  });
+
+  it("银两不足 → silver", async () => {
+    const { skills } = boot({ silver: 1 });
+    await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
+      code: "silver",
     });
   });
 
   it("经验不足 → exp_gate", async () => {
     const { skills } = boot({ exp: 0 });
-    await expect(skills.learn("acc_1", "basic_sword")).rejects.toMatchObject({ code: "exp_gate" });
+    await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
+      code: "exp_gate",
+    });
   });
 
   it("潜能不足 → potential", async () => {
     const { skills } = boot({ potential: 0, learned_points: 10 });
-    await expect(skills.learn("acc_1", "basic_sword")).rejects.toMatchObject({
+    await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
       code: "potential",
     });
   });
 
   it("精不足 → jing", async () => {
     const { skills } = boot({ jing: 0 });
-    await expect(skills.learn("acc_1", "basic_sword")).rejects.toMatchObject({ code: "jing" });
+    await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
+      code: "jing",
+    });
   });
 
-  it("已满级 → max_level；未知武功 → skill_not_found；无角色 → no_character", async () => {
-    const { skills, state } = boot();
-    state.skills.push({
-      character_id: "char_1",
-      skill_id: "trivial_art",
-      level: 1,
-      practice_points: 0,
+  it("门派未拜师请教 → not_apprentice；拜师后免学费", async () => {
+    const { skills, state } = boot({ room_path: "sect_hall" });
+    await expect(skills.learn("acc_1", "basic_sword", "sect_master")).rejects.toMatchObject({
+      code: "not_apprentice",
     });
-    await expect(skills.learn("acc_1", "trivial_art")).rejects.toMatchObject({
-      code: "max_level",
-    });
-    await expect(skills.learn("acc_1", "unknown_art")).rejects.toMatchObject({
+    await skills.apprentice("acc_1", "sect_master");
+    expect(state.characters[0]?.sect_id).toBe("xuanmen");
+    const res = await skills.learn("acc_1", "basic_sword", "sect_master");
+    expect(res.spent.silver).toBe(0);
+    expect(res.skill.level).toBe(1);
+  });
+
+  it("未知武功 → skill_not_found；无角色 → no_character", async () => {
+    const { skills } = boot();
+    await expect(skills.learn("acc_1", "unknown_art", "master_wang")).rejects.toMatchObject({
       code: "skill_not_found",
     });
-    await expect(skills.learn("acc_x", "basic_sword")).rejects.toMatchObject({
+    await expect(skills.learn("acc_x", "basic_sword", "master_wang")).rejects.toMatchObject({
       code: "no_character",
+    });
+  });
+});
+
+describe("skillsService.apprentice", () => {
+  it("向掌门拜师成功；教头不可拜师", async () => {
+    const { skills, state } = boot({ room_path: "sect_hall" });
+    const res = await skills.apprentice("acc_1", "sect_master");
+    expect(res.sectId).toBe("xuanmen");
+    expect(state.characters[0]?.master_npc_id).toBe("sect_master");
+    await expect(skills.apprentice("acc_1", "sect_master")).rejects.toMatchObject({
+      code: "already_apprentice",
+    });
+
+    const { skills: s2 } = boot();
+    await expect(s2.apprentice("acc_1", "master_wang")).rejects.toMatchObject({
+      code: "cannot_apprentice",
+    });
+  });
+});
+
+describe("skillsService.getTeachOffer", () => {
+  it("返回可教清单与报价", async () => {
+    const { skills } = boot();
+    const offer = await skills.getTeachOffer("acc_1", "master_wang");
+    expect(offer.npc.name).toBe("王师傅");
+    expect(offer.offers[0]).toMatchObject({
+      skillId: "basic_sword",
+      currentLevel: 0,
+      nextLevel: 1,
+      cost: { silver: 2, jing: 10, potential: 1 },
+      canLearn: true,
     });
   });
 });
@@ -286,7 +386,6 @@ describe("skillsService.practice", () => {
   it("演练一次：消耗气血并升级；进度点持久化", async () => {
     const { skills, state } = boot();
     const res = await skills.practice("acc_1", "basic_sword", 1);
-    // level 0 → cost 20，1 点即满 level+1=1 → 直接升级
     expect(res.skill.level).toBe(1);
     expect(res.leveled).toBe(true);
     expect(res.qiSpent).toBe(20);
@@ -297,7 +396,6 @@ describe("skillsService.practice", () => {
   it("多次演练：逐级扣气血（含等级成长成本）", async () => {
     const { skills, state } = boot();
     const res = await skills.practice("acc_1", "basic_sword", 3);
-    // 20 + 21 + 21 = 62；level 0→1→2
     expect(res.qiSpent).toBe(62);
     expect(res.skill.level).toBe(2);
     expect(state.characters[0]?.qi).toBe(438);
@@ -311,7 +409,6 @@ describe("skillsService.practice", () => {
 
     const { skills: s2, state } = boot({ qi: 35 });
     const res = await s2.practice("acc_1", "basic_sword", 10);
-    // 第一次 20（升级），第二次需 21 > 剩余 15 → 中断，仅 1 次
     expect(res.iterations).toBe(1);
     expect(res.qiSpent).toBe(20);
     expect(state.characters[0]?.qi).toBe(15);
@@ -344,7 +441,7 @@ describe("skillsService.study", () => {
     const { skills, state } = boot();
     const res = await skills.study("acc_1", "basic_sword", 1);
     expect(res.skill.level).toBe(1);
-    expect(res.jingSpent).toBe(80); // studyJingBase 80 + level 0
+    expect(res.jingSpent).toBe(80);
     expect(state.characters[0]?.jing).toBe(420);
   });
 
@@ -370,7 +467,6 @@ describe("app 集成（skills 路由）", () => {
     const { token } = login.json() as { token: string };
     expect(token).toBeTruthy();
 
-    // 无角色 → 404
     const noChar = await app.inject({
       method: "GET",
       url: "/skills",
@@ -378,7 +474,6 @@ describe("app 集成（skills 路由）", () => {
     });
     expect(noChar.statusCode).toBe(404);
 
-    // 建角（acc_1）
     state.characters.push({
       id: "char_1",
       account_id: "acc_1",
@@ -388,6 +483,10 @@ describe("app 集成（skills 路由）", () => {
       learned_points: 0,
       jing: 500,
       qi: 500,
+      silver: 20,
+      room_path: "village_dojo",
+      master_npc_id: null,
+      sect_id: null,
       attrs: { str: 20, int: 30, con: 20, dex: 10 },
     });
     const list = await app.inject({
@@ -402,7 +501,7 @@ describe("app 集成（skills 路由）", () => {
       method: "POST",
       url: "/skills/learn",
       headers: { authorization: `Bearer ${token}` },
-      payload: { skillId: "basic_sword" },
+      payload: { skillId: "basic_sword", npcId: "master_wang" },
     });
     expect(learn.statusCode).toBe(200);
     expect((learn.json() as { skill: { level: number } }).skill.level).toBe(1);
@@ -411,7 +510,7 @@ describe("app 集成（skills 路由）", () => {
       method: "POST",
       url: "/skills/learn",
       headers: { authorization: `Bearer ${token}` },
-      payload: { skillId: "nope" },
+      payload: { skillId: "nope", npcId: "master_wang" },
     });
     expect(learnBad.statusCode).toBe(404);
     expect((learnBad.json() as { error: { code: string } }).error).toMatchObject({

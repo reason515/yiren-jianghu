@@ -13,7 +13,7 @@ export interface CharacterSheetProps {
   character: CharacterView;
   onClose: () => void;
   pendingAction?: string | null;
-  onSkillAction?: (action: "learn" | "practice" | "study", skillId: string) => void;
+  onSkillAction?: (action: "practice" | "study", skillId: string) => void;
   onInventoryAction?: (action: "equip" | "unequip" | "use", itemId: string) => void;
   /** 改名：提交受控意图，成功后由上层刷新快照。 */
   onRename?: (name: string) => void;
@@ -132,6 +132,11 @@ export function CharacterSheet({
           <i className="dot" aria-hidden="true" />
           银两 <b className="char-num">{character.silver}</b>
         </span>
+        {character.masterName || character.sectId ? (
+          <span className="res sect">
+            师门 <b>{character.masterName ?? character.sectId}</b>
+          </span>
+        ) : null}
       </div>
 
       <div className="char-tabs" role="tablist" aria-label="人物簿页签">
@@ -211,7 +216,7 @@ export function CharacterSheet({
           <section className="char-section">
             <h4 className="char-section-title">武功</h4>
             {learnedSkills.length === 0 ? (
-              <p className="char-empty">你尚未学会任何武功。</p>
+              <p className="char-empty">你尚未学会任何武功。去村中武馆当面请教吧。</p>
             ) : (
               learnedSkills.map((skill) => {
                 const expanded = expandedSkillId === skill.id;
@@ -251,13 +256,11 @@ export function CharacterSheet({
                         ) : null}
                         {onSkillAction && (
                           <div className="char-row-actions">
-                            {(["learn", "practice", "study"] as const).map((action) => {
-                              const label =
-                                action === "learn"
-                                  ? "请教"
-                                  : action === "practice"
-                                    ? "演练"
-                                    : "参悟";
+                            <p className="char-skill-hint">
+                              请教须当面寻师父；此处可自行演练、参悟。
+                            </p>
+                            {(["practice", "study"] as const).map((action) => {
+                              const label = action === "practice" ? "演练" : "参悟";
                               const key = `skill:${action}:${skill.id}`;
                               return (
                                 <Chip

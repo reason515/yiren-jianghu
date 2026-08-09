@@ -215,17 +215,25 @@ describe("F3 全链路旅程", () => {
     expect((back.json() as { id: string }).id).toBe("village_square");
   });
 
-  it("4. 学武：新角色 exp=0 → exp_gate；SQL 提经验后 learn/practice/study 走通", async () => {
+  it("4. 学武：当面请教王师傅；exp=0 → exp_gate；提经验后 learn/practice/study 走通", async () => {
+    // 从村口北行至武馆当面请教（DC-039）
+    await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "move", dir: "north" },
+    });
+
     const learn0 = await app.inject({
       method: "POST",
       url: "/skills/learn",
       headers: auth(tokenA),
-      payload: { skillId: "basic_sword" },
+      payload: { skillId: "basic_sword", npcId: "master_wang" },
     });
     expect(learn0.statusCode).toBe(409);
     expect((learn0.json() as { error: { code: string } }).error.code).toBe("exp_gate");
 
-    // SQL 造数：PVE 战斗域未落地，先给经验与潜能（见文件头注释）
+    // SQL 造数：补经验与潜能（见文件头注释）
     await pool.query("UPDATE characters SET exp = 1000, potential = 100 WHERE id = $1", [
       characterA,
     ]);
@@ -234,10 +242,13 @@ describe("F3 全链路旅程", () => {
       method: "POST",
       url: "/skills/learn",
       headers: auth(tokenA),
-      payload: { skillId: "basic_sword" },
+      payload: { skillId: "basic_sword", npcId: "master_wang" },
     });
     expect(learn.statusCode).toBe(200);
-    expect((learn.json() as { skill: { level: number } }).skill.level).toBe(1);
+    expect(
+      (learn.json() as { skill: { level: number }; spent: { silver: number } }).skill.level,
+    ).toBe(1);
+    expect((learn.json() as { spent: { silver: number } }).spent.silver).toBe(2);
 
     const practice = await app.inject({
       method: "POST",
@@ -255,6 +266,14 @@ describe("F3 全链路旅程", () => {
       payload: { skillId: "basic_sword", count: 1 },
     });
     expect(study.statusCode).toBe(200);
+
+    // 回到村口，供后续步骤
+    await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "move", dir: "south" },
+    });
   });
 
   it("5. 任务：接 q_newbie_trail → 前往村外 → 战胜野狗 → 自动推进 → 交差发奖", async () => {

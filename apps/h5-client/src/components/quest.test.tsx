@@ -21,7 +21,7 @@ afterEach(() => {
 const DATA: QuestPanelData = {
   story: [
     { id: "s_begin", title: "初入江湖", done: true, current: false },
-    { id: "s_learn", title: "拜师学艺", done: true, current: false },
+    { id: "s_learn", title: "武馆求教", done: true, current: false },
     { id: "s_graduate", title: "出村在望", done: false, current: true },
   ],
   quests: [

@@ -16,6 +16,8 @@ import { DIR_LABEL } from "./components/ExitPad.js";
 import { useJournalLog } from "./lib/journalLog.js";
 import { EntitySheet } from "./components/EntitySheet.js";
 import { ShopView } from "./components/ShopView.js";
+import { TeachSheet } from "./components/TeachSheet.js";
+import type { TeachOfferData } from "./lib/teachTypes.js";
 import { CombatView, RESULT_TEXT } from "./components/CombatView.js";
 import { CharacterSheet } from "./components/CharacterSheet.js";
 import { ConfirmSheet } from "./components/ConfirmSheet.js";
@@ -111,6 +113,8 @@ export function App(): JSX.Element {
   const [discarding, setDiscarding] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<SceneNpc | SceneItem | null>(null);
   const [trade, setTrade] = useState<SceneTradeResult | null>(null);
+  const [teach, setTeach] = useState<TeachOfferData | null>(null);
+  const [teachPending, setTeachPending] = useState(false);
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [combatOpen, setCombatOpen] = useState(false);
   const [combatBusy, setCombatBusy] = useState(false);
@@ -702,25 +706,14 @@ export function App(): JSX.Element {
       .finally(() => setAfkPending(false));
   };
 
-  const onSkillAction = (action: "learn" | "practice" | "study", skillId: string): void => {
+  const onSkillAction = (action: "practice" | "study", skillId: string): void => {
     const key = `skill:${action}:${skillId}`;
     const name = characterView?.skills.find((skill) => skill.id === skillId)?.name ?? "这门武功";
     setCharacterPending(key);
-    const request =
-      action === "learn"
-        ? api.learnSkill(skillId)
-        : action === "practice"
-          ? api.practiceSkill(skillId)
-          : api.studySkill(skillId);
+    const request = action === "practice" ? api.practiceSkill(skillId) : api.studySkill(skillId);
     void request
       .then(async (result) => {
         await refreshCharacter();
-        triggerGuide("skill_learned");
-        if (action === "learn") {
-          // 请教本轮不专项改结果文案
-          showToast(`${name}已请教。`);
-          return;
-        }
         if (action === "practice") {
           const spent =
             result && typeof result === "object" && "qiSpent" in result
@@ -747,6 +740,51 @@ export function App(): JSX.Element {
       })
       .catch(notify)
       .finally(() => setCharacterPending(null));
+  };
+
+  const openTeach = (npcId: string): void => {
+    void api
+      .getTeachOffer(npcId)
+      .then((offer) => {
+        setSelectedEntity(null);
+        setTeach(offer);
+      })
+      .catch(notify);
+  };
+
+  const onTeachLearn = (skillId: string): void => {
+    if (!teach) return;
+    setTeachPending(true);
+    void api
+      .learnSkill(skillId, teach.npc.id)
+      .then(async (result) => {
+        await refreshCharacter();
+        triggerGuide("skill_learned");
+        const parts = [
+          result.spent.silver > 0 ? `银 ${result.spent.silver}` : null,
+          `精 ${result.spent.jing}`,
+          `潜能 ${result.spent.potential}`,
+        ].filter(Boolean);
+        const line = `${result.teacher.name}点头示意。耗${parts.join("、")}，${result.skill.name}进至 ${result.skill.level} 级。`;
+        showToast(line);
+        addJournal(line);
+        const next = await api.getTeachOffer(teach.npc.id);
+        setTeach(next);
+      })
+      .catch(notify)
+      .finally(() => setTeachPending(false));
+  };
+
+  const onApprentice = (npcId: string): void => {
+    void api
+      .apprentice(npcId)
+      .then(async (result) => {
+        setSelectedEntity(null);
+        await refreshCharacter();
+        showToast(result.message);
+        addJournal(result.message);
+      })
+      .catch(notify);
   };
 
   const onRename = (name: string): void => {
@@ -852,6 +890,14 @@ export function App(): JSX.Element {
     if (action === "quest") {
       setSelectedEntity(null);
       openQuests();
+      return;
+    }
+    if (action === "teach") {
+      openTeach(targetId);
+      return;
+    }
+    if (action === "apprentice") {
+      onApprentice(targetId);
       return;
     }
     if (action === "talk" || action === "trade") {
@@ -1304,6 +1350,7 @@ export function App(): JSX.Element {
         <EntitySheet
           open
           entity={selectedEntity}
+          sectId={characterView?.sectId}
           onAction={onEntityAction}
           onClose={() => setSelectedEntity(null)}
         />
@@ -1316,6 +1363,12 @@ export function App(): JSX.Element {
             onBuy={(itemId) => onTrade("buy", itemId)}
             onSell={(itemId) => onTrade("sell", itemId)}
           />
+        </Sheet>
+      )}
+
+      {teach && (
+        <Sheet open title={`${teach.npc.name}·请教`} onClose={() => setTeach(null)}>
+          <TeachSheet data={teach} pending={teachPending} onLearn={onTeachLearn} />
         </Sheet>
       )}
 

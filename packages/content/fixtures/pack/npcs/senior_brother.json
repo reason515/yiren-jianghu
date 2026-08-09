@@ -2,6 +2,7 @@
   "id": "senior_brother",
   "name": "大师兄·凌霄",
   "kind": "apprentice_master",
+  "sectId": "xuanmen",
   "level": 45,
   "skills": [
     {
@@ -15,6 +16,20 @@
     {
       "skillId": "xuanmen_parry",
       "level": 80
+    }
+  ],
+  "teaches": [
+    {
+      "skillId": "xuanmen_sword",
+      "maxLevel": 70
+    },
+    {
+      "skillId": "xuanmen_dodge",
+      "maxLevel": 60
+    },
+    {
+      "skillId": "xuanmen_parry",
+      "maxLevel": 60
     }
   ],
   "equipment": ["cubu_yi", "iron_sword"],

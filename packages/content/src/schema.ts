@@ -69,6 +69,8 @@ export const paramsSchema = z.object({
   /** 成长（学习/练习/读书）：exp 门槛与资源消耗 */
   growth: z.object({
     learnJingCostBase: z.number().int().positive().default(150),
+    /** 收费请教默认学费（两银/次）；NPC teaches.tuitionSilver 可覆盖；门派请教强制 0（DC-039）。 */
+    learnTuitionBase: z.number().int().nonnegative().default(2),
     potentialCostPerLevel: z.number().positive().default(1),
     expGateExponent: z.number().positive().default(3),
     expGateDivisor: z.number().positive().default(10),
@@ -142,10 +144,19 @@ const battleRewardSchema = z.object({
   silver: z.number().int().nonnegative().default(0),
 });
 
+/** NPC 可教武功条目（DC-039）：与战斗 skills 展示等级分离。 */
+export const teachOfferSchema = z.object({
+  skillId: id,
+  /** 可教至该等级（含）；实际上限再与 skill.maxLevel、师父该技能等级取 min。 */
+  maxLevel: z.number().int().positive(),
+  /** 覆盖全局 learnTuitionBase；门派请教由服务端强制 0。 */
+  tuitionSilver: z.number().int().nonnegative().optional(),
+});
+
 export const npcSchema = z.object({
   id,
   name: z.string().min(1),
-  kind: z.enum(["battle", "vendor", "apprentice_master", "quest_giver", "npc"]),
+  kind: z.enum(["battle", "vendor", "tuition_teacher", "apprentice_master", "quest_giver", "npc"]),
   /** 外观描述（V2.12 观察动作）：玩家「观察」时显示，短句画面感（wuxia 规范）。 */
   description: z.string().default(""),
   level: z.number().int().nonnegative().optional(),
@@ -175,6 +186,13 @@ export const npcSchema = z.object({
       }),
     )
     .default([]),
+  /**
+   * 可教武功清单（DC-039）：tuition_teacher 必填；apprentice_master 若传功则填。
+   * 与 skills（战斗/观察展示等级）分离。
+   */
+  teaches: z.array(teachOfferSchema).default([]),
+  /** 门派 id（apprentice_master 传功/收徒时必填，如 xuanmen）。 */
+  sectId: id.optional(),
   aggressive: z.boolean().default(false),
   respawnSec: z.number().int().positive().optional(),
   dialogue: z.array(z.string()).default([]),

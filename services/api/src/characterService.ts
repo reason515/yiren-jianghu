@@ -43,6 +43,12 @@ export interface CharacterSummary {
   exp: number;
   effectivePotential: number;
   silver: number;
+  /** 正式拜师师父 NPC id（DC-039）；收费请教不写。 */
+  masterNpcId: string | null;
+  /** 门派 id。 */
+  sectId: string | null;
+  /** 师父名号（内容包解析；无则 null）。 */
+  masterName: string | null;
 }
 
 export const ATTR_MIN = 10;
@@ -53,6 +59,8 @@ export const START_ROOM = "village_start";
 /** 建角赠送并默认穿戴的衣甲（内容包 items/cubu_yi；对齐 xkx 开局布衣）。 */
 export const START_CLOTH_ITEM_ID = "cubu_yi";
 export const START_CLOTH_SLOT = "armor";
+/** 建角起步银两（DC-039：保证未打怪也可请教数次）。 */
+export const START_SILVER = 10;
 
 /** 属性分配校验：每项整数 10–30，总和 = 80。返回 null 表示通过。 */
 export function validateAttrs(attrs: {
@@ -106,8 +114,8 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       if (nameTaken.rows[0]) throw new CharacterError("name_taken", "名号已被他人取用");
 
       const created = await db.query<{ id: string }>(
-        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id) VALUES ($1, $2, $3, $4, $5, $5) RETURNING id",
-        [accountId, name, input.gender, JSON.stringify(input.attrs), START_ROOM],
+        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id, silver) VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING id",
+        [accountId, name, input.gender, JSON.stringify(input.attrs), START_ROOM, START_SILVER],
       );
       const characterId = created.rows[0]?.id;
       if (!characterId) throw new CharacterError("character_create_failed", "立名失败");
@@ -138,8 +146,10 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         neili: number;
         food: number;
         water: number;
+        master_npc_id: string | null;
+        sect_id: string | null;
       }>(
-        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0];
@@ -214,6 +224,11 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         exp: Number(row.exp),
         effectivePotential: effectivePotential(Number(row.potential), Number(row.learned_points)),
         silver: Number(row.silver),
+        masterNpcId: row.master_npc_id,
+        sectId: row.sect_id,
+        masterName: row.master_npc_id
+          ? (content?.npcs.find((n) => n.id === row.master_npc_id)?.name ?? null)
+          : null,
       };
     },
 

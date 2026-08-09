@@ -22,9 +22,12 @@ function learnInput(overrides: Partial<Parameters<typeof learnUp>[0]> = {}) {
     learnedPoints: 0,
     jing: 300,
     int: 20,
+    silver: 100,
+    tuitionSilver: 2,
     skillId: "basic_sword",
     skills: {} as SkillMap,
     maxLevel: MAX_LEVEL,
+    teachCap: MAX_LEVEL,
     ...overrides,
   };
 }
@@ -53,13 +56,25 @@ describe("exp 门槛（pkuxkx 对照：武功³/10 > 经验 无法深造）", ()
 });
 
 describe("learnUp（学习）", () => {
-  it("成功：等级 +1，扣除潜能与精，learned_points 由调用方同步", () => {
+  it("成功：等级 +1，扣除潜能与精与银两；首学精耗 ×2", () => {
     const r = learnUp(learnInput());
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.skills["basic_sword"]).toEqual({ level: 1, practicePoints: 0 });
-      expect(r.potentialSpent).toBe(1); // 1 * potentialCostPerLevel
-      expect(r.jingSpent).toBe(Math.ceil(150 / 20)); // 8
+      expect(r.potentialSpent).toBe(1);
+      expect(r.jingSpent).toBe(Math.ceil(150 / 20) * 2); // 首学 ×2 → 16
+      expect(r.silverSpent).toBe(2);
+    }
+  });
+
+  it("已有等级：精耗不再加倍；学费可为 0", () => {
+    const r = learnUp(
+      learnInput({ skills: { basic_sword: { level: 1, practicePoints: 0 } }, tuitionSilver: 0 }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.jingSpent).toBe(Math.ceil(150 / 20));
+      expect(r.silverSpent).toBe(0);
     }
   });
 
@@ -68,20 +83,39 @@ describe("learnUp（学习）", () => {
     let potential = 1000;
     let learned = 0;
     let jing = 5000;
+    let silver = 100;
     for (let i = 0; i < 5; i++) {
-      const r = learnUp(learnInput({ skills, potential, learnedPoints: learned, jing }));
+      const r = learnUp(learnInput({ skills, potential, learnedPoints: learned, jing, silver }));
       expect(r.ok).toBe(true);
       if (r.ok) {
         skills = r.skills;
         potential -= r.potentialSpent;
         learned += r.potentialSpent;
         jing -= r.jingSpent;
+        silver -= r.silverSpent;
       }
     }
     expect(skills["basic_sword"]?.level).toBe(5);
-    // 潜能成本 = 1+2+3+4+5 = 15
     expect(potential).toBe(1000 - 15);
     expect(learned).toBe(15);
+    expect(silver).toBe(90);
+  });
+
+  it("银两不足 → silver", () => {
+    const r = learnUp(learnInput({ silver: 1, tuitionSilver: 2 }));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("silver");
+  });
+
+  it("超过师父可教上限 → teacher_cap", () => {
+    const r = learnUp(
+      learnInput({
+        teachCap: 1,
+        skills: { basic_sword: { level: 1, practicePoints: 0 } },
+      }),
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("teacher_cap");
   });
 
   it("exp 门槛不足 → exp_gate", () => {
@@ -97,11 +131,12 @@ describe("learnUp（学习）", () => {
       learnInput({
         potential: 10,
         learnedPoints: 9,
-        skills: { basic_sword: { level: 5, practicePoints: 0 } }, // 下一级需 6 潜能
+        skills: { basic_sword: { level: 5, practicePoints: 0 } },
       }),
     );
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("potential");
+    expect(effectivePotential(10, 9)).toBe(1);
   });
 
   it("精不足 → jing", () => {

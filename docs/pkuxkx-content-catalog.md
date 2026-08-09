@@ -52,6 +52,8 @@
 | 战斗契约 | `feature/attribute.c`（1042 行）、`include/combat/damage.h`（calc_damage 184 行） | 动态气血/精神/内力/精力上限；命中/躲闪/招架三态；分系伤害与减伤；内功加成 | 数值参数表 | 机制借鉴 | 纳入（参考契约，重写实现） |
 | 绝招一等公民 | `kungfu/skill/<技能>/` 动作目录、`cmds/std/perform.c`、`do_pfm` 拦截 | 绝招独立数据：id/技能/条件/消耗/冷却/效果/演出；手动按钮与战术模板共用 | 战斗契约、战术模板 | 机制借鉴 | 纳入（抽 4–6 个代表性绝招验证） |
 | 技能制成长 | `feature/skill.c`（971 行）、`cmds/skill/{learn,practice,study}.c` | exp + 潜能 + 武功；武功受 exp 约束；学习/练习/领悟挂机循环 | 数值参数表 | 机制借鉴 | 纳入（单潜能货币，无硬等级） |
+| 交银请教（教头） | `d/wuguan/npc/jiaotou.c`（recognize_apprentice + 交银 mark） | 不拜师、交银换学习机会；每次学仍扣精 | 技能制成长、经济 | 机制借鉴 | 纳入（DC-039：改为按次扣银 GUI，非预付次数） |
+| 门派拜师收徒 | `cmds/skill/apprentice.c`、门派 `attempt_apprentice` | 正式收徒写入师门；本门可请教 | 门派内容 | 机制借鉴 | 纳入（DC-039：落库 master/sect，首版无叛师） |
 | 战术模板 | xkx2001 `web/app/src/lib/ruleEngine.ts`（客户端触发器） | 结构化「条件 → 动作 → 冷却 → 优先级」，服务端校验执行 | 绝招契约 | 机制借鉴 | 纳入（服务端权威，不开放脚本） |
 | 数值参数表 | pkuxkx 各公式（对照列） | 经验/潜能/奖励/挂机收益曲线，移动端会话重设计 | — | 机制借鉴 | 纳入（重设计 + 集中参数） |
 

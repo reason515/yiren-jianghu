@@ -17,7 +17,7 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ├── params.json          # 数值参数表（经验曲线/潜能/战斗基础/状态 Vitals/挂机/经济）
 ├── maps/world.json      # 可选天下图（nodes=area 节点 geo + roads 道路链）
 ├── rooms/*.json         # 房间：id/area/name/exits/doors/actions/npcIds/itemIds
-├── npcs/*.json          # NPC：battle|vendor|apprentice_master|quest_giver|npc
+├── npcs/*.json          # NPC：battle|vendor|tuition_teacher|apprentice_master|quest_giver|npc
 ├── items/*.json         # 物品：weapon|armor|drug|food|misc
 ├── skills/*.json        # 技能：force|weapon|dodge|parry|knowledge
 ├── performs/*.json      # 绝招：skillId/条件/消耗/冷却/效果（一等公民，战术模板动作原子）

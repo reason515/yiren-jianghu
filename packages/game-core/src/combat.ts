@@ -1,28 +1,59 @@
 import type { Json } from "@yjh/shared";
 import type { GameParams } from "./params.js";
 import { chance, createSeededRng, type Rng } from "./random.js";
+import { skillPower } from "./skillPower.js";
 
 /**
  * C3 战斗引擎 v1（回合制、确定性、纯函数）。
  *
- * 参照 pkuxkx include/combat/damage.h 的 calc_damage 思路（命中三态、分系伤害、减伤），
- * 但重设计为参数驱动的简化模型：
+ * 参照 pkuxkx include/combat/probable.h 的 skill_power 思路（DC-041 起改用其作为命中/闪避/
+ * 招架的 A/(A+B) 概率基础），重设计为参数驱动的简化模型：
  * - 回合制交替行动（先手固定 A，先手机制留作扩展）
- * - 命中 → 躲闪 → 招架 三态判定（招架减伤 70%）
- * - 伤害 = max(1, (攻击 + 武器等级×系数 + 内功等级×系数 − 防御×减伤) × 浮动)
+ * - 闪避 → 招架 二态判定（不再设独立的“未命中”态；招架减伤 70%）
+ * - 伤害 = max(1, 攻击 + 武器等级×系数 + 内功等级×系数 − 防御×减伤)，绝招按 move.damage/force 加成后再浮动
  * - 行动由 ActionSelector 决定（手动按钮/战术模板 C6/PVP C8 共用此接口）
  * - 全部随机经 seeded RNG：同 seed 同输入 → 完全相同的战报
  */
 
 export type DamageType = "physical" | "force";
 
+/**
+ * 战斗数值（DC-041：门类等级改由 combatant.ts 的 enable 有效等级注入）。
+ * attack/defense/dodge/parry 保留作叙事/兼容展示；命中判定实际读取 *SkillLevel + combatExp + str/dex。
+ */
 export interface CombatStats {
+  /** 兼容展示：str + 有效攻击槎（武器/空手）等级。 */
   attack: number;
   defense: number;
   dodge: number;
   parry: number;
+  /** 有效攻击槎（sword 或 unarmed）等级。 */
   weaponLevel: number;
+  /** 有效内功等级。 */
   forceLevel: number;
+  /** 有效攻击槎等级（skillPower 用；与 weaponLevel 同值，语义命名）。 */
+  attackSkillLevel: number;
+  /** 有效身法（dodge）等级。 */
+  dodgeSkillLevel: number;
+  /** 有效招架（parry）等级。 */
+  parrySkillLevel: number;
+  /** 战斗经验（pkuxkx combat_exp，随对战积累，C11 起接入）。 */
+  combatExp: number;
+  str: number;
+  dex: number;
+  con: number;
+}
+
+/** 普攻抽中的招式信息（DC-041：由 movePick 挑选，供伤害加成与战报叙事）。 */
+export interface MoveInfo {
+  id: string;
+  name: string;
+  /** 伤害百分比加成。 */
+  damage: number;
+  /** 内功发力加成。 */
+  force: number;
+  /** 身法修正（预留，v1 未接入命中判定）。 */
+  dodge?: number;
 }
 
 export interface Combatant {
@@ -37,6 +68,12 @@ export interface Combatant {
   stats: CombatStats;
   /** 叙事用：人/兽/鸟（DC 内容驱动；缺省按人）。 */
   nature?: "human" | "beast" | "bird";
+  /** 本场普攻走的攻击槎（DC-041：有兵器→sword，否则 unarmed）。 */
+  attackSkillSlot?: "sword" | "unarmed";
+  /** 各槎有效等级快照（叙事/调试用；命中判定以 stats.*SkillLevel 为准）。 */
+  effective?: { force: number; dodge: number; parry: number; weapon: number };
+  /** 战斗经验（与 stats.combatExp 同值，顶层留一份便于服务端直接读取）。 */
+  exp?: number;
 }
 
 export type ActorKey = "a" | "b";
@@ -68,7 +105,7 @@ export interface PerformCost {
 }
 
 export type BattleAction =
-  | { type: "attack" }
+  | { type: "attack"; move?: MoveInfo }
   | { type: "recover" }
   | { type: "flee" }
   | { type: "perform"; performId?: string; effect: PerformEffect; cost: PerformCost };
@@ -107,73 +144,72 @@ export interface BattleResult {
   combatants: Record<ActorKey, Combatant>;
 }
 
-// ---------- 命中三态与伤害（纯函数，可单测） ----------
+// ---------- 命中判定与伤害（纯函数，可单测） ----------
 
-export function clampRate(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
-export function hitRate(p: GameParams, atk: CombatantView, def: CombatantView): number {
-  return clampRate(
-    p.combat.baseHitRate + (atk.stats.attack - def.stats.dodge) * p.combat.hitPerAttackDiff,
-    0.05,
-    0.95,
-  );
-}
-
-export function dodgeRate(p: GameParams, def: CombatantView, atk: CombatantView): number {
-  return clampRate(
-    p.combat.baseDodgeRate + (def.stats.dodge - atk.stats.attack) * p.combat.dodgePerDodgeDiff,
-    0,
-    0.6,
-  );
-}
-
-export function parryRate(p: GameParams, def: CombatantView, atk: CombatantView): number {
-  return clampRate(
-    p.combat.baseParryRate + (def.stats.parry - atk.stats.attack) * p.combat.parryPerParryDiff,
-    0,
-    0.5,
-  );
-}
-
+/**
+ * 伤害基数 + 招式加成 + 浮动（DC-041）。
+ * move 提供时：先按 `(100+move.damage)/100` 放大基数，再叠加 `内功等级×move.force/100` 的发力加成。
+ */
 export function computeAttackDamage(
   p: GameParams,
   atk: CombatantView,
   def: CombatantView,
   rng: Rng,
+  move?: MoveInfo,
 ): number {
-  const base =
+  let base = Math.max(
+    1,
     atk.stats.attack +
-    atk.stats.weaponLevel * p.combat.weaponDmgPerLevel +
-    atk.stats.forceLevel * p.combat.forceDmgPerLevel -
-    def.stats.defense * p.combat.defenseReduce;
+      atk.stats.weaponLevel * p.combat.weaponDmgPerLevel +
+      atk.stats.forceLevel * p.combat.forceDmgPerLevel -
+      def.stats.defense * p.combat.defenseReduce,
+  );
+  if (move) {
+    base = base * ((100 + move.damage) / 100) + (atk.stats.forceLevel * move.force) / 100;
+  }
   const variance = 1 + (rng() * 2 - 1) * p.combat.damageVariance;
   return Math.max(1, Math.round(base * variance));
 }
 
 export type AttackOutcome =
-  | { type: "miss"; hitRate: number }
-  | { type: "dodge"; dodgeRate: number }
-  | { type: "parry"; parryRate: number; damage: number }
-  | { type: "damage"; damage: number };
+  | { type: "dodge"; moveId?: string; moveName?: string }
+  | { type: "parry"; damage: number; moveId?: string; moveName?: string }
+  | { type: "damage"; damage: number; moveId?: string; moveName?: string };
 
+/**
+ * 命中判定（DC-041：改用 pkuxkx skill_power 的 A/(A+B) 概率模型，不再设独立“未命中”态）：
+ * 1. ap = 攻方 skillPower(attackSkillLevel)；dp = 守方 skillPower(dodgeSkillLevel) → 闪避判定；
+ * 2. 未闪避则 pp = 守方 skillPower(parrySkillLevel) → 招架判定（命中仍用 ap 对比）；
+ * 3. 均未触发则正常命中；招架命中伤害打 3 折。
+ */
 export function resolveAttack(
   p: GameParams,
   atk: CombatantView,
   def: CombatantView,
   rng: Rng,
+  move?: MoveInfo,
 ): AttackOutcome {
-  const hRate = hitRate(p, atk, def);
-  if (!chance(rng, hRate)) return { type: "miss", hitRate: hRate };
-  const dRate = dodgeRate(p, def, atk);
-  if (chance(rng, dRate)) return { type: "dodge", dodgeRate: dRate };
-  const pRate = parryRate(p, def, atk);
-  if (chance(rng, pRate)) {
-    const full = computeAttackDamage(p, atk, def, rng);
-    return { type: "parry", parryRate: pRate, damage: Math.max(1, Math.round(full * 0.3)) };
+  const atkAttrs = { str: atk.stats.str, dex: atk.stats.dex };
+  const defAttrs = { str: def.stats.str, dex: def.stats.dex };
+  const ap = skillPower(atk.stats.attackSkillLevel, atk.stats.combatExp, atkAttrs, "attack");
+  const dp = skillPower(def.stats.dodgeSkillLevel, def.stats.combatExp, defAttrs, "defense");
+  if (ap + dp > 0 && chance(rng, dp / (ap + dp))) {
+    return { type: "dodge", ...(move ? { moveId: move.id, moveName: move.name } : {}) };
   }
-  return { type: "damage", damage: computeAttackDamage(p, atk, def, rng) };
+  const pp = skillPower(def.stats.parrySkillLevel, def.stats.combatExp, defAttrs, "defense");
+  if (ap + pp > 0 && chance(rng, pp / (ap + pp))) {
+    const full = computeAttackDamage(p, atk, def, rng, move);
+    return {
+      type: "parry",
+      damage: Math.max(1, Math.round(full * 0.3)),
+      ...(move ? { moveId: move.id, moveName: move.name } : {}),
+    };
+  }
+  return {
+    type: "damage",
+    damage: computeAttackDamage(p, atk, def, rng, move),
+    ...(move ? { moveId: move.id, moveName: move.name } : {}),
+  };
 }
 
 // ---------- 战斗循环 ----------
@@ -222,7 +258,7 @@ export function runBattle(input: BattleInput): BattleResult {
 
       switch (action.type) {
         case "attack": {
-          const outcome = resolveAttack(input.params, view(actor), view(foe), rng);
+          const outcome = resolveAttack(input.params, view(actor), view(foe), rng, action.move);
           if (outcome.type === "damage" || outcome.type === "parry") {
             c[foe].qi = Math.max(0, c[foe].qi - outcome.damage);
           }
@@ -501,7 +537,7 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
         const foe = resolveTarget(input.targetId);
         if (!foe) break;
         const wasAlive = combatants[foe]!.qi > 0;
-        const outcome = resolveAttack(input.params, view(actor), view(foe), rng);
+        const outcome = resolveAttack(input.params, view(actor), view(foe), rng, action.move);
         if (outcome.type === "damage" || outcome.type === "parry") {
           combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - outcome.damage);
         }
@@ -578,7 +614,7 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
     const target = PLAYER_ACTOR;
     switch (action.type) {
       case "attack": {
-        const outcome = resolveAttack(input.params, view(foeId), view(target), rng);
+        const outcome = resolveAttack(input.params, view(foeId), view(target), rng, action.move);
         if (outcome.type === "damage" || outcome.type === "parry") {
           combatants[target]!.qi = Math.max(0, combatants[target]!.qi - outcome.damage);
         }

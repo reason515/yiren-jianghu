@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
-import { attackOnly, runBattle, type CombatantView } from "./combat.js";
+import { attackOnly, runBattle, type CombatStats, type CombatantView } from "./combat.js";
 import {
   createTacticSelector,
   evaluateConditions,
@@ -18,6 +18,8 @@ const PERFORMS = new Map<string, Perform>([
       id: "qiankun_gather",
       skillId: "xuanmen_force",
       name: "乾坤聚气",
+      learnMinLevel: 0,
+      learnRequires: [],
       cost: { qi: 0, jing: 0, neili: 15 },
       cooldownTurns: 5,
       conditions: [{ type: "self_qi_below_pct", value: 60 }],
@@ -31,6 +33,8 @@ const PERFORMS = new Map<string, Perform>([
       id: "zhufeng_break",
       skillId: "xuanmen_sword",
       name: "追风破",
+      learnMinLevel: 0,
+      learnRequires: [],
       cost: { qi: 0, jing: 0, neili: 20 },
       cooldownTurns: 8,
       conditions: [{ type: "enemy_qi_below_pct", value: 30 }],
@@ -47,6 +51,22 @@ const SKILLS = new Map([
 
 const DEPS = { performs: PERFORMS, skillLevels: SKILLS };
 
+const BASE_STATS: CombatStats = {
+  attack: 10,
+  defense: 5,
+  dodge: 5,
+  parry: 5,
+  weaponLevel: 20,
+  forceLevel: 50,
+  attackSkillLevel: 20,
+  dodgeSkillLevel: 5,
+  parrySkillLevel: 5,
+  combatExp: 0,
+  str: 10,
+  dex: 10,
+  con: 10,
+};
+
 function view(overrides: Partial<CombatantView> = {}): CombatantView {
   return {
     qi: 200,
@@ -55,7 +75,7 @@ function view(overrides: Partial<CombatantView> = {}): CombatantView {
     maxJing: 100,
     neili: 80,
     maxNeili: 100,
-    stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 20, forceLevel: 50 },
+    stats: BASE_STATS,
     ...overrides,
   };
 }
@@ -225,7 +245,7 @@ describe("模板接入战斗（挂机/PVP 共用评估器）", () => {
     maxJing: 100,
     neili: 120,
     maxNeili: 150,
-    stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 30, forceLevel: 50 },
+    stats: { ...BASE_STATS, weaponLevel: 30, attackSkillLevel: 30 },
   };
   const bandit = {
     id: "bandit",
@@ -236,7 +256,18 @@ describe("模板接入战斗（挂机/PVP 共用评估器）", () => {
     maxJing: 50,
     neili: 50,
     maxNeili: 50,
-    stats: { attack: 8, defense: 3, dodge: 3, parry: 3, weaponLevel: 10, forceLevel: 10 },
+    stats: {
+      ...BASE_STATS,
+      attack: 8,
+      defense: 3,
+      dodge: 3,
+      parry: 3,
+      weaponLevel: 10,
+      forceLevel: 10,
+      attackSkillLevel: 10,
+      dodgeSkillLevel: 3,
+      parrySkillLevel: 3,
+    },
   };
 
   it("不同模板产出不同战报（攻击型 vs 疗伤型）", () => {

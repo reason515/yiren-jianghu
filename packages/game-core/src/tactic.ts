@@ -143,7 +143,10 @@ function resolveAction(action: TacticAction, ctx: ResolveContext): BattleAction 
         ctx.cooldown,
       );
       if (!canUse.ok) return null;
-      const battleAction = performToBattleAction(perform);
+      const battleAction = performToBattleAction(
+        perform,
+        ctx.deps.skillLevels.get(perform.skillId) ?? 0,
+      );
       if (!battleAction) return null;
       ctx.cooldown.markUsed(perform, ctx.battle.turn);
       return battleAction;

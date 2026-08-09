@@ -1,6 +1,8 @@
+import type { EnableSlot, SkillCategory } from "@yjh/content";
 import type { GameParams } from "./params.js";
 import { computeMaxVitals } from "./vitals.js";
-import type { Combatant } from "./combat.js";
+import type { Combatant, CombatStats } from "./combat.js";
+import { effectiveLevel, type SkillEnableMap, type SkillRaw } from "./enable.js";
 
 /**
  * PVE、PVP 与行侠挂机共用的战斗体输入。
@@ -15,30 +17,77 @@ export interface CombatantSource {
   neili?: number;
 }
 
-export interface CombatSkillLevel {
-  category: "force" | "weapon" | "dodge" | "parry" | "knowledge";
+/** 角色/NPC 已学技能的原始等级输入（buildCombatant 用于计算有效等级）。 */
+export interface CombatantSkillInput {
+  id: string;
   level: number;
 }
 
-/** full 用于快照对战；current 用于会影响角色实际资源的 PVE / 挂机。 */
+/** 技能定义的战斗相关子集（内容包 skillSchema 的投影）。 */
+export interface CombatantSkillDef {
+  kind: "basic" | "special";
+  category: SkillCategory;
+  enableSlots: EnableSlot[];
+}
+
+export interface BuildCombatantOptions {
+  /** 角色/NPC 已学技能的原始等级。 */
+  skills: CombatantSkillInput[];
+  /** 技能定义（id → kind/category/enableSlots），缺失定义的技能会被忽略。 */
+  skillDefs: Map<string, CombatantSkillDef>;
+  /** 各槽位当前激发的特殊功 id（DC-041，见 enable.ts autoEnableMap/assertCanEnable）。 */
+  enableMap: SkillEnableMap;
+  /** 是否持有兵器：true → 攻击槎走 sword，否则走 unarmed。 */
+  hasWeapon?: boolean;
+  /** full 用于快照对战（PVP）；current 用于会影响角色实际资源的 PVE / 挂机。 */
+  resourceMode?: "full" | "current";
+}
+
+/** DC-041：基本功/特殊功激发 → 有效等级注入战斗体（取代旧的门类等级取 max）。 */
 export function buildCombatant(
   params: GameParams,
-  source: CombatantSource,
-  skills: Iterable<CombatSkillLevel>,
-  resourceMode: "full" | "current" = "full",
+  source: CombatantSource & { exp?: number },
+  opts: BuildCombatantOptions,
 ): Combatant {
-  const levelsByCategory = new Map<string, number>();
-  for (const skill of skills) {
-    levelsByCategory.set(
-      skill.category,
-      Math.max(levelsByCategory.get(skill.category) ?? 0, skill.level),
-    );
+  const resourceMode = opts.resourceMode ?? "full";
+
+  const skillMap = new Map<string, SkillRaw>();
+  for (const skill of opts.skills) {
+    const def = opts.skillDefs.get(skill.id);
+    if (!def) continue;
+    skillMap.set(skill.id, {
+      id: skill.id,
+      level: skill.level,
+      kind: def.kind,
+      category: def.category,
+      enableSlots: def.enableSlots,
+    });
   }
-  const weaponLevel = levelsByCategory.get("weapon") ?? 0;
-  const forceLevel = levelsByCategory.get("force") ?? 0;
-  const dodgeLevel = levelsByCategory.get("dodge") ?? 0;
-  const parryLevel = levelsByCategory.get("parry") ?? 0;
+
+  const attackSkillSlot: "sword" | "unarmed" = opts.hasWeapon ? "sword" : "unarmed";
+  const forceLevel = effectiveLevel("force", skillMap, opts.enableMap);
+  const dodgeLevel = effectiveLevel("dodge", skillMap, opts.enableMap);
+  const parryLevel = effectiveLevel("parry", skillMap, opts.enableMap);
+  const weaponLevel = effectiveLevel(attackSkillSlot, skillMap, opts.enableMap);
+
   const maxVitals = computeMaxVitals(params, { ...source.attrs, forceLevel });
+  const exp = source.exp ?? 0;
+
+  const stats: CombatStats = {
+    attack: source.attrs.str + weaponLevel,
+    defense: 10 + source.attrs.con,
+    dodge: 5 + source.attrs.dex + dodgeLevel,
+    parry: 5 + parryLevel,
+    weaponLevel,
+    forceLevel,
+    attackSkillLevel: weaponLevel,
+    dodgeSkillLevel: dodgeLevel,
+    parrySkillLevel: parryLevel,
+    combatExp: exp,
+    str: source.attrs.str,
+    dex: source.attrs.dex,
+    con: source.attrs.con,
+  };
 
   return {
     id: source.id,
@@ -55,13 +104,9 @@ export function buildCombatant(
         ? Math.max(0, source.neili ?? maxVitals.maxNeili)
         : maxVitals.maxNeili,
     maxNeili: maxVitals.maxNeili,
-    stats: {
-      attack: 10 + source.attrs.str + weaponLevel * 2,
-      defense: 10 + source.attrs.con,
-      dodge: 5 + source.attrs.dex + dodgeLevel,
-      parry: 5 + parryLevel,
-      weaponLevel,
-      forceLevel,
-    },
+    stats,
+    attackSkillSlot,
+    effective: { force: forceLevel, dodge: dodgeLevel, parry: parryLevel, weapon: weaponLevel },
+    exp,
   };
 }

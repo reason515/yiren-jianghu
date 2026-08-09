@@ -7,14 +7,12 @@ import {
   attackOrRecover,
   createBattleState,
   computeAttackDamage,
-  dodgeRate,
-  hitRate,
-  parryRate,
   pickAutoTarget,
   resolveAttack,
   runBattle,
   type BattleInput,
   type Combatant,
+  type MoveInfo,
 } from "./combat.js";
 import { createSeededRng } from "./random.js";
 
@@ -28,9 +26,44 @@ function fighter(id: string, overrides: Partial<Combatant> = {}): Combatant {
     maxJing: 100,
     neili: 50,
     maxNeili: 100,
-    stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 10, forceLevel: 5 },
+    stats: {
+      attack: 10,
+      defense: 5,
+      dodge: 5,
+      parry: 5,
+      weaponLevel: 10,
+      forceLevel: 5,
+      attackSkillLevel: 10,
+      dodgeSkillLevel: 5,
+      parrySkillLevel: 5,
+      combatExp: 0,
+      str: 10,
+      dex: 10,
+      con: 10,
+    },
     ...overrides,
   };
+}
+
+/** str=dex=10、各门类等级 0 的对照战斗体：ap=dp=pp=10，闪避/招架概率恰为 0.5，便于精确控制分支。 */
+function evenFighter(id: string): Combatant {
+  return fighter(id, {
+    stats: {
+      attack: 10,
+      defense: 5,
+      dodge: 5,
+      parry: 5,
+      weaponLevel: 0,
+      forceLevel: 0,
+      attackSkillLevel: 0,
+      dodgeSkillLevel: 0,
+      parrySkillLevel: 0,
+      combatExp: 0,
+      str: 10,
+      dex: 10,
+      con: 10,
+    },
+  });
 }
 
 /** 可控 RNG：按顺序吐出预设值。 */
@@ -39,55 +72,69 @@ function stubRng(values: number[]): () => number {
   return () => values[i++] ?? 0.5;
 }
 
-describe("命中三态与伤害（纯函数）", () => {
-  it("命中率随攻击-闪避差值变化", () => {
-    const a = fighter("a", { stats: { ...fighter("a").stats, attack: 20 } });
-    const b = fighter("b");
-    expect(hitRate(DEFAULT_PARAMS, a, b)).toBeGreaterThan(hitRate(DEFAULT_PARAMS, b, a));
-  });
-
-  it("躲闪率随防御方闪避、招架率随防御方招架增长", () => {
-    const low = fighter("a");
-    const high = fighter("a", {
-      stats: { ...fighter("a").stats, dodge: 80, parry: 80 },
-    });
-    expect(dodgeRate(DEFAULT_PARAMS, high, low)).toBeGreaterThan(
-      dodgeRate(DEFAULT_PARAMS, low, high),
-    );
-    expect(parryRate(DEFAULT_PARAMS, high, low)).toBeGreaterThan(
-      parryRate(DEFAULT_PARAMS, low, high),
-    );
-  });
-
-  it("伤害随攻击/等级/内功增长，受防御削减，下限 1", () => {
+describe("命中判定与伤害（纯函数，DC-041 skillPower 模型）", () => {
+  it("伤害基础值：攻击+武器+内功-防御，下限 1；招式按 damage/force 加成", () => {
     const rng = stubRng([0.5]); // 无浮动
     const atk = fighter("a", {
-      stats: { attack: 30, weaponLevel: 20, forceLevel: 10, defense: 0, dodge: 0, parry: 0 },
+      stats: {
+        ...fighter("a").stats,
+        attack: 30,
+        weaponLevel: 20,
+        forceLevel: 10,
+        defense: 0,
+        dodge: 0,
+        parry: 0,
+      },
     });
     const def = fighter("b", {
-      stats: { attack: 0, weaponLevel: 0, forceLevel: 0, defense: 100, dodge: 0, parry: 0 },
+      stats: {
+        ...fighter("b").stats,
+        attack: 0,
+        weaponLevel: 0,
+        forceLevel: 0,
+        defense: 100,
+        dodge: 0,
+        parry: 0,
+      },
     });
     // base = 30 + 20*0.5 + 10*0.4 - 100*0.5 = 30+10+4-50 = -6 → 下限 1
     expect(computeAttackDamage(DEFAULT_PARAMS, atk, def, rng)).toBe(1);
     const def2 = { ...def, stats: { ...def.stats, defense: 0 } };
+    // base = 30+10+4-0 = 44（无浮动）
     expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]))).toBe(44);
+
+    const move: MoveInfo = { id: "m1", name: "式一", damage: 50, force: 20 };
+    // base(44) * 1.5 + forceLevel(10)*20/100 = 66 + 2 = 68（无浮动）
+    expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]), move)).toBe(68);
   });
 
-  it("resolveAttack 分支：miss / dodge / parry / damage", () => {
+  it("resolveAttack 分支：dodge / parry / damage（ap=dp=pp 时概率恰为 0.5）", () => {
     const p = DEFAULT_PARAMS;
-    const a = fighter("a");
-    const b = fighter("b");
-    // rng=[0.0, ...]：命中判定 0 < hitRate → 命中；后续值控制 dodge/parry
-    expect(resolveAttack(p, a, b, stubRng([0.0, 0.99, 0.99])).type).toBe("damage");
-    expect(resolveAttack(p, a, b, stubRng([0.99])).type).toBe("miss");
-    // dodge：命中后第二个值 0.0 < dodgeRate
-    expect(resolveAttack(p, a, b, stubRng([0.0, 0.0, 0.99])).type).toBe("dodge");
-    // parry：命中后 dodge 不触发、parry 触发
-    const parried = resolveAttack(p, a, b, stubRng([0.0, 0.99, 0.0]));
+    const a = evenFighter("a");
+    const b = evenFighter("b");
+    // 第一次判定 0.0 < 0.5 → 闪避
+    expect(resolveAttack(p, a, b, stubRng([0.0])).type).toBe("dodge");
+    // 不闪（0.99≥0.5）、不架（0.99≥0.5）→ 命中；第三个值为伤害浮动
+    expect(resolveAttack(p, a, b, stubRng([0.99, 0.99, 0.5])).type).toBe("damage");
+    // 不闪、招架（0.0<0.5）→ parry，伤害打 3 折且下限 1
+    const parried = resolveAttack(p, a, b, stubRng([0.99, 0.0, 0.5]));
     expect(parried.type).toBe("parry");
     if (parried.type === "parry") {
       expect(parried.damage).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it("命中时回传 moveId/moveName（战报叙事用）", () => {
+    const p = DEFAULT_PARAMS;
+    const move: MoveInfo = { id: "m1", name: "式一", damage: 0, force: 0 };
+    const outcome = resolveAttack(
+      p,
+      evenFighter("a"),
+      evenFighter("b"),
+      stubRng([0.99, 0.99, 0.5]),
+      move,
+    );
+    expect(outcome).toMatchObject({ type: "damage", moveId: "m1", moveName: "式一" });
   });
 });
 
@@ -114,12 +161,30 @@ describe("runBattle（战斗循环）", () => {
       const result = battle({
         seed,
         a: fighter("a", {
-          stats: { attack: 999, defense: 0, dodge: 0, parry: 0, weaponLevel: 100, forceLevel: 100 },
+          stats: {
+            ...fighter("a").stats,
+            attack: 999,
+            defense: 0,
+            dodge: 0,
+            parry: 0,
+            weaponLevel: 100,
+            forceLevel: 100,
+            attackSkillLevel: 100,
+          },
         }),
         b: fighter("b", {
           qi: 50,
           maxQi: 50,
-          stats: { attack: 1, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+          stats: {
+            ...fighter("b").stats,
+            attack: 1,
+            defense: 0,
+            dodge: 0,
+            parry: 0,
+            weaponLevel: 0,
+            forceLevel: 0,
+            attackSkillLevel: 0,
+          },
         }),
       });
       expect(result.winner).toBe("a");
@@ -132,12 +197,28 @@ describe("runBattle（战斗循环）", () => {
       a: fighter("a", {
         qi: 9999,
         maxQi: 9999,
-        stats: { attack: 1, weaponLevel: 0, forceLevel: 0, defense: 0, dodge: 0, parry: 0 },
+        stats: {
+          ...fighter("a").stats,
+          attack: 1,
+          weaponLevel: 0,
+          forceLevel: 0,
+          defense: 0,
+          dodge: 0,
+          parry: 0,
+        },
       }),
       b: fighter("b", {
         qi: 9999,
         maxQi: 9999,
-        stats: { attack: 1, weaponLevel: 0, forceLevel: 0, defense: 0, dodge: 0, parry: 0 },
+        stats: {
+          ...fighter("b").stats,
+          attack: 1,
+          weaponLevel: 0,
+          forceLevel: 0,
+          defense: 0,
+          dodge: 0,
+          parry: 0,
+        },
       }),
     });
     expect(result.winner).toBe("draw");

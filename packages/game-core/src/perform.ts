@@ -76,8 +76,16 @@ export function canUsePerform(
   return { ok: true };
 }
 
-/** 绝招 → 战斗动作（buff 返回 null，v1 不支持）。 */
-export function performToBattleAction(p: Perform): BattleAction | null {
+/**
+ * 绝招按所属技能原级放大效果量（DC-041，简化版 xkx 内功加成）：
+ * `flat * (1 + skillRawLevel/100)`——原级越高，绝招伤害/疗效越可观。
+ */
+export function scalePerformAmount(amount: number, skillRawLevel: number): number {
+  return amount * (1 + skillRawLevel / 100);
+}
+
+/** 绝招 → 战斗动作（buff 返回 null，v1 不支持）。skillRawLevel 用于按等级放大效果量。 */
+export function performToBattleAction(p: Perform, skillRawLevel = 0): BattleAction | null {
   const cost = {
     qi: p.cost.qi || undefined,
     jing: p.cost.jing || undefined,
@@ -88,7 +96,11 @@ export function performToBattleAction(p: Perform): BattleAction | null {
       type: "perform",
       performId: p.id,
       cost,
-      effect: { kind: "damage", type: "physical", flat: p.effect.amount },
+      effect: {
+        kind: "damage",
+        type: "physical",
+        flat: scalePerformAmount(p.effect.amount, skillRawLevel),
+      },
     };
   }
   if (p.effect.type === "heal") {
@@ -96,7 +108,7 @@ export function performToBattleAction(p: Perform): BattleAction | null {
       type: "perform",
       performId: p.id,
       cost,
-      effect: { kind: "heal", flat: p.effect.amount },
+      effect: { kind: "heal", flat: scalePerformAmount(p.effect.amount, skillRawLevel) },
     };
   }
   return null;
@@ -134,7 +146,7 @@ export function performSelector(
       const skillLevel = skillLevels.get(p.skillId) ?? 0;
       const check = canUsePerform(p, { battle: ctx, actor, skillLevel }, turn, cooldown);
       if (!check.ok) continue;
-      const action = performToBattleAction(p);
+      const action = performToBattleAction(p, skillLevel);
       if (action === null) continue;
       cooldown.markUsed(p, turn);
       return action;

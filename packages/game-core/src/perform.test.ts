@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
-import { runBattle, attackOnly, type BattleContext } from "./combat.js";
+import { runBattle, attackOnly, type BattleContext, type CombatStats } from "./combat.js";
 import {
   canUsePerform,
   createPerformCooldownTracker,
   evaluatePerformConditions,
   performSelector,
   performToBattleAction,
+  scalePerformAmount,
   type PerformEvalContext,
 } from "./perform.js";
 import type { Perform } from "@yjh/content";
@@ -15,6 +16,8 @@ const SWIFT: Perform = {
   id: "swift_slash",
   skillId: "basic_sword",
   name: "疾风斩",
+  learnMinLevel: 0,
+  learnRequires: [],
   cost: { qi: 0, jing: 5, neili: 10 },
   cooldownTurns: 3,
   conditions: [{ type: "self_neili_above_pct", value: 30 }],
@@ -26,6 +29,8 @@ const QIANKUN: Perform = {
   id: "qiankun_gather",
   skillId: "xuanmen_force",
   name: "乾坤聚气",
+  learnMinLevel: 0,
+  learnRequires: [],
   cost: { qi: 0, jing: 0, neili: 15 },
   cooldownTurns: 5,
   conditions: [{ type: "self_qi_below_pct", value: 60 }],
@@ -37,6 +42,8 @@ const TAIYI: Perform = {
   id: "taiyi_rain",
   skillId: "xuanmen_sword",
   name: "太乙剑雨",
+  learnMinLevel: 0,
+  learnRequires: [],
   cost: { qi: 0, jing: 8, neili: 12 },
   cooldownTurns: 6,
   conditions: [{ type: "skill_level_at_least", value: 40 }],
@@ -48,6 +55,8 @@ const ZHUFENG: Perform = {
   id: "zhufeng_break",
   skillId: "xuanmen_sword",
   name: "追风破",
+  learnMinLevel: 0,
+  learnRequires: [],
   cost: { qi: 0, jing: 0, neili: 20 },
   cooldownTurns: 8,
   conditions: [{ type: "enemy_qi_below_pct", value: 30 }],
@@ -59,6 +68,23 @@ const BUFF: Perform = {
   ...SWIFT,
   id: "buff_demo",
   effect: { type: "buff", amount: 5, target: "self" },
+};
+
+/** 评估条件/消耗/冷却时不读取 stats，具体数值无关紧要，仅需满足类型。 */
+const DUMMY_STATS: CombatStats = {
+  attack: 10,
+  defense: 0,
+  dodge: 0,
+  parry: 0,
+  weaponLevel: 0,
+  forceLevel: 50,
+  attackSkillLevel: 10,
+  dodgeSkillLevel: 0,
+  parrySkillLevel: 0,
+  combatExp: 0,
+  str: 10,
+  dex: 10,
+  con: 10,
 };
 
 function evalCtx(
@@ -80,7 +106,7 @@ describe("evaluatePerformConditions", () => {
               maxJing: 100,
               neili: 80,
               maxNeili: 100,
-              stats: { attack: 10, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 50 },
+              stats: DUMMY_STATS,
             }
           : {
               qi: 20,
@@ -89,7 +115,7 @@ describe("evaluatePerformConditions", () => {
               maxJing: 50,
               neili: 30,
               maxNeili: 50,
-              stats: { attack: 5, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 10 },
+              stats: DUMMY_STATS,
             },
     },
   });
@@ -123,14 +149,7 @@ describe("evaluatePerformConditions", () => {
                 maxJing: 100,
                 neili: 10,
                 maxNeili: 100,
-                stats: {
-                  attack: 10,
-                  defense: 0,
-                  dodge: 0,
-                  parry: 0,
-                  weaponLevel: 0,
-                  forceLevel: 50,
-                },
+                stats: DUMMY_STATS,
               }
             : {
                 qi: 100,
@@ -139,14 +158,7 @@ describe("evaluatePerformConditions", () => {
                 maxJing: 50,
                 neili: 30,
                 maxNeili: 50,
-                stats: {
-                  attack: 5,
-                  defense: 0,
-                  dodge: 0,
-                  parry: 0,
-                  weaponLevel: 0,
-                  forceLevel: 10,
-                },
+                stats: DUMMY_STATS,
               },
       },
     });
@@ -154,8 +166,16 @@ describe("evaluatePerformConditions", () => {
   });
 });
 
+describe("scalePerformAmount（按所属技能原级放大效果量）", () => {
+  it("原级 0 不放大；原级越高放大越多", () => {
+    expect(scalePerformAmount(12, 0)).toBe(12);
+    expect(scalePerformAmount(12, 50)).toBe(18); // 12 * 1.5
+    expect(scalePerformAmount(12, 100)).toBe(24); // 12 * 2
+  });
+});
+
 describe("performToBattleAction", () => {
-  it("damage 映射为伤害动作（physical）", () => {
+  it("damage 映射为伤害动作（physical）；skillRawLevel 默认 0 不放大", () => {
     const a = performToBattleAction(SWIFT);
     expect(a).toEqual({
       type: "perform",
@@ -170,6 +190,14 @@ describe("performToBattleAction", () => {
     expect(a?.type).toBe("perform");
     if (a?.type === "perform") {
       expect(a.effect).toEqual({ kind: "heal", flat: 25 });
+    }
+  });
+
+  it("传入 skillRawLevel 时按等级放大效果量", () => {
+    const a = performToBattleAction(SWIFT, 50);
+    expect(a?.type).toBe("perform");
+    if (a?.type === "perform") {
+      expect(a.effect).toEqual({ kind: "damage", type: "physical", flat: 18 });
     }
   });
 
@@ -191,7 +219,7 @@ describe("canUsePerform（条件/消耗/冷却/类型）", () => {
               maxJing: 100,
               neili: 80,
               maxNeili: 100,
-              stats: { attack: 10, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 50 },
+              stats: DUMMY_STATS,
             }
           : {
               qi: 100,
@@ -200,7 +228,7 @@ describe("canUsePerform（条件/消耗/冷却/类型）", () => {
               maxJing: 50,
               neili: 30,
               maxNeili: 50,
-              stats: { attack: 5, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 10 },
+              stats: DUMMY_STATS,
             },
     },
   });
@@ -223,14 +251,7 @@ describe("canUsePerform（条件/消耗/冷却/类型）", () => {
                 maxJing: 100,
                 neili: 100,
                 maxNeili: 100,
-                stats: {
-                  attack: 10,
-                  defense: 0,
-                  dodge: 0,
-                  parry: 0,
-                  weaponLevel: 0,
-                  forceLevel: 50,
-                },
+                stats: DUMMY_STATS,
               }
             : {
                 qi: 100,
@@ -239,14 +260,7 @@ describe("canUsePerform（条件/消耗/冷却/类型）", () => {
                 maxJing: 50,
                 neili: 30,
                 maxNeili: 50,
-                stats: {
-                  attack: 5,
-                  defense: 0,
-                  dodge: 0,
-                  parry: 0,
-                  weaponLevel: 0,
-                  forceLevel: 10,
-                },
+                stats: DUMMY_STATS,
               },
       },
     });
@@ -288,6 +302,37 @@ describe("performSelector 接入战斗引擎", () => {
     ["xuanmen_sword", 50],
   ]);
 
+  const heroStats: CombatStats = {
+    attack: 10,
+    defense: 5,
+    dodge: 5,
+    parry: 5,
+    weaponLevel: 30,
+    forceLevel: 50,
+    attackSkillLevel: 30,
+    dodgeSkillLevel: 5,
+    parrySkillLevel: 5,
+    combatExp: 0,
+    str: 10,
+    dex: 10,
+    con: 10,
+  };
+  const banditStats: CombatStats = {
+    attack: 8,
+    defense: 3,
+    dodge: 3,
+    parry: 3,
+    weaponLevel: 10,
+    forceLevel: 10,
+    attackSkillLevel: 10,
+    dodgeSkillLevel: 3,
+    parrySkillLevel: 3,
+    combatExp: 0,
+    str: 10,
+    dex: 10,
+    con: 10,
+  };
+
   it("战斗中出现绝招事件且无 perform_failed（条件/消耗/冷却均由选择器把控）", () => {
     const result = runBattle({
       a: {
@@ -299,7 +344,7 @@ describe("performSelector 接入战斗引擎", () => {
         maxJing: 100,
         neili: 100,
         maxNeili: 100,
-        stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 30, forceLevel: 50 },
+        stats: heroStats,
       },
       b: {
         id: "bandit",
@@ -310,7 +355,7 @@ describe("performSelector 接入战斗引擎", () => {
         maxJing: 50,
         neili: 50,
         maxNeili: 50,
-        stats: { attack: 8, defense: 3, dodge: 3, parry: 3, weaponLevel: 10, forceLevel: 10 },
+        stats: banditStats,
       },
       selectors: { a: performSelector([SWIFT, TAIYI, ZHUFENG], skills), b: attackOnly },
       seed: 42,
@@ -332,7 +377,7 @@ describe("performSelector 接入战斗引擎", () => {
           maxJing: 100,
           neili: 100,
           maxNeili: 100,
-          stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 30, forceLevel: 50 },
+          stats: heroStats,
         },
         b: {
           id: "bandit",
@@ -343,7 +388,7 @@ describe("performSelector 接入战斗引擎", () => {
           maxJing: 50,
           neili: 50,
           maxNeili: 50,
-          stats: { attack: 8, defense: 3, dodge: 3, parry: 3, weaponLevel: 10, forceLevel: 10 },
+          stats: banditStats,
         },
         selectors: { a: performSelector([SWIFT, TAIYI, ZHUFENG], skills), b: attackOnly },
         seed: 7,
@@ -363,7 +408,7 @@ describe("performSelector 接入战斗引擎", () => {
         maxJing: 100,
         neili: 200,
         maxNeili: 200,
-        stats: { attack: 10, defense: 5, dodge: 5, parry: 5, weaponLevel: 30, forceLevel: 50 },
+        stats: heroStats,
       },
       b: {
         id: "bandit",
@@ -374,7 +419,18 @@ describe("performSelector 接入战斗引擎", () => {
         maxJing: 50,
         neili: 50,
         maxNeili: 50,
-        stats: { attack: 1, defense: 0, dodge: 0, parry: 0, weaponLevel: 0, forceLevel: 0 },
+        stats: {
+          ...banditStats,
+          attack: 1,
+          defense: 0,
+          dodge: 0,
+          parry: 0,
+          weaponLevel: 0,
+          forceLevel: 0,
+          attackSkillLevel: 0,
+          dodgeSkillLevel: 0,
+          parrySkillLevel: 0,
+        },
       },
       selectors: { a: performSelector([ZHUFENG], skills), b: attackOnly },
       seed: 11,

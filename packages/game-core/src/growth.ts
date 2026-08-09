@@ -1,5 +1,9 @@
 import type { GameParams } from "./params.js";
 import { effectivePotential } from "./params.js";
+import { unlockedMoves } from "./enable.js";
+
+/** learn/practice/study 升级后查询新等级已解锁的招式（DC-041，供 API 层落库/提示）。 */
+export { unlockedMoves as movesUnlockedByLevel };
 
 /**
  * C5 技能成长：learn（当面请教）/ practice（自练）/ study（读书领悟）。

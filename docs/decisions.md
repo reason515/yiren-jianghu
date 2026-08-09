@@ -62,6 +62,7 @@
 | DC-041 | 2026-08 | xkx 式武学全套（激发/招式/绝招学会/skill_power） | ①基本功+特殊功；人物簿 GUI 激发（有效等级=基本/2+特殊）；②招式挂特殊功达级解锁，普攻自动抽；③绝招须学会后手动（挂机模板仅已学）；④命中改 skill_power 分段 A/(A+B)；⑤可查看师父武功。无 prepare/完整 exert。升级可清空库 | 对齐 xkx enable/action/perform/combatd；GUI 无命令行 | numeric-baseline §2.3、protocol.md、database-schema、content schema、game-core、skillsService、CombatView/CharacterSheet | ✅ |
 | DC-042 | 2026-08 | 新手生计挂机（无战斗换银/历练/潜能） | 新增 `afk.kind=grind`：内容包 `grindJobs`（村中杂役/溪边垂钓）；按时长发三件套+耗精；`maxExp` 限新手；不需战术。AfkSheet 默认「生计」。顺带野狗去群战降为 1v1 | DC-041 后新手打不过野狗、无起步资源；对标 pkuxkx 配药/钓鱼「时间换成长」语义，不做小游戏 | protocol.md §9、numeric-baseline §2.4、content grind_jobs、afkService/worker、AfkSheet、catalog | ✅ |
 | DC-043 | 2026-08 | 在线/离线挂机双轨 + 历练用词统一 | `afk_jobs.presence`（online/offline）+ 心跳超时 pause；在线生计/行侠短 tick 高倍率见闻；离线实时累计；`settleJobNow` 供 status/stop/worker 共用；玩家可见「经验」统一为「历练」；可 wipe 库不兼容旧档 | 在线需心跳与见闻反馈、离线须可中途结算；用词混用影响认知 | protocol.md §9、numeric-baseline §2.4、database-schema §3.7、afkService/jobSettle、AfkSheet/App | ✅ |
+| DC-044 | 2026-08 | 生存结算闭环：恢复入口补齐 + 食水消耗 | ①`settleCharacterVitals` 统一入口：场景交互 + `GET /characters/me` + `resume` 均按 `last_heal_at` 结算；新建角色写 `last_heal_at=now()`，空值仅初始化时钟不永久跳过；②`applyRegen` 同步按 `foodPerMin`/`waterPerMin` 消耗饱腹/饮水（绝对值，窗口封顶）；③客户端约 60s 轮询 + 移动后刷新顶栏 | 实测气精不回、食水不降：新建角色 `last_heal_at` 空导致结算早退；顶栏只在 resume/开人物簿刷新；DC-032 暂缓的食水消耗补齐 | protocol.md §7、vitals.ts、vitalsSettle、迁移 0016、h5 App | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -76,6 +77,7 @@
 | DC-039 门派「同门任一师父可请教」 | DC-040 | 改为仅向当前师父请教；先大师兄后掌门 |
 | DC-035「不借 enable」与门类最高级进战斗 | DC-041 | GUI 激发 + 有效等级；命中改 skill_power；招式/绝招学会制 |
 | DC-020 战斗线性命中/伤害简化口径（对照列）中「生效列仍为线性」 | DC-041 | 生效列改为 skill_power + 招式系数；params 旧线性系数保留作伤害基底 |
+| DC-032「食水不自动恢复 / 暂不实现饥饿」 | DC-044 | 同 tick 按绝对值消耗 food/water；恢复入口扩展至读档与顶栏轮询 |
 
 # 4. 一致性检查
 

@@ -41,15 +41,19 @@ export const paramsSchema = z.object({
     /** 在线相对离线收益倍率。 */
     onlineRewardMult: z.number().min(1).max(5).default(1.8),
   }),
-  /** 自然恢复（V2.12，参照 pkuxkx heart_beat 时间恢复）：
-   * 每分钟按上限比例恢复（qiPerMin=0.02 → maxQi 的 2%/min）；
-   * 场景交互时按距上次结算的时间差恢复，单次封顶 maxWindowMinutes 防离线累积。 */
+  /** 自然恢复/消耗（V2.12 + DC-044，参照 pkuxkx heart_beat）：
+   * qi/jing/jingli/neili 每分钟按上限比例恢复；food/water 按绝对值消耗；
+   * 场景/角色/会话入口按距上次结算的时间差结算，单次封顶 maxWindowMinutes 防离线累积。 */
   regen: z
     .object({
       qiPerMin: z.number().min(0).max(1).default(0.02),
       jingPerMin: z.number().min(0).max(1).default(0.015),
       jingliPerMin: z.number().min(0).max(1).default(0.02),
       neiliPerMin: z.number().min(0).max(1).default(0.01),
+      /** 饱腹每分钟消耗点数（绝对值，非比例）。 */
+      foodPerMin: z.number().min(0).default(1),
+      /** 饮水每分钟消耗点数（绝对值，非比例）。 */
+      waterPerMin: z.number().min(0).default(1.5),
       maxWindowMinutes: z.number().int().min(1).max(1440).default(30),
     })
     .default({}),

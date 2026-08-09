@@ -44,6 +44,8 @@ export const DEFAULT_PARAMS: GameParams = {
     jingPerMin: 0.015,
     jingliPerMin: 0.02,
     neiliPerMin: 0.01,
+    foodPerMin: 1,
+    waterPerMin: 1.5,
     maxWindowMinutes: 30,
   },
   vitals: {

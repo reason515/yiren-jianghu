@@ -8,6 +8,7 @@ import {
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
+import { settleCharacterVitals, vitalsContentFromPack } from "./vitalsSettle.js";
 
 /** 角色域错误（code 进入错误信封）。 */
 export class CharacterError extends Error {
@@ -124,7 +125,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       if (nameTaken.rows[0]) throw new CharacterError("name_taken", "名号已被他人取用");
 
       const created = await db.query<{ id: string }>(
-        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id, silver) VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING id",
+        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id, silver, last_heal_at) VALUES ($1, $2, $3, $4, $5, $5, $6, now()) RETURNING id",
         [accountId, name, input.gender, JSON.stringify(input.attrs), START_ROOM, START_SILVER],
       );
       const characterId = created.rows[0]?.id;
@@ -140,6 +141,10 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
     },
 
     async getCharacter(accountId) {
+      // DC-044：读档前先结算恢复/食水，保证人物簿与顶栏看到最新状态。
+      if (content) {
+        await settleCharacterVitals(db, vitalsContentFromPack(content), accountId);
+      }
       const rows = await db.query<{
         id: string;
         name: string;

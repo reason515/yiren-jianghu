@@ -60,9 +60,9 @@ export function maxWaterCapacity(p: GameParams, dex: number): number {
 }
 
 /**
- * 自然恢复（V2.12，参照 pkuxkx heart_beat 时间恢复）：
+ * 自然恢复与食水消耗（V2.12 / DC-044，参照 pkuxkx heart_beat）：
  * 按距上次结算的分钟数恢复 qi/jing/jingli/neili（每分钟为上限的 qiPerMin 等比例），
- * 食水不自动恢复（pkuxkx 食水随时间消耗，本项目暂不实现饥饿）；单次封顶窗口防离线累积。
+ * 并按绝对值消耗 food/water；单次封顶窗口防离线累积。
  */
 export function applyRegen(
   current: VitalsState,
@@ -73,12 +73,15 @@ export function applyRegen(
   const r = p.regen;
   const capped = Math.min(deltaMinutes, r.maxWindowMinutes);
   const gain = (maxValue: number, perMin: number): number => Math.floor(maxValue * perMin * capped);
+  const drain = (perMin: number | undefined): number => Math.floor((perMin ?? 0) * capped);
   return {
     ...current,
     qi: Math.min(max.maxQi, current.qi + gain(max.maxQi, r.qiPerMin)),
     jing: Math.min(max.maxJing, current.jing + gain(max.maxJing, r.jingPerMin)),
     jingli: Math.min(max.maxJingli, current.jingli + gain(max.maxJingli, r.jingliPerMin)),
     neili: Math.min(max.maxNeili, current.neili + gain(max.maxNeili, r.neiliPerMin)),
+    food: Math.max(0, current.food - drain(r.foodPerMin)),
+    water: Math.max(0, current.water - drain(r.waterPerMin)),
   };
 }
 

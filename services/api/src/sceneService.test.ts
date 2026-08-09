@@ -18,6 +18,8 @@ const PACK = {
       jingPerMin: 0.015,
       jingliPerMin: 0.02,
       neiliPerMin: 0.01,
+      foodPerMin: 1,
+      waterPerMin: 1.5,
       maxWindowMinutes: 30,
     },
     growth: {
@@ -230,18 +232,31 @@ function mockDb() {
               food: c.food ?? 300,
               water: c.water ?? 300,
               attrs: c.attrs ?? '{"str":20,"int":20,"con":20,"dex":20}',
-              last_heal_at: c.last_heal_at ?? new Date().toISOString(),
+              last_heal_at:
+                c.last_heal_at === undefined ? new Date().toISOString() : c.last_heal_at,
             })) as unknown as T[],
         };
       }
-      if (text.includes("UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4")) {
-        const character = state.characters.find((c) => c.id === params[4]);
+      if (
+        text.includes(
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6",
+        )
+      ) {
+        const character = state.characters.find((c) => c.id === params[6]);
         if (character) {
           character.qi = Number(params[0]);
           character.jing = Number(params[1]);
           character.jingli = Number(params[2]);
           character.neili = Number(params[3]);
+          character.food = Number(params[4]);
+          character.water = Number(params[5]);
+          character.last_heal_at = new Date().toISOString();
         }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE characters SET last_heal_at = now()")) {
+        const character = state.characters.find((c) => c.id === params[0]);
+        if (character) character.last_heal_at = new Date().toISOString();
         return { rows: [] as unknown as T[] };
       }
       if (text.includes("SELECT id, room_path, silver FROM characters")) {
@@ -541,17 +556,31 @@ describe("sceneService.act", () => {
     });
   });
 
-  it("自然恢复：距上次结算 10 分钟后交互，qi/jing 按比例回升（V2.12）", async () => {
+  it("自然恢复：距上次结算 10 分钟后交互，qi/jing 按比例回升、食水下降（V2.12/DC-044）", async () => {
     const { scene, state } = await boot();
     const character = state.characters[0]!;
     character.qi = 0;
     character.jing = 0;
+    character.food = 300;
+    character.water = 300;
     character.attrs = '{"str":20,"int":20,"con":20,"dex":20}';
     character.last_heal_at = new Date(Date.now() - 10 * 60000).toISOString();
     await scene.getScene("acc_1");
     // maxQi=420：floor(420*0.02*10)=84；maxJing=420：floor(420*0.015*10)=63
     expect(character.qi).toBe(84);
     expect(character.jing).toBe(63);
+    expect(character.food).toBe(290);
+    expect(character.water).toBe(285);
+  });
+
+  it("自然恢复：last_heal_at 为空时只初始化时钟，不永久跳过", async () => {
+    const { scene, state } = await boot();
+    const character = state.characters[0]!;
+    character.qi = 0;
+    character.last_heal_at = null;
+    await scene.getScene("acc_1");
+    expect(character.qi).toBe(0);
+    expect(character.last_heal_at).toBeTruthy();
   });
 
   it("拾取按角色一次性落入行囊，并从该角色的场景中移除", async () => {

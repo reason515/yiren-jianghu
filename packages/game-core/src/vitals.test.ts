@@ -134,17 +134,17 @@ describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () =
     effJing: 0,
   };
 
-  it("按上限比例 + 时间差恢复，封顶上限", () => {
+  it("按上限比例 + 时间差恢复，封顶上限；食水按绝对值消耗", () => {
     const next = applyRegen(HURT, MAX, 10, DEFAULT_PARAMS);
     // qi: floor(420 * 0.02 * 10) = 84；jing: floor(420*0.015*10) = 63；
     // jingli: floor(100*0.02*10) = 20；neili: floor(100*0.01*10) = 10
     expect(next).toMatchObject({ qi: 84, jing: 63, jingli: 20, neili: 10 });
-    // 食水不自动恢复
-    expect(next.food).toBe(300);
-    expect(next.water).toBe(300);
+    // food: 300 - floor(1*10) = 290；water: 300 - floor(1.5*10) = 285
+    expect(next.food).toBe(290);
+    expect(next.water).toBe(285);
   });
 
-  it("恢复不超上限；时间差超窗口按窗口封顶（防离线累积）", () => {
+  it("恢复不超上限；时间差超窗口按窗口封顶（防离线累积）；食水不低于 0", () => {
     const nearlyFull = applyRegen(
       { ...HURT, qi: 400, jing: 400, jingli: 90, neili: 95 },
       MAX,
@@ -153,8 +153,13 @@ describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () =
     );
     expect(nearlyFull.qi).toBe(420);
     expect(nearlyFull.jing).toBe(420);
-    // 3 小时（180 分钟）远超 30 分钟窗口 → 只按 30 分钟恢复
+    // 3 小时（180 分钟）远超 30 分钟窗口 → 只按 30 分钟恢复/消耗
     const offline = applyRegen(HURT, MAX, 180, DEFAULT_PARAMS);
     expect(offline.qi).toBe(Math.floor(420 * 0.02 * 30));
+    expect(offline.food).toBe(270);
+    expect(offline.water).toBe(255);
+    const drained = applyRegen({ ...HURT, food: 5, water: 3 }, MAX, 10, DEFAULT_PARAMS);
+    expect(drained.food).toBe(0);
+    expect(drained.water).toBe(0);
   });
 });

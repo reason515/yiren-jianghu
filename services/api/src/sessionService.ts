@@ -7,6 +7,7 @@ import {
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
+import { settleCharacterVitals, vitalsContentFromPack } from "./vitalsSettle.js";
 
 /** 会话恢复域错误（code 进入错误信封）。 */
 export class SessionError extends Error {
@@ -80,6 +81,10 @@ type CharRow = {
 export function createSessionService(db: Db, content?: ContentPack): SessionService {
   return {
     async resume(accountId) {
+      // DC-044：重连恢复点先结算气精/食水，再读快照。
+      if (content) {
+        await settleCharacterVitals(db, vitalsContentFromPack(content), accountId);
+      }
       const rows = await db.query<CharRow>(
         "SELECT id, name, gender, status, room_path, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],

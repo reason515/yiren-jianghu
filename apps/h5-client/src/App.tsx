@@ -263,6 +263,18 @@ export function App(): JSX.Element {
     }
   }, [api]);
 
+  /** DC-044：轻量刷新生存值（结算入口在 getCharacter），供移动/定时轮询。 */
+  const refreshVitals = useCallback(async (): Promise<void> => {
+    try {
+      const profile = await api.getCharacter();
+      setVitals(profile.vitals);
+      setVitalsMax(profile.vitalsMax);
+      setSilver(profile.silver);
+    } catch {
+      // 轮询失败不打扰；下次交互再试
+    }
+  }, [api]);
+
   const refreshAfk = useCallback(
     async (pendingReportIds: string[] = []): Promise<void> => {
       try {
@@ -305,6 +317,15 @@ export function App(): JSX.Element {
     return () => window.clearInterval(timer);
   }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
+  // DC-044：在线约每分钟刷新生存值（触发服务端恢复/食水结算并更新顶栏）
+  useEffect(() => {
+    if (!token || !character) return;
+    const timer = window.setInterval(() => {
+      void refreshVitals();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [token, character, refreshVitals]);
+
   // 恢复点：resume + 刷新全量状态；成功 true，失败抛错（网络 TypeError 或 ApiError 由调用方裁决）。
   const restoreSession = useCallback(async (): Promise<boolean> => {
     const res = await api.resume();
@@ -322,6 +343,7 @@ export function App(): JSX.Element {
         refreshCombat(),
         refreshQuests(),
         refreshAfk(res.pendingAfkReports.map((report) => report.jobId)),
+        refreshVitals(),
       ]);
       // 断线期间完成的论剑，重连后直接翻开战报回响。
       const firstPvp = res.pendingPvpReportIds[0];
@@ -336,7 +358,7 @@ export function App(): JSX.Element {
       setNeedCreate(true);
     }
     return true;
-  }, [api, refreshAfk, refreshCombat, refreshQuests, refreshScene]);
+  }, [api, refreshAfk, refreshCombat, refreshQuests, refreshScene, refreshVitals]);
 
   const clearRetryTimer = (): void => {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
@@ -463,7 +485,7 @@ export function App(): JSX.Element {
       addJournal(`你向${DIR_LABEL[dir] ?? ""}行去，来到${next.name}。`, undefined, [
         { text: next.name, cls: "place" },
       ]);
-      await refreshQuests();
+      await Promise.all([refreshQuests(), refreshVitals()]);
     } catch (e) {
       notify(e);
     }
@@ -1071,7 +1093,7 @@ export function App(): JSX.Element {
         if (state.result) {
           if (state.result === "win") triggerGuide("battle_won");
           addJournal(RESULT_TEXT[state.result] ?? "此战已了。", "combat");
-          await Promise.all([refreshScene(), refreshQuests()]);
+          await Promise.all([refreshScene(), refreshQuests(), refreshVitals()]);
         }
       } catch (e) {
         // 服务端拒绝绝招时保留当前战局，反馈其权威文案。

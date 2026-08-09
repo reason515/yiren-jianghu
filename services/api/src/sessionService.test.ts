@@ -23,6 +23,7 @@ interface CharState {
   food: number;
   water: number;
   attrs?: Record<string, unknown> | string | null;
+  last_heal_at?: string | null;
 }
 
 interface AfkState {
@@ -88,6 +89,45 @@ function mockDb() {
             .filter((skill) => skill.character_id === params[0])
             .map((skill) => ({ skill_id: skill.skill_id, level: skill.level })) as unknown as T[],
         };
+      }
+      if (text.includes("SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at")) {
+        return {
+          rows: state.characters
+            .filter((c) => c.account_id === params[0] && c.status === "active")
+            .map((c) => ({
+              id: c.id,
+              qi: c.qi,
+              jing: c.jing,
+              jingli: c.jingli,
+              neili: c.neili,
+              food: c.food,
+              water: c.water,
+              attrs: c.attrs ?? null,
+              last_heal_at: c.last_heal_at ?? new Date().toISOString(),
+            })) as unknown as T[],
+        };
+      }
+      if (
+        text.includes(
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6",
+        )
+      ) {
+        const character = state.characters.find((c) => c.id === params[6]);
+        if (character) {
+          character.qi = Number(params[0]);
+          character.jing = Number(params[1]);
+          character.jingli = Number(params[2]);
+          character.neili = Number(params[3]);
+          character.food = Number(params[4]);
+          character.water = Number(params[5]);
+          character.last_heal_at = new Date().toISOString();
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE characters SET last_heal_at = now()")) {
+        const character = state.characters.find((c) => c.id === params[0]);
+        if (character) character.last_heal_at = new Date().toISOString();
+        return { rows: [] as unknown as T[] };
       }
       if (text.includes("SELECT id, name, gender, status, room_path, exp, potential")) {
         return {

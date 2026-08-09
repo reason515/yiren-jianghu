@@ -139,7 +139,7 @@ pvp.report
 - `trade { targetId }`：仅可向当前房间商贩打开交易快照，返回服务端银两、内容包报价及行囊。
 - `buy` / `sell { targetId, itemId, count }`：商贩和物品均由服务端验证；扣款/入囊或扣物/入银两与每日回收额度在同一事务结算。
 
-**自然恢复（V2.12，参照 pkuxkx 时间恢复）**：`GET /scene`、移动、场景交互时，服务端按距 `characters.last_heal_at` 的时间差结算 qi/jing/jingli/neili 恢复（每分钟为上限的 `params.regen.qiPerMin` 等比例），单次封顶 `maxWindowMinutes` 防离线累积；食水不自动恢复。
+**自然恢复与食水消耗（V2.12 / DC-044，参照 pkuxkx 时间恢复）**：`GET /scene`、移动、场景交互、`GET /characters/me`、`GET /session/resume` 时，服务端按距 `characters.last_heal_at` 的时间差结算：qi/jing/jingli/neili 按上限的 `params.regen.*PerMin` 比例恢复；food/water 按 `params.regen.foodPerMin` / `waterPerMin` 绝对值消耗。单次封顶 `maxWindowMinutes` 防离线累积。新建角色写入 `last_heal_at=now()`；空值会在首次结算时初始化时钟（不补发离线恢复）。客户端约每分钟刷新生存值以更新顶栏。
 
 客户端不得提交价格、银两余额、物品定义或结算结果；`targetId` / `itemId` 仅作服务端校验所需的内部引用，不在玩家界面展示（DC-025）。
 

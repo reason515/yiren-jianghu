@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeScoreChanges } from "@yjh/game-core";
+import { computeScoreChanges, DEFAULT_PARAMS } from "@yjh/game-core";
 import { createApp } from "./app.js";
 import { PvpError, createPvpService } from "./pvpService.js";
 import type { ContentPack } from "@yjh/content";
@@ -7,42 +7,7 @@ import type { Db, DbRow } from "./db.js";
 
 const PACK = {
   manifest: { version: "0.0.0", name: "test" },
-  params: {
-    expCurve: { base: 100, growth: 1.1 },
-    potential: { learnCostFactor: 1 },
-    combat: { baseHitRate: 0.7, baseDodgeRate: 0.1, baseParryRate: 0.15 },
-    afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
-    growth: {
-      learnJingCostBase: 150,
-      potentialCostPerLevel: 1,
-      expGateExponent: 3,
-      expGateDivisor: 10,
-      practiceQiBase: 20,
-      practiceQiPerLevel: 1,
-      practicePointsPerAction: 1,
-      studyJingBase: 80,
-    },
-    vitals: {
-      qiBase: 100,
-      jingBase: 100,
-      jingliBase: 100,
-      qiPerCon: 16,
-      qiPerStr: 0,
-      jingPerInt: 16,
-      forceQiPerLevel: 2,
-      forceJingPerLevel: 1,
-      neiliPerLevel: 10,
-      jingliPerLevel: 3,
-      neiliToQiDiv: 4,
-      neiliToJingDiv: 12,
-      foodBase: 200,
-      foodPerCon: 10,
-      waterBase: 200,
-      waterPerDex: 10,
-    },
-    pvp: { dailyChallengeLimit: 5, kFactor: 32, seasonWeeks: 6 },
-    economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
-  },
+  params: DEFAULT_PARAMS,
   rooms: [],
   npcs: [],
   items: [],

@@ -1,0 +1,197 @@
+# 《一人江湖》机制总表（DC-046）
+# 唯一生效源：系数 + 公式 + 分段表 + 实体数值索引。
+# 改数字或公式只改本文件；控制流（战斗循环/挂机状态机）仍在 game-core。
+
+coeffs:
+  expCurve:
+    base: 100
+    growth: 1.1
+  combat:
+    weaponDmgPerLevel: 0.5
+    forceDmgPerLevel: 0.4
+    defenseReduce: 0.5
+    damageVariance: 0.1
+    recoverNeiliPerTurn: 20
+    fleeBaseChance: 0.7
+    parryDamageFactor: 0.3
+    recoverNeiliThreshold: 0.3
+    defenseBase: 10
+    dodgeBase: 5
+    parryBase: 5
+  afk:
+    maxDurationHours: 8
+    dailyDiminishRate: 0.5
+    studyAttemptsPerHour: 12
+    onlineTickSec: 60
+    onlineHeartbeatTimeoutSec: 45
+    onlineRewardMult: 1.8
+  vitals:
+    qiBase: 100
+    jingBase: 100
+    jingliBase: 100
+    qiPerCon: 16
+    qiPerStr: 0
+    jingPerInt: 16
+    forceQiPerLevel: 2
+    forceJingPerLevel: 1
+    neiliPerLevel: 10
+    jingliPerLevel: 3
+    neiliToQiDiv: 4
+    neiliToJingDiv: 12
+    foodBase: 200
+    foodPerCon: 10
+    waterBase: 200
+    waterPerDex: 10
+  growth:
+    learnJingCostBase: 150
+    learnTuitionBase: 2
+    potentialCostPerLevel: 1
+    expGateExponent: 3
+    expGateDivisor: 10
+    practiceQiBase: 20
+    practiceQiPerLevel: 1
+    practicePointsPerAction: 1
+    studyJingBase: 80
+    firstLearnJingMult: 2
+    practicePointsNeededOffset: 1
+  pvp:
+    dailyChallengeLimit: 5
+    kFactor: 32
+    seasonWeeks: 6
+    eloScale: 400
+  economy:
+    maxCashflowPerDay: 1000
+  regen:
+    qiPerMin: 0.02
+    jingPerMin: 0.015
+    jingliPerMin: 0.02
+    neiliPerMin: 0.01
+    foodPerMin: 1
+    waterPerMin: 1.5
+    maxWindowMinutes: 30
+  enable:
+    basicLevelDivisor: 2
+  perform:
+    scaleDivisor: 100
+  skillPower:
+    attrDivisor: 6
+    strWeight: 5
+    zeroLevelExpDiv: 50
+    minPower: 1
+
+# 命名公式：标识符来自 coeffs 叶名 + 运行时变量（见 mechanics.ts RUNTIME_VARS）
+formulas:
+  # 升到下一级所需历练
+  expForNextLevel: "round(base * growth^(level - 1))"
+  # 挂机每日递减：调用方先算 fullCycles = floor(hoursUsedToday / maxDurationHours)
+  diminishMultiplier: "fullCycles <= 0 ? 1 : max(0, min(1, (1 - dailyDiminishRate)^fullCycles))"
+  # exp 门槛所需历练（isLevelAllowed: exp >= expGateRequired）
+  expGateRequired: "level^expGateExponent / expGateDivisor"
+  potentialCostForNext: "ceil(nextLevel * potentialCostPerLevel)"
+  # isFirstLearn: 1 或 0
+  jingCostForLearn: "max(1, ceil(learnJingCostBase / max(1, int))) * (isFirstLearn != 0 ? firstLearnJingMult : 1)"
+  practiceCost: "practiceQiBase + level * practiceQiPerLevel"
+  practicePointsNeeded: "level + practicePointsNeededOffset"
+  studyCost: "max(1, studyJingBase + level)"
+  maxNeili: "forceLevel * neiliPerLevel"
+  maxQi: "qiBase + con * qiPerCon + str * qiPerStr + forceLevel * forceQiPerLevel + floor(forceLevel * neiliPerLevel / neiliToQiDiv)"
+  maxJing: "jingBase + int * jingPerInt + forceLevel * forceJingPerLevel + floor(forceLevel * neiliPerLevel / neiliToJingDiv)"
+  maxJingli: "jingliBase + forceLevel * jingliPerLevel"
+  maxFood: "foodBase + con * foodPerCon"
+  maxWater: "waterBase + dex * waterPerDex"
+  # 伤害基底（未乘招式、未浮动）
+  attackDamageBase: "max(1, atk + weaponLevel * weaponDmgPerLevel + forceLevel * forceDmgPerLevel - def * defenseReduce)"
+  # 招式加成：base * (100+moveDamage)/100 + forceLevel*moveForce/100（bindings 含 base）
+  moveDamageApplied: "base * (100 + moveDamage) / 100 + forceLevel * moveForce / 100"
+  parryDamage: "max(1, round(fullDamage * parryDamageFactor))"
+  scalePerformAmount: "amount * (1 + skillRawLevel / scaleDivisor)"
+  expectedScore: "1 / (1 + 10^((scoreB - scoreA) / eloScale))"
+  effectiveLevel: "floor(basicLevel / basicLevelDivisor) + specialLevel"
+  # skillPower：调用方注入 cubePower/expBonus（piecewise）或零级分支
+  skillPowerBase: "level <= 0 ? floor(combatExp / zeroLevelExpDiv) : cubePower + expBonus"
+  skillPowerWeighted: "floor(max(minPower, power) * weighted / attrDivisor)"
+  combatantAttack: "str + weaponLevel"
+  combatantDefense: "defenseBase + con"
+  combatantDodge: "dodgeBase + dex + dodgeLevel"
+  combatantParry: "parryBase + parryLevel"
+
+# 分段表：自上而下首个 when 为真的 then
+piecewise:
+  levelCubePower:
+    - when: "level < 30"
+      then: "floor(level * level * level / 30)"
+    - when: "level < 300"
+      then: "900 + floor(floor(level / 10)^3 / 3)"
+    - when: "level < 600"
+      then: "7400 + floor(floor(level / 15)^3 / 3)"
+    - when: "level < 1200"
+      then: "19800 + floor(floor(level / 20)^3 / 3)"
+    - when: "level < 1800"
+      then: "70600 + floor(floor(level / 30)^3 / 3)"
+    - when: "level < 3000"
+      then: "127200 + floor(floor(level / 50)^3 / 3)"
+    - when: "1"
+      then: "196800 + floor(floor(level / 150)^3 / 3)"
+  combatExpBonus:
+    - when: "expK < 30"
+      then: "floor(combatExp / 100)"
+    - when: "expK < 3000"
+      then: "270 + floor(combatExp / 1000)"
+    - when: "expK < 21000"
+      then: "2270 + floor(combatExp / 3000)"
+    - when: "expK < 180000"
+      then: "5770 + floor(combatExp / 6000)"
+    - when: "expK < 600000"
+      then: "20770 + floor(combatExp / 12000)"
+    - when: "1"
+      then: "46770 + floor(combatExp / 25000)"
+
+entityIndex:
+  npc_battle_rewards:
+    path: npcs[].battleRewards
+    fields: [exp, potential, silver]
+    note: 战胜 battle NPC 固定成长与银两
+  npc_drops:
+    path: npcs[].drops
+    fields: [itemId, chance, min, max, minExp]
+    note: 会话种子掷物
+  npc_goods:
+    path: npcs[].goods
+    fields: [itemId, buy, sell]
+    note: 商贩报价唯一来源
+  npc_teaches:
+    path: npcs[].teaches
+    fields: [skillId, maxLevel, tuitionSilver]
+    note: 请教目录与学费覆盖
+  grind_hourly:
+    path: grind_jobs[].hourlyGain
+    fields: [exp, potential, silver]
+    note: 离线生计时薪
+  grind_round:
+    path: grind_jobs[].roundGain
+    fields: [exp, potential, silver]
+    note: 在线合圈基础奖（再乘 onlineRewardMult）
+  grind_jing:
+    path: grind_jobs[].jingPerHour
+    fields: [jingPerHour]
+    note: 离线生计耗精
+  move_damage:
+    path: moves[].damage
+    fields: [damage, force]
+    note: 普攻招式伤害/内功百分比
+  perform_effect:
+    path: performs[].effect.amount
+    fields: [amount]
+    note: 绝招效果量（再经 scalePerformAmount）
+  perform_cost:
+    path: performs[].cost
+    fields: [qi, jing, neili]
+  item_stats:
+    path: items[].stats
+    fields: [attack, defense]
+  quest_rewards:
+    path: quests[].rewards
+    fields: [exp, potential, silver]
+  skill_max_level:
+    path: skills[].maxLevel
+    fields: [maxLevel]

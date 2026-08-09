@@ -1,4 +1,11 @@
-﻿import type { EnableSlot, Move, SkillCategory } from "@yjh/content";
+﻿import {
+  evalFormulaWithCoeffs,
+  type CompiledMechanics,
+  type EnableSlot,
+  type Move,
+  type SkillCategory,
+} from "@yjh/content";
+import { DEFAULT_MECHANICS, DEFAULT_PARAMS, type GameParams } from "./params.js";
 
 /**
  * C11 基本功/特殊功激发（DC-041）。
@@ -53,20 +60,25 @@ export function basicSkillIdForSlot(slot: EnableSlot, skillDefs?: Iterable<Skill
 }
 
 /**
- * 槽位有效等级 = floor(基本功原级/2) + 已激发特殊功原级（无激发为 0）。
- * 全部使用角色原始（raw）等级，不做二次派生。
+ * 槽位有效等级 = floor(基本功原级/basicLevelDivisor) + 已激发特殊功原级（无激发为 0）。
+ * 公式 effectiveLevel（DC-046）。
  */
 export function effectiveLevel(
   slot: EnableSlot,
   skills: SkillRawMap,
   enableMap: SkillEnableMap,
+  params: GameParams = DEFAULT_PARAMS,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): number {
   const map = normalizeSkillMap(skills);
   const basicId = basicSkillIdForSlot(slot, map.values());
   const basicLevel = map.get(basicId)?.level ?? 0;
   const specialId = enableMap[slot];
   const specialLevel = specialId ? (map.get(specialId)?.level ?? 0) : 0;
-  return Math.floor(basicLevel / 2) + specialLevel;
+  return evalFormulaWithCoeffs(mechanics, params, "effectiveLevel", {
+    basicLevel,
+    specialLevel,
+  });
 }
 
 export type EnableErrorCode = "not_learned" | "not_special" | "slot_not_allowed";

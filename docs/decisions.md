@@ -64,6 +64,7 @@
 | DC-043 | 2026-08 | 在线/离线挂机双轨 + 历练用词统一 | `afk_jobs.presence`（online/offline）+ 心跳超时 pause；在线生计/行侠短 tick 高倍率见闻；离线实时累计；`settleJobNow` 供 status/stop/worker 共用；玩家可见「经验」统一为「历练」；可 wipe 库不兼容旧档 | 在线需心跳与见闻反馈、离线须可中途结算；用词混用影响认知 | protocol.md §9、numeric-baseline §2.4、database-schema §3.7、afkService/jobSettle、AfkSheet/App | ✅ |
 | DC-044 | 2026-08 | 生存结算闭环：恢复入口补齐 + 食水消耗 | ①`settleCharacterVitals` 统一入口：场景交互 + `GET /characters/me` + `resume` 均按 `last_heal_at` 结算；新建角色写 `last_heal_at=now()`，空值仅初始化时钟不永久跳过；②`applyRegen` 同步按 `foodPerMin`/`waterPerMin` 消耗饱腹/饮水（绝对值，窗口封顶）；③客户端约 60s 轮询 + 移动后刷新顶栏 | 实测气精不回、食水不降：新建角色 `last_heal_at` 空导致结算早退；顶栏只在 resume/开人物簿刷新；DC-032 暂缓的食水消耗补齐 | protocol.md §7、vitals.ts、vitalsSettle、迁移 0016、h5 App | ✅ |
 | DC-045 | 2026-08 | 在线生计真实跑图（合圈发奖） | 在线 `grind`：内容包 `hubRoomId`/`route`/`workRooms`/`roundGain`；先白名单导航到枢纽，再沿回路逐步改 `room_path`，合圈才发奖；挂机 running 禁手动 move；任意处可开活。离线仍 `hourlyGain` 按时长、不跑图 | 对齐 xkx 钓鱼/配药「人在地图干活、干完一轮拿一轮」；见闻轮换不够真 | protocol.md §9、numeric-baseline §2.4、content grind_jobs/rooms、game-core grindCircuit、jobSettle/afkService/sceneService、H5 | ✅ |
+| DC-046 | 2026-08 | 机制公式进内容包 DSL | 内容包根目录 `mechanics.yaml` 为全局系数+命名公式+分段表+实体索引的唯一生效源；安全表达式引擎（白名单函数，禁 eval）在加载时编译；`params` 为 `coeffs` 兼容别名。控制流（战斗循环/挂机状态机）仍留 game-core | 便于 review/调公式且运行时直读同一文件；修正 DC-020「公式形态留代码」边界 | mechanics.yaml、content expr/mechanics、numeric-baseline、yjh-content-pack | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -79,6 +80,7 @@
 | DC-035「不借 enable」与门类最高级进战斗 | DC-041 | GUI 激发 + 有效等级；命中改 skill_power；招式/绝招学会制 |
 | DC-020 战斗线性命中/伤害简化口径（对照列）中「生效列仍为线性」 | DC-041 | 生效列改为 skill_power + 招式系数；params 旧线性系数保留作伤害基底 |
 | DC-032「食水不自动恢复 / 暂不实现饥饿」 | DC-044 | 同 tick 按绝对值消耗 food/water；恢复入口扩展至读档与顶栏轮询 |
+| DC-020「公式形态留代码、只改参数表数字」 | DC-046 | 系数与公式表达式均进 `mechanics.yaml`；控制流仍留代码；旧 `params.json` 退役 |
 
 # 4. 一致性检查
 

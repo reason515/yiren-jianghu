@@ -1,7 +1,8 @@
 import type { ContentPack } from "./schema.js";
+import { KNOWN_ENTITY_INDEX_PATHS, compileMechanics, type MechanicsConfig } from "./mechanics.js";
 
 /**
- * 内容包校验器（A6）：结构（zod）+ 引用完整性。
+ * 内容包校验器（A6 / DC-046）：结构（zod）+ 引用完整性 + 机制公式。
  * 返回 issue 列表；severity: "error" | "warning"。
  */
 
@@ -29,8 +30,29 @@ function dup(list: unknown[], label: string): ContentIssue[] {
   return issues;
 }
 
-export function validateContentPack(pack: ContentPack): ContentIssue[] {
+export function validateContentPack(
+  pack: ContentPack & { mechanics?: MechanicsConfig },
+): ContentIssue[] {
   const issues: ContentIssue[] = [];
+
+  if (pack.mechanics) {
+    const compiled = compileMechanics(pack.mechanics);
+    if (!compiled.ok) {
+      for (const err of compiled.errors) {
+        issues.push({ code: "mechanics_compile", severity: "error", message: err });
+      }
+    } else {
+      for (const [key, entry] of Object.entries(compiled.mechanics.entityIndex)) {
+        if (!KNOWN_ENTITY_INDEX_PATHS.has(entry.path)) {
+          issues.push({
+            code: "entity_index_unknown_path",
+            severity: "error",
+            message: `entityIndex.${key} 未知路径：${entry.path}`,
+          });
+        }
+      }
+    }
+  }
 
   const roomIds = new Set(pack.rooms.map((r) => r.id));
   const npcIds = new Set(pack.npcs.map((n) => n.id));

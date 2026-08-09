@@ -1,5 +1,10 @@
-import type { EnableSlot, SkillCategory } from "@yjh/content";
-import type { GameParams } from "./params.js";
+import {
+  evalFormulaWithCoeffs,
+  type CompiledMechanics,
+  type EnableSlot,
+  type SkillCategory,
+} from "@yjh/content";
+import { DEFAULT_MECHANICS, type GameParams } from "./params.js";
 import { computeMaxVitals } from "./vitals.js";
 import type { Combatant, CombatStats } from "./combat.js";
 import { effectiveLevel, type SkillEnableMap, type SkillRaw } from "./enable.js";
@@ -48,6 +53,7 @@ export function buildCombatant(
   params: GameParams,
   source: CombatantSource & { exp?: number },
   opts: BuildCombatantOptions,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): Combatant {
   const resourceMode = opts.resourceMode ?? "full";
 
@@ -65,28 +71,32 @@ export function buildCombatant(
   }
 
   const attackSkillSlot: "sword" | "unarmed" = opts.hasWeapon ? "sword" : "unarmed";
-  const forceLevel = effectiveLevel("force", skillMap, opts.enableMap);
-  const dodgeLevel = effectiveLevel("dodge", skillMap, opts.enableMap);
-  const parryLevel = effectiveLevel("parry", skillMap, opts.enableMap);
-  const weaponLevel = effectiveLevel(attackSkillSlot, skillMap, opts.enableMap);
+  const forceLevel = effectiveLevel("force", skillMap, opts.enableMap, params, mechanics);
+  const dodgeLevel = effectiveLevel("dodge", skillMap, opts.enableMap, params, mechanics);
+  const parryLevel = effectiveLevel("parry", skillMap, opts.enableMap, params, mechanics);
+  const weaponLevel = effectiveLevel(attackSkillSlot, skillMap, opts.enableMap, params, mechanics);
 
-  const maxVitals = computeMaxVitals(params, { ...source.attrs, forceLevel });
+  const maxVitals = computeMaxVitals(params, { ...source.attrs, forceLevel }, mechanics);
   const exp = source.exp ?? 0;
+  const { str, dex, con } = source.attrs;
 
   const stats: CombatStats = {
-    attack: source.attrs.str + weaponLevel,
-    defense: 10 + source.attrs.con,
-    dodge: 5 + source.attrs.dex + dodgeLevel,
-    parry: 5 + parryLevel,
+    attack: evalFormulaWithCoeffs(mechanics, params, "combatantAttack", { str, weaponLevel }),
+    defense: evalFormulaWithCoeffs(mechanics, params, "combatantDefense", { con }),
+    dodge: evalFormulaWithCoeffs(mechanics, params, "combatantDodge", {
+      dex,
+      dodgeLevel,
+    }),
+    parry: evalFormulaWithCoeffs(mechanics, params, "combatantParry", { parryLevel }),
     weaponLevel,
     forceLevel,
     attackSkillLevel: weaponLevel,
     dodgeSkillLevel: dodgeLevel,
     parrySkillLevel: parryLevel,
     combatExp: exp,
-    str: source.attrs.str,
-    dex: source.attrs.dex,
-    con: source.attrs.con,
+    str,
+    dex,
+    con,
   };
 
   return {

@@ -1,5 +1,6 @@
-import type { Perform } from "@yjh/content";
+import { evalFormulaWithCoeffs, type CompiledMechanics, type Perform } from "@yjh/content";
 import type { ActionSelector, ActorKey, BattleAction, BattleContext } from "./combat.js";
+import { DEFAULT_MECHANICS, DEFAULT_PARAMS, type GameParams } from "./params.js";
 
 /**
  * C4 绝招定义与执行。
@@ -77,11 +78,18 @@ export function canUsePerform(
 }
 
 /**
- * 绝招按所属技能原级放大效果量（DC-041，简化版 xkx 内功加成）：
- * `flat * (1 + skillRawLevel/100)`——原级越高，绝招伤害/疗效越可观。
+ * 绝招按所属技能原级放大效果量（公式 scalePerformAmount）。
  */
-export function scalePerformAmount(amount: number, skillRawLevel: number): number {
-  return amount * (1 + skillRawLevel / 100);
+export function scalePerformAmount(
+  amount: number,
+  skillRawLevel: number,
+  params: GameParams = DEFAULT_PARAMS,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "scalePerformAmount", {
+    amount,
+    skillRawLevel,
+  });
 }
 
 /** 绝招 → 战斗动作（buff 返回 null，v1 不支持）。skillRawLevel 用于按等级放大效果量。 */

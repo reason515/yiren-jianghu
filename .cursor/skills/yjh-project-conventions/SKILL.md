@@ -12,7 +12,7 @@ description: 《一人江湖》(yiren-jianghu) 项目开发规范——单仓结
 - **服务端权威**：角色、战斗、挂机、PVP、奖励、排行榜全部由服务端结算；客户端只展示与收集意图。
 - **无原始指令**：玩家不接触命令行；交互一律走结构化 UI + 服务端 API 事件。
 - **纯规则可测**：`packages/game-core` 是零 IO 的纯 TypeScript 规则引擎（不碰 DB/Redis/网络），确定性可复现（PVP 用固定种子）。
-- **内容驱动**：地图/NPC/物品/技能/绝招/任务/数值都在 `packages/content` 的内容包中，不进代码。
+- **内容驱动**：地图/NPC/物品/技能/绝招/任务/机制（系数+公式 DSL，`mechanics.yaml`，DC-046）都在 `packages/content` 的内容包中；控制流仍在 `game-core`。
 - **跨端**：客户端用 Taro + React（先 H5，后续微信小程序）；不依赖浏览器专属能力。
 - **单一货币**：首版仅银两；单潜能货币（有效潜能 = potential − learned_points）。
 - **参考边界**：pkuxkx 仅作机制/内容研究来源，进入仓库的内容必须经 `docs/pkuxkx-content-catalog.md` 登记（见 yjh-content-pack）。

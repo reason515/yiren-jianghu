@@ -3,6 +3,7 @@ import { PROTOCOL_VERSION } from "@yjh/shared";
 import { createApp } from "./app.js";
 import { SessionError, createSessionService } from "./sessionService.js";
 import type { ContentPack } from "@yjh/content";
+import { DEFAULT_PARAMS } from "@yjh/game-core";
 import type { Db, DbRow } from "./db.js";
 
 interface CharState {
@@ -230,29 +231,10 @@ function boot() {
   return { db, state, session };
 }
 
-/** 最小内容包 stub：仅 vitals 参数 + 技能表（computeMaxVitals 只读 params.vitals）。 */
+/** 最小内容包 stub：默认 params + 技能表（computeMaxVitals 读公式）。 */
 const CONTENT = {
   manifest: { version: "0.0.0", name: "test" },
-  params: {
-    vitals: {
-      qiBase: 100,
-      jingBase: 100,
-      jingliBase: 100,
-      qiPerCon: 16,
-      qiPerStr: 0,
-      jingPerInt: 16,
-      forceQiPerLevel: 2,
-      forceJingPerLevel: 1,
-      neiliPerLevel: 10,
-      jingliPerLevel: 3,
-      neiliToQiDiv: 4,
-      neiliToJingDiv: 12,
-      foodBase: 200,
-      foodPerCon: 10,
-      waterBase: 200,
-      waterPerDex: 10,
-    },
-  },
+  params: DEFAULT_PARAMS,
   skills: [{ id: "xuanmen_force", name: "玄门心法", category: "force" }],
 } as unknown as ContentPack;
 

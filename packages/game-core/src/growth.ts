@@ -1,5 +1,5 @@
-import type { GameParams } from "./params.js";
-import { effectivePotential } from "./params.js";
+import { evalFormulaWithCoeffs, type CompiledMechanics } from "@yjh/content";
+import { DEFAULT_MECHANICS, type GameParams, effectivePotential } from "./params.js";
 import { unlockedMoves } from "./enable.js";
 
 /** learn/practice/study 升级后查询新等级已解锁的招式（DC-041，供 API 层落库/提示）。 */
@@ -70,24 +70,36 @@ export type LearnResult =
     }
   | { ok: false; reason: LearnFailure; skills: SkillMap };
 
-/** 目标等级是否允许（exp 门槛）：level^exponent / divisor ≤ exp。 */
-export function isLevelAllowed(params: GameParams, exp: number, level: number): boolean {
-  const required = Math.pow(level, params.growth.expGateExponent) / params.growth.expGateDivisor;
+/** 目标等级是否允许（exp 门槛）：公式 expGateRequired。 */
+export function isLevelAllowed(
+  params: GameParams,
+  exp: number,
+  level: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): boolean {
+  const required = evalFormulaWithCoeffs(mechanics, params, "expGateRequired", { level });
   return exp >= required;
 }
 
-export function potentialCostForNext(params: GameParams, nextLevel: number): number {
-  return Math.ceil(nextLevel * params.growth.potentialCostPerLevel);
+export function potentialCostForNext(
+  params: GameParams,
+  nextLevel: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "potentialCostForNext", { nextLevel });
 }
 
-/** 基础精耗；isFirstLearn 时 ×2（对齐 xkx learn.c）。 */
+/** 基础精耗；首学倍率见 coeffs.firstLearnJingMult（公式 jingCostForLearn）。 */
 export function jingCostForLearn(
   params: GameParams,
   int: number,
-  options: { isFirstLearn?: boolean } = {},
+  options: { isFirstLearn?: boolean; mechanics?: CompiledMechanics } = {},
 ): number {
-  const base = Math.max(1, Math.ceil(params.growth.learnJingCostBase / Math.max(1, int)));
-  return options.isFirstLearn ? base * 2 : base;
+  const mechanics = options.mechanics ?? DEFAULT_MECHANICS;
+  return evalFormulaWithCoeffs(mechanics, params, "jingCostForLearn", {
+    int,
+    isFirstLearn: options.isFirstLearn ? 1 : 0,
+  });
 }
 
 /** 教习实际上限：技能上限、可教上限、师父该技能等级三者取 min。 */
@@ -145,12 +157,20 @@ export function previewLearnCost(input: {
 
 // ---------- practice ----------
 
-export function practicePointsNeeded(params: GameParams, level: number): number {
-  return level + 1;
+export function practicePointsNeeded(
+  params: GameParams,
+  level: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "practicePointsNeeded", { level });
 }
 
-export function practiceCost(params: GameParams, level: number): number {
-  return params.growth.practiceQiBase + level * params.growth.practiceQiPerLevel;
+export function practiceCost(
+  params: GameParams,
+  level: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "practiceCost", { level });
 }
 
 export interface PracticeInput {
@@ -185,8 +205,12 @@ export function practiceOnce(input: PracticeInput): PracticeResult {
 
 // ---------- study（读书/领悟，消耗精） ----------
 
-export function studyCost(params: GameParams, level: number): number {
-  return Math.max(1, params.growth.studyJingBase + level);
+export function studyCost(
+  params: GameParams,
+  level: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "studyCost", { level });
 }
 
 export interface StudyInput {

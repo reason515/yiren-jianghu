@@ -7,26 +7,25 @@ import { z } from "zod";
 
 const id = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/, "id 只能用小写字母、数字、_ 与 -");
 
-// ---------- 数值参数表（D1 填充，封测集中调参） ----------
+// ---------- 数值系数表（DC-046：mechanics.yaml coeffs；公式见 formulas/piecewise） ----------
 export const paramsSchema = z.object({
-  /** 经验曲线：下一级所需经验 = base * growth^(level-1)（首版简化） */
+  /** 经验曲线系数（公式 expForNextLevel） */
   expCurve: z.object({ base: z.number().int().positive(), growth: z.number().positive() }),
-  /** 潜能：学习消耗系数（有效潜能 = potential - learned_points） */
-  potential: z.object({ learnCostFactor: z.number().positive() }),
-  /** 战斗基础值（命中/躲闪/招架）与伤害系数 */
+  /** 战斗伤害与行动系数（命中改 skill_power，见 formulas/piecewise） */
   combat: z.object({
-    baseHitRate: z.number().min(0).max(1),
-    baseDodgeRate: z.number().min(0).max(1),
-    baseParryRate: z.number().min(0).max(1),
-    hitPerAttackDiff: z.number().default(0.01),
-    dodgePerDodgeDiff: z.number().default(0.01),
-    parryPerParryDiff: z.number().default(0.01),
     weaponDmgPerLevel: z.number().default(0.5),
     forceDmgPerLevel: z.number().default(0.4),
     defenseReduce: z.number().default(0.5),
     damageVariance: z.number().min(0).max(0.5).default(0.1),
     recoverNeiliPerTurn: z.number().nonnegative().default(20),
     fleeBaseChance: z.number().min(0).max(1).default(0.7),
+    /** 招架后伤害倍率（原硬编码 0.3） */
+    parryDamageFactor: z.number().min(0).max(1).default(0.3),
+    /** 内力低于上限比例时选择回气 */
+    recoverNeiliThreshold: z.number().min(0).max(1).default(0.3),
+    defenseBase: z.number().nonnegative().default(10),
+    dodgeBase: z.number().nonnegative().default(5),
+    parryBase: z.number().nonnegative().default(5),
   }),
   /** 挂机：时长上限与每日递减 */
   afk: z.object({
@@ -88,17 +87,37 @@ export const paramsSchema = z.object({
     practiceQiPerLevel: z.number().int().nonnegative().default(1),
     practicePointsPerAction: z.number().positive().default(1),
     studyJingBase: z.number().int().positive().default(80),
+    /** 0 级首学精耗倍率（原硬编码 ×2） */
+    firstLearnJingMult: z.number().positive().default(2),
+    /** practicePointsNeeded = level + offset */
+    practicePointsNeededOffset: z.number().int().nonnegative().default(1),
   }),
   /** PVP：赛季与积分规则 */
   pvp: z.object({
     dailyChallengeLimit: z.number().int().positive().default(5),
     kFactor: z.number().int().positive().default(32),
     seasonWeeks: z.number().int().positive().default(6),
+    /** ELO 期望分母（原硬编码 400） */
+    eloScale: z.number().positive().default(400),
   }),
-  /** 经济：掉落基础与现金流出上限（防通胀） */
+  /** 经济：现金流出上限（防通胀） */
   economy: z.object({
-    silverDropBase: z.number().nonnegative(),
     maxCashflowPerDay: z.number().positive(),
+  }),
+  /** 激发有效等级系数 */
+  enable: z.object({
+    basicLevelDivisor: z.number().positive().default(2),
+  }),
+  /** 绝招按原级放大 */
+  perform: z.object({
+    scaleDivisor: z.number().positive().default(100),
+  }),
+  /** skill_power 合成系数（分段见 piecewise） */
+  skillPower: z.object({
+    attrDivisor: z.number().positive().default(6),
+    strWeight: z.number().positive().default(5),
+    zeroLevelExpDiv: z.number().positive().default(50),
+    minPower: z.number().positive().default(1),
   }),
 });
 
@@ -457,6 +476,7 @@ export const worldMapSchema = z.object({
 });
 
 // ---------- 内容包整体 ----------
+// mechanics.yaml 由 load.ts 装载并校验（见 mechanics.ts）；params 为 coeffs 兼容别名。
 export const contentPackSchema = z.object({
   manifest: manifestSchema,
   params: paramsSchema,
@@ -473,6 +493,7 @@ export const contentPackSchema = z.object({
   worldMap: worldMapSchema.optional(),
 });
 
+/** 内容包结构（params 为 mechanics.coeffs 别名；加载后另附 mechanics/compiled，见 load.ts）。 */
 export type ContentPack = z.infer<typeof contentPackSchema>;
 export type Params = z.infer<typeof paramsSchema>;
 export type Room = z.infer<typeof roomSchema>;

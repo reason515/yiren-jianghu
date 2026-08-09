@@ -9,9 +9,9 @@
 
 # 1. 说明
 
-本项目数值遵循（DC-020）：**pkuxkx 公式仅作对照列，按移动端会话节奏重设计；所有数值集中在内容包 `params.json`**（生效列），封测期间集中调参。本文件是 C1/D1 的"对照列归档"（来源文件 + 公式 + 重设计理由）。
+本项目数值遵循（DC-020 / DC-046）：**pkuxkx 公式仅作对照列，按移动端会话节奏重设计；系数与公式表达式集中在内容包 `mechanics.yaml`**（生效列），封测期间集中调参。本文件是 C1/D1 的"对照列归档"（来源文件 + 重设计理由）；**运行时以 yaml 为准**。
 
-生效值以 `packages/content/fixtures/pack/params.json` 为准；下文括号内为当前值。
+生效源：`packages/content/fixtures/pack/mechanics.yaml`（`coeffs` + `formulas` + `piecewise` + `entityIndex`）；下文括号内为当前值。
 
 # 2. 对照表
 
@@ -44,8 +44,8 @@
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
 | 有效等级 | `query_skill`：基本/2+特殊（`feature/skill.c`） | 同式；GUI 激发（DC-041） | 对齐 xkx；无人物 level 阶梯加成 |
-| 命中 | `skill_power` + `random(ap+dp)<dp` 躲 / 再架（`probable.h`/`combatd.c`） | 同式分段立方+exp（无 apply 因子） | DC-041 起生效；旧 baseHitRate 仅残留 params |
-| 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架减伤 70% | 对齐 combatd；去掉独立「未命中」态 |
+| 命中 | `skill_power` + `random(ap+dp)<dp` 躲 / 再架（`probable.h`/`combatd.c`） | `piecewise.levelCubePower` / `combatExpBonus` + `skillPower*` 公式 | DC-041/046；旧线性命中系数已删除 |
+| 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架伤 ×`parryDamageFactor`(0.3) | 对齐 combatd；去掉独立「未命中」态 |
 | 伤害 | 武器+action%+内功−防御 | 基底 `weaponDmgPerLevel=0.5` 等 + 招式 damage/force% + 浮动 ±10% | 招式进伤害；绝招按原级缩放 |
 | 逃跑 | flee 判定 | `fleeBaseChance=0.7` | PvE 逃生友好 |
 
@@ -73,18 +73,18 @@
 
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
-| 掉落基础 | dropmoney 相关 | `silverDropBase=5` | 初值，D 阶段随怪物内容校准 |
-| 现金流出上限 | `moneyd.c MAX_CASHFLOW_ALLOWED`（40 两金） | `maxCashflowPerDay=1000` | 吸收"超限卖出静默失败"教训，明确拒绝（C9） |
+| 现金流出上限 | `moneyd.c MAX_CASHFLOW_ALLOWED`（40 两金） | `maxCashflowPerDay=1000` | 吸收"超限卖出静默失败"教训，明确拒绝（C9）；银两掉落见 NPC/任务实体 |
 
 # 3. 调整纪律
 
-- 封测调参只改 `params.json`（+ 同步 5 处：schema/fixtures×2/DEFAULT_PARAMS/validate.test），不碰代码公式（yjh-content-pack 常见坑 #5）。
+- 封测调参/改公式只改 `mechanics.yaml`（+ 同步 schema coeffs、fixtures×2、`DEFAULT_PARAMS` 经 yaml 同源、validate.test）；控制流不进 DSL（yjh-content-pack）。
 - 每次调整在 本文件"变更记录"登记（日期 + 项 + 新值 + 理由），保持可追溯。
 
 # 4. 变更记录
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-10 | 生效源改为 `mechanics.yaml`；公式 DSL + 清理死字段 | DC-046 | review/运行时同一文件；旧 params.json 退役 |
 | 2026-08-09 | 学习首学精耗 ×2；学费 `learnTuitionBase=2`；建角赠银 10 | DC-039 双轨学艺 | 对齐 xkx learn 首学加倍 + 武馆教头交银语义（按次 GUI） |
 | 2026-08-09 | 生计挂机 hourlyGain + jingPerHour + maxExp | DC-042 | 新手无战斗也能攒银/历练/潜能；见 grind_jobs |
 | 2026-08-09 | onlineTickSec/onlineHeartbeatTimeoutSec/onlineRewardMult | DC-043 | 在线短轮回高收益 + 心跳断线 pause |

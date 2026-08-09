@@ -69,7 +69,9 @@ try {
         }
         process.exit(1);
       }
-      await writeFile(out, JSON.stringify(pack, null, 2), "utf8");
+      const packOut = { ...pack };
+      delete packOut.compiled;
+      await writeFile(out, JSON.stringify(packOut, null, 2), "utf8");
       console.log(`✅ 已打版：${out}`);
       process.exit(0);
     }

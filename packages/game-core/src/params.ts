@@ -1,90 +1,39 @@
-import { paramsSchema, type Params } from "@yjh/content";
+import {
+  defaultCompiledMechanics,
+  evalFormulaWithCoeffs,
+  paramsSchema,
+  type CompiledMechanics,
+  type Params,
+} from "@yjh/content";
 
 /**
- * C1 数值参数表与公式模块。
+ * C1 / DC-046 数值参数与公式模块。
  *
- * 设计要点：
- * - 纯函数、零 IO、确定性可复现（game-core 护栏）。
- * - 参数 Schema 的单一来源在 @yjh/content（内容包作者契约），这里只做运行时装载与派生公式，
- *   避免两份定义漂移。
- * - pkuxkx 公式（如 max_potential = 100+sqrt(exp)/10、武功³/10 > exp 检查）仅作对照参考，
- *   不进入本模块；本模块数值按移动端会话节奏重设计，由内容包 params.json 驱动。
+ * - 系数 Schema 与公式 DSL 的单一来源在 @yjh/content（mechanics.yaml）。
+ * - 本模块提供装载、DEFAULT 与派生求值；公式形状不再写死在 TS。
  */
 
 export type GameParams = Params;
+export type { CompiledMechanics };
 
-/** 开发默认值，与 packages/content/fixtures/pack/params.json 保持一致。 */
-export const DEFAULT_PARAMS: GameParams = {
-  expCurve: { base: 100, growth: 1.1 },
-  potential: { learnCostFactor: 1 },
-  combat: {
-    baseHitRate: 0.7,
-    baseDodgeRate: 0.1,
-    baseParryRate: 0.15,
-    hitPerAttackDiff: 0.01,
-    dodgePerDodgeDiff: 0.01,
-    parryPerParryDiff: 0.01,
-    weaponDmgPerLevel: 0.5,
-    forceDmgPerLevel: 0.4,
-    defenseReduce: 0.5,
-    damageVariance: 0.1,
-    recoverNeiliPerTurn: 20,
-    fleeBaseChance: 0.7,
-  },
-  afk: {
-    maxDurationHours: 8,
-    dailyDiminishRate: 0.5,
-    studyAttemptsPerHour: 12,
-    onlineTickSec: 60,
-    onlineHeartbeatTimeoutSec: 45,
-    onlineRewardMult: 1.8,
-  },
-  regen: {
-    qiPerMin: 0.02,
-    jingPerMin: 0.015,
-    jingliPerMin: 0.02,
-    neiliPerMin: 0.01,
-    foodPerMin: 1,
-    waterPerMin: 1.5,
-    maxWindowMinutes: 30,
-  },
-  vitals: {
-    qiBase: 100,
-    jingBase: 100,
-    jingliBase: 100,
-    qiPerCon: 16,
-    qiPerStr: 0,
-    jingPerInt: 16,
-    forceQiPerLevel: 2,
-    forceJingPerLevel: 1,
-    neiliPerLevel: 10,
-    jingliPerLevel: 3,
-    neiliToQiDiv: 4,
-    neiliToJingDiv: 12,
-    foodBase: 200,
-    foodPerCon: 10,
-    waterBase: 200,
-    waterPerDex: 10,
-  },
-  growth: {
-    learnJingCostBase: 150,
-    learnTuitionBase: 2,
-    potentialCostPerLevel: 1,
-    expGateExponent: 3,
-    expGateDivisor: 10,
-    practiceQiBase: 20,
-    practiceQiPerLevel: 1,
-    practicePointsPerAction: 1,
-    studyJingBase: 80,
-  },
-  pvp: { dailyChallengeLimit: 5, kFactor: 32, seasonWeeks: 6 },
-  economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
-};
+/** 开发默认系数，与 packages/content/fixtures/pack/mechanics.yaml coeffs 保持一致。 */
+export const DEFAULT_PARAMS: GameParams = structuredClone(defaultCompiledMechanics().coeffs);
 
-/** 升到下一级所需经验：base * growth^(level-1)（level 从 1 起）。 */
-export function expForNextLevel(p: GameParams, level: number): number {
+/** 默认编译机制（公式+分段）；生产环境优先用 loadContentDir().pack.compiled。 */
+export function defaultMechanics(): CompiledMechanics {
+  return defaultCompiledMechanics();
+}
+
+export const DEFAULT_MECHANICS: CompiledMechanics = defaultCompiledMechanics();
+
+/** 升到下一级所需经验：公式 expForNextLevel。 */
+export function expForNextLevel(
+  p: GameParams,
+  level: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
   if (!Number.isInteger(level) || level < 1) throw new RangeError("level 必须是不小于 1 的整数");
-  return Math.round(p.expCurve.base * Math.pow(p.expCurve.growth, level - 1));
+  return Math.round(evalFormulaWithCoeffs(mechanics, p, "expForNextLevel", { level }));
 }
 
 /** 有效潜能 = potential − learned_points（已定修正，下限 0）。 */
@@ -93,20 +42,25 @@ export function effectivePotential(potential: number, learnedPoints: number): nu
 }
 
 /**
- * 挂机每日递减乘数（0 ≤ 返回值 ≤ 1）：
- * 每满一个 maxDurationHours 周期，收益乘 (1 - dailyDiminishRate)，下界为 0。
- * 单调不增，确定性可测。
+ * 挂机每日递减乘数（0 ≤ 返回值 ≤ 1）。
+ * 公式 diminishMultiplier；fullCycles 由本函数按 coeffs 预计算。
  */
-export function diminishMultiplier(p: GameParams, hoursUsedToday: number): number {
+export function diminishMultiplier(
+  p: GameParams,
+  hoursUsedToday: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
   if (hoursUsedToday < 0) throw new RangeError("hoursUsedToday 必须 >= 0");
   const fullCycles = Math.floor(hoursUsedToday / p.afk.maxDurationHours);
-  if (fullCycles <= 0) return 1;
-  return Math.max(0, Math.min(1, Math.pow(1 - p.afk.dailyDiminishRate, fullCycles)));
+  return evalFormulaWithCoeffs(mechanics, p, "diminishMultiplier", {
+    hoursUsedToday,
+    fullCycles,
+  });
 }
 
 export type ParseParamsResult = { ok: true; params: GameParams } | { ok: false; errors: string[] };
 
-/** 装载参数表（内容包 params.json → 校验 → GameParams）。 */
+/** 装载参数表（mechanics.coeffs / 旧 params.json → 校验 → GameParams）。 */
 export function parseParams(input: unknown): ParseParamsResult {
   const result = paramsSchema.safeParse(input);
   if (result.success) return { ok: true, params: result.data };

@@ -1,19 +1,8 @@
-import { DEFAULT_PARAMS, type GameParams } from "./params.js";
+import { evalFormulaWithCoeffs, type CompiledMechanics } from "@yjh/content";
+import { DEFAULT_MECHANICS, DEFAULT_PARAMS, type GameParams } from "./params.js";
 
 /**
- * C2 Vitals 动态上限计算。
- *
- * 参照 pkuxkx feature/attribute.c 的 query_max_qi/jing/neili/jingli 结构，
- * 但按移动端节奏重设计：首版无年龄阶段，采用成年人常数（对应 pkuxkx 31–60 段公式）；
- * 年龄衰减/内功类型系数留待后续。所有系数来自参数表 vitals 段（内容包驱动）。
- *
- * 公式（对照 pkuxkx 列）：
- * - maxNeili = forceLevel * neiliPerLevel          （pkuxkx: SKILL_D(force)->query_max_neili）
- * - maxQi    = qiBase + con*qiPerCon + str*qiPerStr + forceLevel*forceQiPerLevel
- *              + floor(maxNeili / neiliToQiDiv)     （pkuxkx: 31–60 段 + max_neili/4 + level_hp）
- * - maxJing  = jingBase + int*jingPerInt + forceLevel*forceJingPerLevel
- *              + floor(maxNeili / neiliToJingDiv)   （pkuxkx: 31+ 段 + max_neili/12）
- * - maxJingli= jingliBase + forceLevel*jingliPerLevel （pkuxkx: force_skill * jingli_times）
+ * C2 Vitals 动态上限计算（DC-046：公式在 mechanics.yaml）。
  */
 
 export interface VitalsInput {
@@ -32,37 +21,45 @@ export interface MaxVitals {
   maxJingli: number;
 }
 
-export function computeMaxVitals(p: GameParams, input: VitalsInput): MaxVitals {
-  const v = p.vitals;
-  const maxNeili = input.forceLevel * v.neiliPerLevel;
-  const maxQi =
-    v.qiBase +
-    input.con * v.qiPerCon +
-    input.str * v.qiPerStr +
-    input.forceLevel * v.forceQiPerLevel +
-    Math.floor(maxNeili / v.neiliToQiDiv);
-  const maxJing =
-    v.jingBase +
-    input.int * v.jingPerInt +
-    input.forceLevel * v.forceJingPerLevel +
-    Math.floor(maxNeili / v.neiliToJingDiv);
-  const maxJingli = v.jingliBase + input.forceLevel * v.jingliPerLevel;
-  return { maxQi, maxJing, maxNeili, maxJingli };
+export function computeMaxVitals(
+  p: GameParams,
+  input: VitalsInput,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): MaxVitals {
+  const vars = {
+    str: input.str,
+    int: input.int,
+    con: input.con,
+    dex: input.dex,
+    forceLevel: input.forceLevel,
+  };
+  return {
+    maxNeili: evalFormulaWithCoeffs(mechanics, p, "maxNeili", vars),
+    maxQi: evalFormulaWithCoeffs(mechanics, p, "maxQi", vars),
+    maxJing: evalFormulaWithCoeffs(mechanics, p, "maxJing", vars),
+    maxJingli: evalFormulaWithCoeffs(mechanics, p, "maxJingli", vars),
+  };
 }
 
-/** 食物/饮水上限（pkuxkx: max_food_capacity / max_water_capacity 按体质/身法）。 */
-export function maxFoodCapacity(p: GameParams, con: number): number {
-  return p.vitals.foodBase + con * p.vitals.foodPerCon;
+/** 食物/饮水上限。 */
+export function maxFoodCapacity(
+  p: GameParams,
+  con: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, p, "maxFood", { con });
 }
 
-export function maxWaterCapacity(p: GameParams, dex: number): number {
-  return p.vitals.waterBase + dex * p.vitals.waterPerDex;
+export function maxWaterCapacity(
+  p: GameParams,
+  dex: number,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, p, "maxWater", { dex });
 }
 
 /**
- * 自然恢复与食水消耗（V2.12 / DC-044，参照 pkuxkx heart_beat）：
- * 按距上次结算的分钟数恢复 qi/jing/jingli/neili（每分钟为上限的 qiPerMin 等比例），
- * 并按绝对值消耗 food/water；单次封顶窗口防离线累积。
+ * 自然恢复与食水消耗（V2.12 / DC-044）：速率系数仍在 coeffs.regen。
  */
 export function applyRegen(
   current: VitalsState,

@@ -1,5 +1,6 @@
 import type { Json } from "@yjh/shared";
-import type { GameParams } from "./params.js";
+import { evalFormulaWithCoeffs, type CompiledMechanics } from "@yjh/content";
+import { DEFAULT_MECHANICS, type GameParams } from "./params.js";
 import { chance, createSeededRng, type Rng } from "./random.js";
 import { skillPower } from "./skillPower.js";
 
@@ -118,6 +119,8 @@ export interface BattleInput {
   selectors: Record<ActorKey, ActionSelector>;
   seed: number;
   params: GameParams;
+  /** 缺省用 DEFAULT_MECHANICS；生产传入 content.compiled。 */
+  mechanics?: CompiledMechanics;
   maxTurns?: number;
 }
 
@@ -156,16 +159,21 @@ export function computeAttackDamage(
   def: CombatantView,
   rng: Rng,
   move?: MoveInfo,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): number {
-  let base = Math.max(
-    1,
-    atk.stats.attack +
-      atk.stats.weaponLevel * p.combat.weaponDmgPerLevel +
-      atk.stats.forceLevel * p.combat.forceDmgPerLevel -
-      def.stats.defense * p.combat.defenseReduce,
-  );
+  let base = evalFormulaWithCoeffs(mechanics, p, "attackDamageBase", {
+    atk: atk.stats.attack,
+    def: def.stats.defense,
+    weaponLevel: atk.stats.weaponLevel,
+    forceLevel: atk.stats.forceLevel,
+  });
   if (move) {
-    base = base * ((100 + move.damage) / 100) + (atk.stats.forceLevel * move.force) / 100;
+    base = evalFormulaWithCoeffs(mechanics, p, "moveDamageApplied", {
+      base,
+      moveDamage: move.damage,
+      moveForce: move.force,
+      forceLevel: atk.stats.forceLevel,
+    });
   }
   const variance = 1 + (rng() * 2 - 1) * p.combat.damageVariance;
   return Math.max(1, Math.round(base * variance));
@@ -188,26 +196,48 @@ export function resolveAttack(
   def: CombatantView,
   rng: Rng,
   move?: MoveInfo,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): AttackOutcome {
   const atkAttrs = { str: atk.stats.str, dex: atk.stats.dex };
   const defAttrs = { str: def.stats.str, dex: def.stats.dex };
-  const ap = skillPower(atk.stats.attackSkillLevel, atk.stats.combatExp, atkAttrs, "attack");
-  const dp = skillPower(def.stats.dodgeSkillLevel, def.stats.combatExp, defAttrs, "defense");
+  const ap = skillPower(
+    atk.stats.attackSkillLevel,
+    atk.stats.combatExp,
+    atkAttrs,
+    "attack",
+    p,
+    mechanics,
+  );
+  const dp = skillPower(
+    def.stats.dodgeSkillLevel,
+    def.stats.combatExp,
+    defAttrs,
+    "defense",
+    p,
+    mechanics,
+  );
   if (ap + dp > 0 && chance(rng, dp / (ap + dp))) {
     return { type: "dodge", ...(move ? { moveId: move.id, moveName: move.name } : {}) };
   }
-  const pp = skillPower(def.stats.parrySkillLevel, def.stats.combatExp, defAttrs, "defense");
+  const pp = skillPower(
+    def.stats.parrySkillLevel,
+    def.stats.combatExp,
+    defAttrs,
+    "defense",
+    p,
+    mechanics,
+  );
   if (ap + pp > 0 && chance(rng, pp / (ap + pp))) {
-    const full = computeAttackDamage(p, atk, def, rng, move);
+    const full = computeAttackDamage(p, atk, def, rng, move, mechanics);
     return {
       type: "parry",
-      damage: Math.max(1, Math.round(full * 0.3)),
+      damage: evalFormulaWithCoeffs(mechanics, p, "parryDamage", { fullDamage: full }),
       ...(move ? { moveId: move.id, moveName: move.name } : {}),
     };
   }
   return {
     type: "damage",
-    damage: computeAttackDamage(p, atk, def, rng, move),
+    damage: computeAttackDamage(p, atk, def, rng, move, mechanics),
     ...(move ? { moveId: move.id, moveName: move.name } : {}),
   };
 }
@@ -258,7 +288,14 @@ export function runBattle(input: BattleInput): BattleResult {
 
       switch (action.type) {
         case "attack": {
-          const outcome = resolveAttack(input.params, view(actor), view(foe), rng, action.move);
+          const outcome = resolveAttack(
+            input.params,
+            view(actor),
+            view(foe),
+            rng,
+            action.move,
+            input.mechanics,
+          );
           if (outcome.type === "damage" || outcome.type === "parry") {
             c[foe].qi = Math.max(0, c[foe].qi - outcome.damage);
           }
@@ -366,6 +403,7 @@ export interface BattleRoundInput {
   /** 会话建立即固定的随机种子。 */
   seed: number;
   params: GameParams;
+  mechanics?: CompiledMechanics;
   /** 玩家本回合意图；客户端只能提交此字段。 */
   playerAction: BattleAction;
   /** 指定敌方槽位；缺省打气最低的存活敌人。 */
@@ -537,7 +575,14 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
         const foe = resolveTarget(input.targetId);
         if (!foe) break;
         const wasAlive = combatants[foe]!.qi > 0;
-        const outcome = resolveAttack(input.params, view(actor), view(foe), rng, action.move);
+        const outcome = resolveAttack(
+          input.params,
+          view(actor),
+          view(foe),
+          rng,
+          action.move,
+          input.mechanics,
+        );
         if (outcome.type === "damage" || outcome.type === "parry") {
           combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - outcome.damage);
         }
@@ -614,7 +659,14 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
     const target = PLAYER_ACTOR;
     switch (action.type) {
       case "attack": {
-        const outcome = resolveAttack(input.params, view(foeId), view(target), rng, action.move);
+        const outcome = resolveAttack(
+          input.params,
+          view(foeId),
+          view(target),
+          rng,
+          action.move,
+          input.mechanics,
+        );
         if (outcome.type === "damage" || outcome.type === "parry") {
           combatants[target]!.qi = Math.max(0, combatants[target]!.qi - outcome.damage);
         }
@@ -713,6 +765,12 @@ export const attackOnly: ActionSelector = () => ({ type: "attack" });
 /** 内力低于 30% 时回气，否则攻击。 */
 export const attackOrRecover: ActionSelector = (ctx, actor) => {
   const v = ctx.get(actor);
-  if (v.maxNeili > 0 && v.neili / v.maxNeili < 0.3) return { type: "recover" };
+  // 阈值见 coeffs.recoverNeiliThreshold；选择器无 params 入参，默认 0.3
+  if (
+    v.maxNeili > 0 &&
+    v.neili / v.maxNeili < DEFAULT_MECHANICS.coeffs.combat.recoverNeiliThreshold
+  ) {
+    return { type: "recover" };
+  }
   return { type: "attack" };
 };

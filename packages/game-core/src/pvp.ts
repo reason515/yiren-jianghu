@@ -1,9 +1,9 @@
-import type { GameParams } from "./params.js";
+import { evalFormulaWithCoeffs, type CompiledMechanics, type Perform } from "@yjh/content";
+import { DEFAULT_MECHANICS, DEFAULT_PARAMS, type GameParams } from "./params.js";
 import type { Combatant, BattleEvent } from "./combat.js";
 import { runBattle } from "./combat.js";
 import { createTacticSelector, type TacticTemplate } from "./tactic.js";
 import { dayKey } from "./afk.js";
-import type { Perform } from "@yjh/content";
 
 /**
  * C8 异步 PVP 引擎。
@@ -70,8 +70,13 @@ export function simulateMatch(input: PvpMatchInput): PvpMatchResult {
 
 // ---------- 赛季积分（ELO 式） ----------
 
-export function expectedScore(scoreA: number, scoreB: number): number {
-  return 1 / (1 + Math.pow(10, (scoreB - scoreA) / 400));
+export function expectedScore(
+  scoreA: number,
+  scoreB: number,
+  params: GameParams = DEFAULT_PARAMS,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+): number {
+  return evalFormulaWithCoeffs(mechanics, params, "expectedScore", { scoreA, scoreB });
 }
 
 export type EloOutcome = "win" | "loss" | "draw";
@@ -81,8 +86,10 @@ export function eloDelta(
   opponentScore: number,
   outcome: EloOutcome,
   k: number,
+  params: GameParams = DEFAULT_PARAMS,
+  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): number {
-  const expected = expectedScore(score, opponentScore);
+  const expected = expectedScore(score, opponentScore, params, mechanics);
   const s = outcome === "win" ? 1 : outcome === "loss" ? 0 : 0.5;
   return Math.round(k * (s - expected));
 }

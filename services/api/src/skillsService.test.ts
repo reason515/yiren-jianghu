@@ -2,48 +2,13 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import { SkillsError, createSkillsService } from "./skillsService.js";
 import type { ContentPack } from "@yjh/content";
+import { DEFAULT_PARAMS } from "@yjh/game-core";
 import type { Db, DbRow } from "./db.js";
 
 /** 最小内容包：含村武馆教头与一门可教武功（DC-039）。 */
 const PACK = {
   manifest: { version: "0.0.0", name: "test" },
-  params: {
-    expCurve: { base: 100, growth: 1.1 },
-    potential: { learnCostFactor: 1 },
-    combat: { baseHitRate: 0.7, baseDodgeRate: 0.1, baseParryRate: 0.15 },
-    afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
-    growth: {
-      learnJingCostBase: 150,
-      learnTuitionBase: 2,
-      potentialCostPerLevel: 1,
-      expGateExponent: 3,
-      expGateDivisor: 10,
-      practiceQiBase: 20,
-      practiceQiPerLevel: 1,
-      practicePointsPerAction: 1,
-      studyJingBase: 80,
-    },
-    vitals: {
-      qiBase: 100,
-      jingBase: 100,
-      jingliBase: 100,
-      qiPerCon: 16,
-      qiPerStr: 0,
-      jingPerInt: 16,
-      forceQiPerLevel: 2,
-      forceJingPerLevel: 1,
-      neiliPerLevel: 10,
-      jingliPerLevel: 3,
-      neiliToQiDiv: 4,
-      neiliToJingDiv: 12,
-      foodBase: 200,
-      foodPerCon: 10,
-      waterBase: 200,
-      waterPerDex: 10,
-    },
-    pvp: { dailyChallengeLimit: 5, kFactor: 32, seasonWeeks: 6 },
-    economy: { silverDropBase: 5, maxCashflowPerDay: 1000 },
-  },
+  params: DEFAULT_PARAMS,
   rooms: [
     { id: "village_dojo", area: "newbie", name: "武馆", npcIds: ["master_wang"], exits: [] },
     { id: "village_elsewhere", area: "newbie", name: "别处", npcIds: [], exits: [] },

@@ -7,7 +7,7 @@
 | 触发条件                                                                                                | 技能                      | 位置                                              |
 | ------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------- |
 | 任何在本仓库写代码、改配置、跑测试、提交、部署相关任务                                                  | `yjh-project-conventions` | `.cursor/skills/yjh-project-conventions/SKILL.md` |
-| 内容包/Schema/校验/CLI；从 pkuxkx 筛选、移植、登记内容                                                  | `yjh-content-pack`        | `.cursor/skills/yjh-content-pack/SKILL.md`        |
+| 内容包/Schema/校验/CLI（含 mechanics.yaml 公式 DSL）；从 pkuxkx 筛选、移植、登记内容                    | `yjh-content-pack`        | `.cursor/skills/yjh-content-pack/SKILL.md`        |
 | 编写或优化任何玩家可见游戏文本（绝招/招式、战斗演出、房间场景、NPC 对话、任务简报、剧情事件、物品描述） | `yjh-wuxia-copywriting`   | `.cursor/skills/yjh-wuxia-copywriting/SKILL.md`   |
 | 设计或修改区域地图/世界地图/场景方位图（八向网格、多视图一致性、地图数据契约、校验与交互）              | `yjh-map-design`          | `.cursor/skills/yjh-map-design/SKILL.md`          |
 | 设计或变更设计决策/撰写设计提案、规格、审计；维护决策登记表                                             | `yjh-design-docs`         | `.cursor/skills/yjh-design-docs/SKILL.md`         |

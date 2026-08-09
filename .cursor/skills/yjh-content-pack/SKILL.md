@@ -14,7 +14,7 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ```text
 <dir>/
 ├── manifest.json        # { version: "x.y.z", name, description }
-├── params.json          # 数值参数表（经验曲线/潜能/战斗基础/状态 Vitals/挂机/经济）
+├── mechanics.yaml       # DC-046 机制总表：coeffs + formulas + piecewise + entityIndex
 ├── maps/world.json      # 可选天下图（nodes=area 节点 geo + roads 道路链）
 ├── rooms/*.json         # 房间：id/area/name/exits/doors/actions/npcIds/itemIds
 ├── npcs/*.json          # NPC：battle|vendor|tuition_teacher|apprentice_master|quest_giver|npc
@@ -22,10 +22,19 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 ├── skills/*.json        # 技能：force|weapon|dodge|parry|knowledge
 ├── performs/*.json      # 绝招：skillId/条件/消耗/冷却/效果（一等公民，战术模板动作原子）
 ├── quests/*.json        # 任务：sect|bounty|main；phase: goto|kill|talk|deliver|collect
+├── grind_jobs/*.json    # 生计挂机（离线时薪 / 在线回路）
 └── story/*.json         # 主线节点：questId/next/conditions
 ```
 
 支持 `.json` 与 `.yaml/.yml`。**id 命名**：小写字母/数字/`_`/`-`。
+
+**mechanics.yaml（DC-046）**：
+
+- `coeffs`：可调系数（原 params 段；运行时 `pack.params === coeffs`）。
+- `formulas`：命名公式字符串（安全 DSL：`+-*/^%`、比较、三元、`floor/ceil/round/min/max/abs/pow`；禁 eval/属性访问）。
+- `piecewise`：分段表（如 skill_power 立方/历练加成），自上而下首个 `when` 命中。
+- `entityIndex`：实体数值字段索引（NPC 奖励、生计、招式等仍在各 JSON，此处供 review + 路径校验）。
+- 改数字或改公式**只动本文件**；战斗循环/挂机状态机等控制流仍在 `game-core`。
 
 ## Schema 要点（改 schema 前先读 schema.ts）
 
@@ -36,7 +45,7 @@ description: 《一人江湖》(yiren-jianghu) 内容包与 pkuxkx 内容筛选�
 - 绝招 `performs[]` 必须引用存在的 `skillId`；条件为受控枚举（self_qi_below_pct / self_neili_above_pct / skill_level_at_least / enemy_qi_below_pct），**不开放脚本/正则**；冷却字段为 `cooldownTurns`（回合制语义）；`effect.type="buff"` Schema 保留但 v1 引擎未实现（校验器发 warning）。
 - 任务 `quests[]`：phase 的 targetId 按类型校验（goto→房间、kill/talk→NPC、deliver/collect→物品）；奖励 items 引用物品；可选 `briefing` 字段为任务简报（玩家文案，见 yjh-wuxia-copywriting）。**相位结算语义（服务端 questsService 已实现）**：相位按内容包顺序推进，**只推进当前相位**；`talk`/`goto` 命中 1 次即完成相位，`kill`/`deliver`/`collect` 按 `count` 计数；全部相位完成才可交差（`report`）。进度推进由**战斗/挂机域经 `recordProgress` 钩子驱动**（击杀 NPC id / 抵达房间 id / 交谈 NPC id），内容作者需保证 targetId 与战斗/挂机产出的 id 一致（NPC 用 npcs/ id，物品用 items/ id，房间用 rooms/ id）。
 - 技能 `skills[]`：`maxLevel` 同时约束 learn/practice/study；learn 还受 exp 门槛（`level^3/10 ≤ exp`，见 growth.expGateExponent/Divisor）与潜能/精限制，practice/study 无 exp 门槛但耗气血/精（practiceQiBase / studyJingBase 参数驱动）；`baseLevel` 为初始等级（服务端按 0 处理未建档技能）。
-- 数值参数 `params.json`：`afk.maxDurationHours ∈ [0.5, 24]`（校验器建议 1–12）、`dailyDiminishRate ∈ [0,1]`。
+- 机制 `mechanics.yaml`：`afk.maxDurationHours ∈ [0.5, 24]`（校验器建议 1–12）、`dailyDiminishRate ∈ [0,1]`；公式 id 必须覆盖引擎注册表（见 `mechanics.ts` `REQUIRED_FORMULA_IDS`）。
 
 ## CLI（packages/content）
 
@@ -76,17 +85,17 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 - 门派原型：玄门剑宗（pkuxkx 武当为结构样本，文本原创）；技能收敛到必需十几门，绝招 4–6 个验证。
 - 装备：基础装备 + 消耗品；无宝石/强化/套装（筛选目录中为"延期"）。
 - 日常：门派任务为核心 + 新手衙门悬赏过渡；押镖/剿匪延期。
-- 数值：重设计 + 集中参数表，pkuxkx 作对照列，移动端会话节奏（单次探索 10–30 分钟）。
+- 数值/机制：重设计 + `mechanics.yaml`（系数与公式 DSL，DC-046），pkuxkx 作对照列，移动端会话节奏（单次探索 10–30 分钟）。
 - 明确否决：实时相遇、原始命令行、LPC/FluffOS、离线交易、QQ/BBS/IM、反机器人。
 
 ## 常见坑
 
 1. 改了 schema 但忘了跑 build，validate.test 与 CLI（引 dist）会拿到旧类型/旧校验。
 2. CLI 显式路径按 packages/content 相对解析；绝对路径（`/` 开头或盘符）直接使用。
-3. 校验器只做结构与引用完整性，**不做**平衡性检查；数值合理性靠 `params.json` 集中调参。
+3. 校验器做结构、引用完整性与 **mechanics 公式编译**；**不做**平衡性检查；数值/公式合理性靠改 `mechanics.yaml`。
 4. fixtures 有两套：`pack/`（有效）与 `broken-pack/`（故意坏引用，验证拒绝）。CI 的 content:validate 用默认 fixtures，别把 broken-pack 设为默认。
-5. **新增参数段（如 vitals/growth/pvp）必须 5 处同步**，漏一处 CI/单测必红：① `packages/content/src/schema.ts` 的 `paramsSchema` ② `fixtures/pack/params.json` ③ `fixtures/broken-pack/params.json` ④ `packages/game-core/src/params.ts` 的 `DEFAULT_PARAMS` ⑤ `packages/content/src/validate.test.ts` 的 basePack（C2/C5/C8 均按此扩展）。
-6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/数值参数。别把玩家数据塞进内容包。
+5. **新增 coeffs 段或公式 id 必须同步**：① `paramsSchema` / `REQUIRED_FORMULA_IDS` ② `fixtures/pack/mechanics.yaml` ③ `fixtures/broken-pack/mechanics.yaml` ④ `DEFAULT_PARAMS`（由 yaml 同源 `defaultCompiledMechanics`）⑤ `validate.test.ts` basePack coeffs；漏一处 CI/单测必红。
+6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/机制表。别把玩家数据塞进内容包。
 7. **地图布局数据（grid 坐标/出口方向/via 绕行/世界图 geo）按 `yjh-map-design` 规范设计**，D/E 阶段随内容包落地（rooms 加 grid 或新增 maps 集合），校验并入 validator；逻辑导航（连通性）在 `game-core/map.ts`（C10），两者共享出口真相。
 8. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。
 9. **内容包 JSON 文本内嵌英文引号 `"` 会破坏 JSON 解析**（D2 踩过：房间/NPC 对话里的引号）。中文对话一律用「」引号（JSON 合法且更符合文风）；写完跑 `pnpm content:validate` 会第一时间抓到。

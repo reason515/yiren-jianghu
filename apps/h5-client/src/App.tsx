@@ -74,6 +74,8 @@ import type { SceneItem, SceneNpc, SceneRoom, SceneTradeResult } from "./lib/sce
 const BASE_URL = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 const TOKEN_KEY = "yjh.token";
 const ONBOARD_KEY = "yjh.onboard";
+/** 全局 toast 自动消失时长（成功反馈与业务错误共用）。 */
+const TOAST_MS = 2500;
 
 type Panel = "none" | "character" | "afk" | "quests" | "forum" | "leaderboard" | "map" | "pvp";
 
@@ -157,6 +159,20 @@ export function App(): JSX.Element {
   });
   const [guideTipText, setGuideTipText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** 同文案再次推送时仍重启计时（仅改 message 时 React 会跳过更新）。 */
+  const [toastNonce, setToastNonce] = useState(0);
+  const showToast = useCallback((message: string): void => {
+    setError(message);
+    setToastNonce((n) => n + 1);
+  }, []);
+
+  // 全局 toast：约 2.5s 自动消失；可点按提前关闭。
+  useEffect(() => {
+    if (!error) return;
+    const id = window.setTimeout(() => setError(null), TOAST_MS);
+    return () => window.clearTimeout(id);
+  }, [error, toastNonce]);
+
   /** 见闻串行入队（V2.14.2）：交谈多句与观察同一队列，打完一行再追加下一行。 */
   const {
     entries: journal,
@@ -306,7 +322,7 @@ export function App(): JSX.Element {
       setReconnect(next);
       if (next.phase === "failed") {
         clearRetryTimer();
-        setError("久唤不应，江湖暂别。稍后再来。");
+        showToast("久唤不应，江湖暂别。稍后再来。");
       } else {
         retryTimer.current = window.setTimeout(() => void retryNow(), next.nextRetryMs);
       }
@@ -327,7 +343,7 @@ export function App(): JSX.Element {
       beginReconnect();
       return;
     }
-    setError(e.message);
+    showToast(e.message);
   };
 
   // 首启引导：事件驱动轻提示（欢迎/接任务/学武/首战），乱序跳级、完成后不再打扰。
@@ -460,7 +476,7 @@ export function App(): JSX.Element {
         setPvpChallenge(null);
         setPvpReplay(await api.getPvpMatch(match.id));
         setPvpReplayOpen(true);
-        setError(
+        showToast(
           match.result === "challenger_win"
             ? "剑下见真章——这一场你赢了。"
             : match.result === "defender_win"
@@ -503,7 +519,7 @@ export function App(): JSX.Element {
       .getForumPost(postId)
       .then((detail) => {
         if (!detail) {
-          setError("这帖子已随风而去。");
+          showToast("这帖子已随风而去。");
           return;
         }
         setForumActivePost(detail.post);
@@ -536,7 +552,7 @@ export function App(): JSX.Element {
             post.id === postId ? { ...post, likedByMe: liked, likeCount } : post,
           ),
         }));
-        setError(liked ? "已记下这一赞。" : "收回了这一赞。");
+        showToast(liked ? "已记下这一赞。" : "收回了这一赞。");
       })
       .catch(notify)
       .finally(() => setForumPending(false));
@@ -585,13 +601,13 @@ export function App(): JSX.Element {
       .then(async () => {
         setForumComposer(null);
         if (forumComposer.kind === "post") {
-          setError("已贴上江湖茶话。");
+          showToast("已贴上江湖茶话。");
           await refreshForumSections();
         } else if (forumComposer.kind === "comment") {
-          setError("已回帖。");
+          showToast("已回帖。");
           await onForumOpenPost(forumComposer.postId);
         } else {
-          setError("已递呈坊主处置。");
+          showToast("已递呈坊主处置。");
         }
       })
       .catch(notify)
@@ -614,7 +630,7 @@ export function App(): JSX.Element {
   const onMapNavigate = (roomId: string): void => {
     const exit = room?.exits.find((candidate) => candidate.roomId === roomId);
     if (!exit) {
-      setError("路途尚远，先循眼前的出口前行。");
+      showToast("路途尚远，先循眼前的出口前行。");
       return;
     }
     setPanel("none");
@@ -623,7 +639,7 @@ export function App(): JSX.Element {
 
   const onSelectWorldArea = (areaId: string): void => {
     const node = mapData?.world.nodes.find((entry) => entry.id === areaId);
-    setError(node ? `${node.name}尚在远方，须循官道逐程而行。` : "那处方位未明，只可远望。");
+    showToast(node ? `${node.name}尚在远方，须循官道逐程而行。` : "那处方位未明，只可远望。");
   };
 
   const refreshLeaderboard = useCallback(async (): Promise<void> => {
@@ -659,7 +675,7 @@ export function App(): JSX.Element {
       .then((job) => {
         setAfkStatus(toAfkStatusView(job));
         setPanel("none");
-        setError("气息渐定，行止已安排妥当。");
+        showToast("气息渐定，行止已安排妥当。");
         addJournal("气息渐定，行止已安排妥当。");
       })
       .catch(notify)
@@ -697,7 +713,7 @@ export function App(): JSX.Element {
         triggerGuide("skill_learned");
         if (action === "learn") {
           // 请教本轮不专项改结果文案
-          setError(`${name}已请教。`);
+          showToast(`${name}已请教。`);
           return;
         }
         if (action === "practice") {
@@ -710,7 +726,7 @@ export function App(): JSX.Element {
               ? Boolean((result as { leveled: boolean }).leveled)
               : false;
           const cost = Number.isFinite(spent) ? `，耗气 ${spent}` : "";
-          setError(`${name}已演练${cost}${leveled ? "，功力精进" : ""}。`);
+          showToast(`${name}已演练${cost}${leveled ? "，功力精进" : ""}。`);
           return;
         }
         const spent =
@@ -722,7 +738,7 @@ export function App(): JSX.Element {
             ? Boolean((result as { leveled: boolean }).leveled)
             : false;
         const cost = Number.isFinite(spent) ? `，耗精 ${spent}` : "";
-        setError(`${name}已参悟${cost}${leveled ? "，功力精进" : ""}。`);
+        showToast(`${name}已参悟${cost}${leveled ? "，功力精进" : ""}。`);
       })
       .catch(notify)
       .finally(() => setCharacterPending(null));
@@ -734,7 +750,7 @@ export function App(): JSX.Element {
       .updateCharacterName(name)
       .then(async () => {
         await refreshCharacter();
-        setError(`名号已更作「${name}」。`);
+        showToast(`名号已更作「${name}」。`);
       })
       .catch(notify)
       .finally(() => setCharacterPending(null));
@@ -753,7 +769,7 @@ export function App(): JSX.Element {
     void request
       .then(async () => {
         await refreshCharacter();
-        setError(
+        showToast(
           `${name}${action === "equip" ? "已佩上" : action === "unequip" ? "已卸下" : "已使用"}。`,
         );
       })
@@ -782,7 +798,7 @@ export function App(): JSX.Element {
     const exit = room?.exits.find((candidate) => candidate.roomId === roomId);
     setQuestOpen(false);
     if (!exit) {
-      setError("路途尚远，先循眼前的出口前行。");
+      showToast("路途尚远，先循眼前的出口前行。");
       return;
     }
     void onGo(exit.dir);
@@ -804,7 +820,7 @@ export function App(): JSX.Element {
       .then((result) => {
         const rewards = (result as { rewards: QuestRewardView }).rewards;
         const text = `交差已毕：经验 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
-        setError(text);
+        showToast(text);
         addJournal(text);
         return refreshQuests();
       })
@@ -879,7 +895,7 @@ export function App(): JSX.Element {
         .then((result) => {
           setSelectedEntity(null);
           const text = result.kind === "take" ? `拾得：${result.item.name}` : "此物已收入行囊。";
-          setError(text);
+          showToast(text);
           addJournal(text);
           return refreshScene();
         })
@@ -1296,7 +1312,7 @@ export function App(): JSX.Element {
 
       {error && (
         <div className="toast-host">
-          <button className="toast" onClick={() => setError(null)}>
+          <button type="button" className="toast show" onClick={() => setError(null)}>
             {error}
           </button>
         </div>

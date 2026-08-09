@@ -77,7 +77,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 
 - **stat token 命名**：经验/潜能/生存资源用独立 `--stat-exp` / `--stat-potential` / `--stat-qi` / `--stat-jing` 等（与 xkx tokens.css 对齐），不混用通用色；新状态先补 token 再使用。
 - **分段控件泛型化**：互斥选择统一 `ChoiceRow<T>`（分段按钮，选中态玉色描边）；沿用禁原生 `<select>`；人物/物品列表仍用 chip。
-- **浮层内反馈用 toast**：在 Sheet 内触发的操作反馈（学武/交易/装备等）用 toast 呈现（z-index 高于所有浮层，参考 xkx z-index:200）；**多行反馈合并为一条完整 toast**；内容与操作结果叙事一致，不拼接自定义文案。
+- **浮层内反馈用 toast**：在 Sheet 内触发的操作反馈（学武/交易/装备等）用 toast 呈现（z-index 高于所有浮层，参考 xkx z-index:200）；**多行反馈合并为一条完整 toast**；内容与操作结果叙事一致，不拼接自定义文案；**约 2.5s 自动消失，可点按提前关闭**（App 层 `showToast`，勿只 set 文案不消）。
 - **attr-card 属性卡规范**（属性设置/重设共用）：**统一墨色**（同类项不染色，V2.5）——左边框 `--paper-faint` 细墨线、属性名 `--font-display` 16px `--paper`、说明 `--paper-faint` 12px、数值 `--paper` 600 `tabular-nums` **16px（不放大）**；分配状态条（满足玉色 / 不足或超出朱砂）；加减按钮到边界/超预算禁用。**grid 行必须 `minmax(0,1fr)`**（普通 `1fr` 会被 hint 文案 min-content 撑爆，加减按钮挤出屏外——V2.3 建角实测）。**读数分色**（V2.4→V2.5）：双数标注（当前/先天）时当前值墨色加粗、基准值 `--paper-faint` 弱化，不靠颜色靠字重与亮度。
 - **战斗中悬浮动作条**（借鉴 xkx FloatingPerfBar）：战斗中出现在屏底居中、浮于浮层之上、可收起；**只在战斗中显示**，平时不占场景区。
 - **NPC 能力 → 场景动作**：NPC 对话/交易/请托等动作由 NPC 定义（内容包 `npc` 能力字段）**生成**动作 chip，不写死——与"动作从世界中长出"一致（xkx inferNpcCapabilityActions 思想）。

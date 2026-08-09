@@ -244,18 +244,26 @@
   font-size: 10px;
   transition: transform 0.15s ease;
 }
+/* V2.14.1：折叠见闻正常换行，固定高度内滚动（勿单行 ellipsis） */
 .journal-summary-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  max-height: 7.6em; /* 约 4–5 行（13px × 1.7） */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 .journal-summary-line {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
   color: var(--paper-dim);
   font-size: 13px;
+  line-height: 1.7;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .journal-summary-line.hl {
   color: var(--jade-bright);

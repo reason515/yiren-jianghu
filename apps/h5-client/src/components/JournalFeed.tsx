@@ -172,6 +172,7 @@ function TypewriterRich({
 
 export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element {
   const panelRef = useRef<HTMLElement>(null);
+  const summaryTextRef = useRef<HTMLSpanElement>(null);
   const followingRef = useRef(true);
   const pinningRef = useRef(false);
   /** 首屏已有条目的 id 上限；大于此值的才进入打字队列。 */
@@ -230,21 +231,30 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
   const latestFew = visibleEntries.slice(-SUMMARY_COUNT);
   const panelEntries = visibleEntries.slice(-100);
 
-  const pinToBottom = (): void => {
+  /** 展开面板 / 折叠摘要：有新内容时滚到最新（折叠区可换行滚动，勿 ellipsis）。 */
+  const pinFeedsToBottom = (): void => {
     const panel = panelRef.current;
-    if (!panel) return;
-    pinningRef.current = true;
-    panel.scrollTop = panel.scrollHeight;
-    requestAnimationFrame(() => {
+    if (panel) {
+      pinningRef.current = true;
+      panel.scrollTop = panel.scrollHeight;
       requestAnimationFrame(() => {
-        pinningRef.current = false;
+        requestAnimationFrame(() => {
+          pinningRef.current = false;
+        });
       });
-    });
+    }
+    const summary = summaryTextRef.current;
+    if (summary) summary.scrollTop = summary.scrollHeight;
   };
 
   useLayoutEffect(() => {
-    if (expanded && followingRef.current) pinToBottom();
-  }, [expanded, lastId, typingId, panelEntries.length]);
+    if (expanded) {
+      if (followingRef.current) pinFeedsToBottom();
+    } else {
+      // 折叠态始终跟随最新，避免换行增高后仍停在旧位置
+      pinFeedsToBottom();
+    }
+  }, [expanded, lastId, typingId, panelEntries.length, latestFew.length]);
 
   const openLog = (): void => {
     followingRef.current = true;
@@ -265,7 +275,11 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
         entry={entry}
         keyBase={keyBase}
         active={active}
-        onReveal={entry.id === typingId && followingRef.current ? pinToBottom : undefined}
+        onReveal={
+          entry.id === typingId && (!expanded || followingRef.current)
+            ? pinFeedsToBottom
+            : undefined
+        }
         onDone={active ? () => onLineDone(entry.id) : undefined}
       />
     );
@@ -307,7 +321,7 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
                   onClick={() => {
                     followingRef.current = true;
                     setFollowing(true);
-                    pinToBottom();
+                    pinFeedsToBottom();
                   }}
                 >
                   最新
@@ -341,7 +355,11 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
               </span>
             </span>
           </span>
-          <span className="journal-summary-text">
+          <span
+            ref={summaryTextRef}
+            className="journal-summary-text"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {latestFew.length > 0 ? (
               latestFew.map((entry) => (
                 <span

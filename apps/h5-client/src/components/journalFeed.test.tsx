@@ -52,6 +52,8 @@ describe("JournalFeed（见闻动态流）", () => {
     expect(combat.length).toBe(1);
     // 首屏历史不打字机
     expect(host.querySelector("[data-typing='1']")).toBeNull();
+    // 折叠区可滚动容器存在（换行滚动，非单行 ellipsis）
+    expect(host.querySelector(".journal-summary-text")).not.toBeNull();
   });
 
   it("点击折叠卡展开全屏历史，全部条目可见", () => {

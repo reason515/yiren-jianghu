@@ -61,7 +61,12 @@ function basePack(): ContentPack {
         name: "村口广场",
         exits: [{ dir: "south", roomId: "village_inn" }],
       },
-      { id: "village_inn", area: "newbie", name: "村中客栈" },
+      {
+        id: "village_inn",
+        area: "newbie",
+        name: "村中客栈",
+        exits: [{ dir: "north", roomId: "village_square" }],
+      },
     ],
     npcs: [
       {
@@ -106,6 +111,13 @@ describe("validateContentPack", () => {
     pack.rooms[0] = { ...pack.rooms[0]!, exits: [{ dir: "north", roomId: "nowhere" }] };
     const issues = validateContentPack(pack);
     expect(issues.some((i) => i.code === "broken_exit")).toBe(true);
+  });
+
+  it("warns on one-way exits without a return path", () => {
+    const pack = basePack();
+    pack.rooms[1] = { ...pack.rooms[1]!, exits: [] };
+    const issues = validateContentPack(pack);
+    expect(issues.some((i) => i.code === "one_way_exit")).toBe(true);
   });
 
   it("flags broken quest npc reference", () => {

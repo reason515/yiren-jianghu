@@ -5,6 +5,9 @@
   "shortDesc": "青石拱门，门洞两侧各立一名带刀守卫。",
   "longDesc": "城门是座青石拱门，门楣上刻着褪色的字，被风雨磨得只剩轮廓。门洞两侧各立一名带刀守卫，目光扫过往来行人。进城的人流稀稀落落，有挑担的货郎，也有背着行囊的旅人——你夹在中间，闻到了城里飘来的饭菜香。",
   "grid": [0, 0],
-  "exits": [{ "dir": "north", "roomId": "city_street" }],
+  "exits": [
+    { "dir": "north", "roomId": "city_street" },
+    { "dir": "south", "roomId": "village_trail" }
+  ],
   "npcIds": ["city_guard"]
 }

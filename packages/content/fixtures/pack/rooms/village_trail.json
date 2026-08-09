@@ -7,7 +7,7 @@
   "grid": [3, 0],
   "exits": [
     { "dir": "west", "roomId": "village_general" },
-    { "dir": "south", "roomId": "city_gate" }
+    { "dir": "north", "roomId": "city_gate" }
   ],
   "npcIds": ["wild_dog"]
 }

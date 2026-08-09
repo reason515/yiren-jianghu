@@ -47,6 +47,8 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
   issues.push(...dup(pack.story, "story"));
 
   // 房间
+  const oneWayReported = new Set<string>();
+  const roomsById = new Map(pack.rooms.map((room) => [room.id, room]));
   for (const room of pack.rooms) {
     for (const exit of room.exits) {
       if (!roomIds.has(exit.roomId)) {
@@ -55,6 +57,20 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
           severity: "error",
           message: `房间 ${room.id} 出口 ${exit.dir} 指向不存在的房间 ${exit.roomId}`,
         });
+        continue;
+      }
+      const target = roomsById.get(exit.roomId);
+      const hasReturn = target?.exits.some((candidate) => candidate.roomId === room.id) ?? false;
+      if (!hasReturn) {
+        const key = [room.id, exit.roomId].sort().join("|");
+        if (!oneWayReported.has(key)) {
+          oneWayReported.add(key);
+          issues.push({
+            code: "one_way_exit",
+            severity: "warning",
+            message: `房间 ${room.id} → ${exit.roomId}（${exit.dir}）无回程出口`,
+          });
+        }
       }
     }
     for (const npcId of room.npcIds) {

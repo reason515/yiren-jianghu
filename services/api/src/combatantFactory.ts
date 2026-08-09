@@ -36,9 +36,10 @@ export function buildCharacterCombatant(
 export function buildNpcCombatant(content: ContentPack, npc: Npc): Combatant {
   const level = npc.level ?? 1;
   const attrs = npc.attrs ?? { str: 10 + level, int: 10, con: 10 + level, dex: 10 + level };
-  return buildCharacterCombatant(
+  const combatant = buildCharacterCombatant(
     content,
     { id: `npc:${npc.id}`, name: npc.name, attrs },
     new Map(npc.skills.map((skill) => [skill.skillId, skill.level])),
   );
+  return { ...combatant, nature: npc.nature ?? "human" };
 }

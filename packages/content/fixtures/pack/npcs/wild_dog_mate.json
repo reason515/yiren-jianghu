@@ -23,5 +23,6 @@
     "silver": 1
   },
   "description": "比那只灰狗更瘦，却跟得更紧。眼珠子转，像在等一声口哨。",
+  "nature": "beast",
   "battleAllies": ["wild_dog"]
 }

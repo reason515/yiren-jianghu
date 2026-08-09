@@ -1,16 +1,27 @@
 /**
  * PVE 战斗传输适配：服务端的 state/events 是唯一事实，客户端只转换为展示状态和受控意图。
  * 支持同场多敌（DC-038）与自动普攻意图（DC-037）。
- * 战报文案遵循 yjh-wuxia-copywriting（金庸画面 / 古龙节奏 / 黄易气机）。
+ * 战报文案遵循 yjh-wuxia-copywriting；关键字着色见 combatNarrative。
  */
+
+import { narrateBattleEvent, type NarrativeCombatant } from "./combatNarrative.js";
+
+/** 句内关键字着色（非整行）。 */
+export type CombatMark = "hit" | "hurt" | "dodge" | "parry" | "perform" | "tense" | "recover";
+
+export interface CombatSegment {
+  text: string;
+  mark?: CombatMark;
+}
 
 export interface CombatLine {
   id: number;
   text: string;
+  segments?: CombatSegment[];
   kind?: CombatLineKind;
 }
 
-/** 语义着色：颜色只区分「类」（击中/受伤/绝招/回避…），不裸露数值。 */
+/** 行级语义：仅开战/胜负等氛围行保留轻量整行气质；击中/闪避改走 segments。 */
 export type CombatLineKind =
   | "normal"
   | "start"
@@ -24,28 +35,15 @@ export type CombatLineKind =
   | "down"
   | "victory";
 
+/** 整行 class 仅保留开场/收束气质；命中类颜色改走 `.cm-*` 关键字。 */
 export function combatLineClassName(kind?: CombatLineKind): string {
   switch (kind) {
     case "start":
       return " start";
-    case "damage":
-      return " hit";
-    case "hurt":
-      return " hurt";
-    case "dodge":
-      return " dodge";
-    case "parry":
-      return " parry";
-    case "perform":
-      return " hl";
-    case "recover":
-      return " recover";
-    case "danger":
-      return " dg";
-    case "down":
-      return " down-line";
     case "victory":
       return " victory";
+    case "down":
+      return " down-line";
     default:
       return "";
   }
@@ -118,6 +116,8 @@ interface ServerCombatant {
   maxJing: number;
   neili: number;
   maxNeili: number;
+  nature?: "human" | "beast" | "bird";
+  stats?: NarrativeCombatant["stats"];
 }
 
 interface ServerCombatEvent {
@@ -164,7 +164,31 @@ function nameOf(
   return response.state.combatants[actor]?.name ?? "对手";
 }
 
-/** 玩家侧用第二人称「你」，更像在读武侠小说。 */
+function narrativeOf(
+  response: CombatStatusResponse,
+  actor: string | undefined,
+  playerName: string,
+): NarrativeCombatant | undefined {
+  if (!actor) return undefined;
+  if (actor === "a") {
+    const player = response.state.combatants.a;
+    if (!player) return { name: playerName, nature: "human" };
+    return {
+      name: playerName,
+      nature: player.nature ?? "human",
+      stats: player.stats,
+      maxQi: player.maxQi,
+    };
+  }
+  const foe = response.state.combatants[actor];
+  if (!foe) return undefined;
+  return {
+    name: foe.name,
+    nature: foe.nature,
+    stats: foe.stats,
+    maxQi: foe.maxQi,
+  };
+}
 
 /** 事件 → 叙事行（PVE 战斗与 PVP 回放共用，避免文案漂移）。 */
 export function battleEventLine(
@@ -172,170 +196,12 @@ export function battleEventLine(
   playerName: string,
   enemyName: string,
   names?: (actor: string | undefined) => string,
+  combatantOf?: (actor: string | undefined) => NarrativeCombatant | undefined,
 ): CombatLine | null {
-  const resolve = names ?? ((actor) => (actor === "a" || !actor ? playerName : enemyName));
-  const data = asRecord(event.data);
-  const fromPlayer = !event.actor || event.actor === "a";
-  const actorName = fromPlayer ? "你" : resolve(event.actor);
-  const targetId = typeof data.targetId === "string" ? data.targetId : undefined;
-  const hitTarget =
-    targetId === "a" ? "你" : targetId ? resolve(targetId) : fromPlayer ? enemyName : "你";
-  const performName = typeof data.performId === "string" ? data.performId : undefined;
-  const foeNames = Array.isArray(data.foeNames)
-    ? data.foeNames.filter((n): n is string => typeof n === "string")
-    : [];
-  const foeCount = typeof data.foeCount === "number" ? data.foeCount : foeNames.length;
-  const pick = (variants: string[]): string =>
-    variants[Math.abs(event.seq) % variants.length] ?? variants[0]!;
-
-  switch (event.type) {
-    case "battle_start":
-      if (foeCount > 1 || foeNames.length > 1) {
-        const list = foeNames.length > 0 ? foeNames.join("、") : "数人";
-        return {
-          id: event.seq,
-          kind: "start",
-          text: pick([
-            `风忽然静了。${list}已将退路堵死——这一场，注定要一个人应付多方。`,
-            `${list}围上来。杀意像潮水，一寸寸漫过脚面。`,
-          ]),
-        };
-      }
-      return {
-        id: event.seq,
-        kind: "start",
-        text: pick([
-          `${enemyName}横在眼前。四下无声，只余彼此的呼吸。`,
-          `与${enemyName}对上了。刀未出鞘，杀机先至。`,
-        ]),
-      };
-    case "damage":
-      return {
-        id: event.seq,
-        kind: fromPlayer ? "damage" : "hurt",
-        text: fromPlayer
-          ? pick([
-              `力由脊发。你这一击落在${hitTarget}身上——他闷哼一声，脚步乱了。`,
-              `没有花哨。你只递出一记干脆的着子，${hitTarget}肩头已吃了实打。`,
-              `招势过处，衣角翻飞。${hitTarget}胸前一沉，气息散了半寸。`,
-            ])
-          : pick([
-              `${actorName}扑近，爪牙已至。你肋下一疼，真气乱了片刻。`,
-              `${actorName}这一下又狠又快——你退得半步，口中却已泛起铁锈味。`,
-              `避无可避。${actorName}的力道撞上肩背，你牙关一紧。`,
-            ]),
-      };
-    case "parry":
-      return {
-        id: event.seq,
-        kind: "parry",
-        text: pick([
-          `${hitTarget}横开架势，硬生生把这一击挡下。虎口发麻，人却没退。`,
-          `金石相交，一串短响。${hitTarget}架住了，腕骨隐隐发酸。`,
-        ]),
-      };
-    case "miss":
-    case "dodge":
-      return {
-        id: event.seq,
-        kind: "dodge",
-        text: pick([
-          `${hitTarget}侧身半寸。招式擦过衣角，只带起一阵空风。`,
-          `差一点。${actorName}这一招落空，尘土在脚边打了个旋。`,
-          `没有人看清那一瞬——${hitTarget}已让开，招式扑了个空。`,
-        ]),
-      };
-    case "recover":
-      return {
-        id: event.seq,
-        kind: "recover",
-        text: pick([
-          `${actorName}沉息归元。浊气下沉，清气上升，肩背松了半分。`,
-          `丹田一点暖意散开。${actorName}稳住了阵脚，呼吸渐沉。`,
-        ]),
-      };
-    case "perform":
-      return {
-        id: event.seq,
-        kind: "perform",
-        text: performName
-          ? pick([
-              `气机一转。你使出「${performName}」——${hitTarget}眼前一花，竟来不及完整看清那一式。`,
-              `「${performName}」！你起手便是杀机。等风声落定，${hitTarget}才觉出身上已中了一记。`,
-              `你指尖微颤，真气随招走。「${performName}」递出，${hitTarget}退无可退。`,
-            ])
-          : pick([
-              `气机一转，绝招已出。短促，凌厉，不留余地。`,
-              `这一式来得又急又准——对手心神最松的一瞬，你已递到了。`,
-            ]),
-      };
-    case "perform_failed":
-      return {
-        id: event.seq,
-        kind: "danger",
-        text: pick([
-          `${actorName}气息未继，这一式终究散在半途。`,
-          `真气一滞。${actorName}想发的那一招，只余半截余势。`,
-        ]),
-      };
-    case "flee":
-      return {
-        id: event.seq,
-        kind: "danger",
-        text:
-          data.success === true
-            ? pick([
-                `${actorName}虚晃一步，身形已没入烟尘。`,
-                `退路虽窄，${actorName}还是从杀机缝里钻了出去。`,
-              ])
-            : pick([
-                `${actorName}想退，对手却缠上来，退路被堵死了。`,
-                `抽身不及。${actorName}刚挪半步，便被杀气压了回去。`,
-              ]),
-      };
-    case "foe_down": {
-      const fallen = typeof data.name === "string" ? data.name : actorName;
-      return {
-        id: event.seq,
-        kind: "down",
-        text: pick([
-          `${fallen}膝下一软，栽进尘土——一时起不来了。`,
-          `风过处，${fallen}已伏。余劲还在，人却静了。`,
-        ]),
-      };
-    }
-    case "victory":
-      return {
-        id: event.seq,
-        kind: "victory",
-        text: pick([
-          `胜负已分。余劲散在风里，像一场未写完的句号。`,
-          `尘埃落定。四下忽然静得能听见自己的心跳。`,
-        ]),
-      };
-    case "reward":
-      return {
-        id: event.seq,
-        kind: "victory",
-        text: pick(["这一程所得，已收入行囊。", "战利入囊。江湖路远，先带走眼前这点。"]),
-      };
-    case "quest_progress":
-      return {
-        id: event.seq,
-        kind: "normal",
-        text: pick(["手头的请托，也向前走了一步。", "这一战之后，肩上的差事轻了半分。"]),
-      };
-    case "draw":
-      return {
-        id: event.seq,
-        kind: "danger",
-        text: pick(["两下分开，谁也没有再追。", "未分胜负。风里只余各自的喘息。"]),
-      };
-    case "turn_start":
-      return null;
-    default:
-      return null;
-  }
+  return narrateBattleEvent(event, playerName, enemyName, {
+    names,
+    combatantOf,
+  });
 }
 
 function rewardOf(events: ServerCombatEvent[]): CombatReward | undefined {
@@ -427,6 +293,7 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
             : "draw";
   const enemyName =
     enemies.length > 1 ? enemies.map((e) => e.name).join("、") : (primary?.name ?? "对手");
+  const primarySlot = slots[0];
   return {
     enemyName,
     enemyQi: primary?.qi ?? 0,
@@ -441,8 +308,18 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
     log: response.events
       .map((event) => resolvePerformLabel(event, response.performs))
       .map((event) =>
-        battleEventLine(event, player.name, primary?.name ?? "对手", (actor) =>
-          nameOf(response, actor, player.name),
+        battleEventLine(
+          event,
+          player.name,
+          primary?.name ?? "对手",
+          (actor) => nameOf(response, actor, player.name),
+          (actor) => {
+            if (!actor) return undefined;
+            if ((actor === "b" || actor === "b0") && primarySlot) {
+              return narrativeOf(response, primarySlot, player.name);
+            }
+            return narrativeOf(response, actor, player.name);
+          },
         ),
       )
       .filter((line): line is CombatLine => line !== null),

@@ -161,6 +161,10 @@ export const npcSchema = z.object({
    * 同场盟友（DC-038）：开战时若盟友亦在当前房间且为 battle，则一并入场（去重、计入上限）。
    */
   battleAllies: z.array(id).default([]),
+  /**
+   * 战斗叙事种族（借鉴 xkx race 分流，文案原创）：兽/鸟用扑咬抓啄，不用「出招」口吻。
+   */
+  nature: z.enum(["human", "beast", "bird"]).default("human"),
   /** 商店库存（kind=vendor 时生效）：物品 + 买卖价。 */
   goods: z
     .array(

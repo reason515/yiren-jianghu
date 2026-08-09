@@ -35,6 +35,8 @@ export interface Combatant {
   neili: number;
   maxNeili: number;
   stats: CombatStats;
+  /** 叙事用：人/兽/鸟（DC 内容驱动；缺省按人）。 */
+  nature?: "human" | "beast" | "bird";
 }
 
 export type ActorKey = "a" | "b";

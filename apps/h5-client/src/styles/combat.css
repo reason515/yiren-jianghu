@@ -117,46 +117,28 @@
 }
 
 .combat-log {
-  max-height: 42vh;
+  max-height: 48vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 3px;
+  padding: 10px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 .combat-line {
   margin: 0;
   color: var(--paper-dim);
-  line-height: 1.9;
-  font-size: 15px;
+  line-height: 1.5;
+  font-size: 13.5px;
 }
-/* 语义着色：类而非项 —— 开战 / 击中 / 受伤 / 绝招 / 回避 / 回气 / 倒地 / 胜负 */
+/* 开场/收束保留整行气质；击中/闪避等只染 `.cm-*` 关键字 */
 .combat-line.start {
   color: var(--gold);
   font-family: var(--font-display);
   letter-spacing: 0.5px;
-}
-.combat-line.hit {
-  color: var(--jade-bright);
-}
-.combat-line.hurt {
-  color: var(--cinnabar);
-}
-.combat-line.dodge,
-.combat-line.parry {
-  color: var(--paper-faint);
-}
-.combat-line.hl {
-  color: var(--gold);
-  font-weight: 600;
-}
-.combat-line.recover {
-  color: var(--stat-neili);
-}
-.combat-line.dg {
-  color: var(--cinnabar);
+  font-size: 14px;
+  line-height: 1.55;
 }
 .combat-line.down-line {
   color: var(--gold-muted);
@@ -165,6 +147,31 @@
   color: var(--gold);
   font-family: var(--font-display);
   letter-spacing: 1px;
+  font-size: 14px;
+}
+.cm-hit {
+  color: var(--jade-bright);
+  font-weight: 600;
+}
+.cm-hurt {
+  color: var(--cinnabar);
+  font-weight: 600;
+}
+.cm-dodge {
+  color: var(--jade);
+}
+.cm-parry {
+  color: var(--gold-muted);
+}
+.cm-perform {
+  color: var(--gold);
+  font-weight: 600;
+}
+.cm-tense {
+  color: var(--paper);
+}
+.cm-recover {
+  color: var(--stat-neili);
 }
 
 .combat-result-block {

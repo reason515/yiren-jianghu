@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
+import { renderCombatSegments } from "./combatRender.js";
 import {
   combatLineClassName,
   type CombatResult,
@@ -143,7 +144,7 @@ export function CombatView({
             key={line.id}
             className={`combat-line${combatLineClassName(line.kind)}${flashId === line.id ? " perform-flash" : ""}`}
           >
-            {line.text}
+            {renderCombatSegments(line)}
           </p>
         ))}
       </div>

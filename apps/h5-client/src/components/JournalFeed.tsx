@@ -2,11 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode 
 
 /**
  * 见闻（动态文字流，V2.10 参照 xkx EventLog；V2.11 关键字高亮；V2.12 固定高度展开；
- * V2.14 新条目打字机显现——**一行一行串行**，打完再出下一行）。
- * 场景描述是「静态所见」；见闻是「互动后的动态记录」——交谈/交易/拾取/战斗/交差等
- * 事件追加到此处，可展开固定高度面板滚动翻看历史、自动跟随最新。
- * 渲染时人名前缀（`名字：`）玉色、数字金色、地名（mark）青蓝，避免全文同色平淡。
- * 新追加条目以「几个字一批」打字机显现；多行同时到达时排队，勿并行推进。
+ * V2.14 打字机显现；V2.14.2 **串行入队在 useJournalLog**——本组件只打「当前末行」）。
+ * 场景描述是「静态所见」；见闻是「互动后的动态记录」。
+ * 多行交谈不得一次塞进 entries：由上层 enqueue 排队，settled 后再追加下一行。
  */
 export interface JournalEntry {
   id: number;
@@ -20,6 +18,11 @@ export interface JournalEntry {
 export interface JournalFeedProps {
   entries: JournalEntry[];
   onClose?: () => void;
+  /**
+   * 某条见闻已展示完毕（打字结束 / 无需打字 / 首屏历史）时回调。
+   * 供 `useJournalLog` 放出队列中的下一行——交谈多句与观察同一套串行。
+   */
+  onEntrySettled?: (id: number) => void;
 }
 
 const SUMMARY_COUNT = 3;
@@ -80,7 +83,6 @@ function renderRich(text: string, keyBase: string, mark?: JournalEntry["mark"]):
   let first = true;
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!;
-    // mark 段（地名/物品）：整段语义色，不再拆人名/数字
     if (seg.cls) {
       parts.push(
         <span className={seg.cls} key={`${keyBase}-m${i}`}>
@@ -91,7 +93,6 @@ function renderRich(text: string, keyBase: string, mark?: JournalEntry["mark"]):
       continue;
     }
     let segText = seg.text;
-    // 人名前缀只在首个非 mark 段处理
     if (first) {
       const name = segText.match(NAME_RE);
       if (name) {
@@ -114,7 +115,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** 当前行打字机：按批揭示；完成后 onDone 交给队列推进下一行。 */
+/** 末行打字机：按批揭示；完成后 onDone（上层再 enqueue 下一行）。 */
 function TypewriterRich({
   entry,
   keyBase,
@@ -124,7 +125,6 @@ function TypewriterRich({
 }: {
   entry: JournalEntry;
   keyBase: string;
-  /** 是否为本轮正在打字的那一行（串行队列中唯一）。 */
   active: boolean;
   onReveal?: () => void;
   onDone?: () => void;
@@ -134,18 +134,25 @@ function TypewriterRich({
   const [shown, setShown] = useState(() => (active && !skipMotion ? 0 : full));
   const onRevealRef = useRef(onReveal);
   const onDoneRef = useRef(onDone);
+  const doneOnceRef = useRef(false);
   onRevealRef.current = onReveal;
   onDoneRef.current = onDone;
   const typing = active && shown < full;
 
   useEffect(() => {
+    doneOnceRef.current = false;
+    const finish = (): void => {
+      if (doneOnceRef.current) return;
+      doneOnceRef.current = true;
+      onDoneRef.current?.();
+    };
     if (!active) {
       setShown(full);
       return;
     }
-    if (skipMotion) {
+    if (skipMotion || full === 0) {
       setShown(full);
-      onDoneRef.current?.();
+      finish();
       return;
     }
     setShown(0);
@@ -156,7 +163,7 @@ function TypewriterRich({
       onRevealRef.current?.();
       if (i >= full) {
         window.clearInterval(timer);
-        onDoneRef.current?.();
+        finish();
       }
     }, TYPE_INTERVAL_MS);
     return () => window.clearInterval(timer);
@@ -170,17 +177,16 @@ function TypewriterRich({
   );
 }
 
-export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element {
+export function JournalFeed({ entries, onClose, onEntrySettled }: JournalFeedProps): JSX.Element {
   const panelRef = useRef<HTMLElement>(null);
   const summaryTextRef = useRef<HTMLSpanElement>(null);
   const followingRef = useRef(true);
   const pinningRef = useRef(false);
-  /** 首屏已有条目的 id 上限；大于此值的才进入打字队列。 */
+  const settledRef = useRef<Set<number>>(new Set());
+  /** 首屏已有条目的 id 上限；仅大于此值的末行才打字。 */
   const baselineRef = useRef<number | null>(null);
-  /** 已打完的新条目 id（串行队列已消费）。 */
-  const doneRef = useRef<Set<number>>(new Set());
-  /** 当前正在打字的那一行（同时最多一行）。 */
-  const [typingId, setTypingId] = useState<number | null>(null);
+  const onSettledRef = useRef(onEntrySettled);
+  onSettledRef.current = onEntrySettled;
   const [expanded, setExpanded] = useState(false);
   const [following, setFollowing] = useState(true);
   const lastId = entries.length > 0 ? entries[entries.length - 1]!.id : 0;
@@ -189,49 +195,25 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
     baselineRef.current = lastId;
   }
   const baseline = baselineRef.current;
+  const latestFew = entries.slice(-SUMMARY_COUNT);
+  const panelEntries = entries.slice(-100);
+  /** 数据层保证同时最多一条新行；本组件只打末行。 */
+  const typingTargetId = lastId > baseline ? lastId : null;
 
-  /** 尚未展示的排队行（按 id 升序 = 时间序）。 */
-  const nextPending = (): number | null => {
-    for (const e of entries) {
-      if (e.id > baseline && !doneRef.current.has(e.id)) return e.id;
-    }
-    return null;
+  const reportSettled = (id: number): void => {
+    if (settledRef.current.has(id)) return;
+    settledRef.current.add(id);
+    onSettledRef.current?.(id);
   };
 
-  // 有新行入队且当前空闲 → 启动队首一行
+  // 首屏历史 / 无需打字的末行：立刻 settled，避免上层队列卡死
   useEffect(() => {
-    if (typingId !== null) return;
-    const next = nextPending();
-    if (next !== null) setTypingId(next);
-  }, [entries, lastId, typingId]);
-
-  // 减少动态效果：积压行一次放行
-  useEffect(() => {
-    if (!prefersReducedMotion()) return;
-    let changed = false;
     for (const e of entries) {
-      if (e.id > baseline && !doneRef.current.has(e.id)) {
-        doneRef.current.add(e.id);
-        changed = true;
-      }
+      if (e.id <= baseline) reportSettled(e.id);
     }
-    if (changed) setTypingId(null);
-  }, [entries, baseline, lastId]);
+    if (typingTargetId === null && lastId > 0) reportSettled(lastId);
+  }, [entries, baseline, lastId, typingTargetId]);
 
-  const onLineDone = (id: number): void => {
-    doneRef.current.add(id);
-    const next = nextPending();
-    setTypingId(next);
-  };
-
-  /** 可见行：历史全文 + 已打完 + 当前正在打的一行（排队中的后续行先不渲染）。 */
-  const visibleEntries = entries.filter(
-    (e) => e.id <= baseline || doneRef.current.has(e.id) || e.id === typingId,
-  );
-  const latestFew = visibleEntries.slice(-SUMMARY_COUNT);
-  const panelEntries = visibleEntries.slice(-100);
-
-  /** 展开面板 / 折叠摘要：有新内容时滚到最新（折叠区可换行滚动，勿 ellipsis）。 */
   const pinFeedsToBottom = (): void => {
     const panel = panelRef.current;
     if (panel) {
@@ -251,10 +233,9 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
     if (expanded) {
       if (followingRef.current) pinFeedsToBottom();
     } else {
-      // 折叠态始终跟随最新，避免换行增高后仍停在旧位置
       pinFeedsToBottom();
     }
-  }, [expanded, lastId, typingId, panelEntries.length, latestFew.length]);
+  }, [expanded, lastId, panelEntries.length, latestFew.length]);
 
   const openLog = (): void => {
     followingRef.current = true;
@@ -268,19 +249,14 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
   };
 
   const renderLine = (entry: JournalEntry, keyBase: string): JSX.Element => {
-    const isNew = entry.id > baseline;
-    const active = isNew && entry.id === typingId && !doneRef.current.has(entry.id);
+    const active = typingTargetId !== null && entry.id === typingTargetId;
     return (
       <TypewriterRich
         entry={entry}
         keyBase={keyBase}
         active={active}
-        onReveal={
-          entry.id === typingId && (!expanded || followingRef.current)
-            ? pinFeedsToBottom
-            : undefined
-        }
-        onDone={active ? () => onLineDone(entry.id) : undefined}
+        onReveal={active && (!expanded || followingRef.current) ? pinFeedsToBottom : undefined}
+        onDone={active ? () => reportSettled(entry.id) : undefined}
       />
     );
   };

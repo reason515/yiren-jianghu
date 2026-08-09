@@ -12,8 +12,8 @@ import { DepartureOverlay } from "./components/DepartureOverlay.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { CharacterCreateSheet } from "./components/CharacterCreateSheet.js";
 import { SceneView } from "./components/SceneView.js";
-import type { JournalEntry } from "./components/JournalFeed.js";
 import { DIR_LABEL } from "./components/ExitPad.js";
+import { useJournalLog } from "./lib/journalLog.js";
 import { EntitySheet } from "./components/EntitySheet.js";
 import { ShopView } from "./components/ShopView.js";
 import { CombatView, RESULT_TEXT } from "./components/CombatView.js";
@@ -157,16 +157,22 @@ export function App(): JSX.Element {
   });
   const [guideTipText, setGuideTipText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const journalIdRef = useRef(0);
-  const [journal, setJournal] = useState<JournalEntry[]>([]);
-
-  /** 见闻（V2.10 动态文字流）：互动事件追加，与静态场景描述分离；mark 标记关键词（地名等）独立色。 */
+  /** 见闻串行入队（V2.14.2）：交谈多句与观察同一队列，打完一行再追加下一行。 */
+  const {
+    entries: journal,
+    enqueue: enqueueJournal,
+    onEntrySettled: onJournalSettled,
+    clear: clearJournal,
+  } = useJournalLog();
   const addJournal = useCallback(
-    (text: string, kind?: JournalEntry["kind"], mark?: JournalEntry["mark"]): void => {
-      journalIdRef.current += 1;
-      setJournal((prev) => [...prev, { id: journalIdRef.current, text, kind, mark }]);
+    (
+      text: string,
+      kind?: "combat" | "normal",
+      mark?: Array<{ text: string; cls: "place" | "item" }>,
+    ): void => {
+      enqueueJournal({ text, kind, mark });
     },
-    [],
+    [enqueueJournal],
   );
 
   const api: ApiClient = useMemo(() => createApiClient(BASE_URL, { get: () => token }), [token]);
@@ -790,10 +796,12 @@ export function App(): JSX.Element {
         .sceneAction({ type: action, targetId })
         .then((result) => {
           setSelectedEntity(null);
-          // 交谈只入见闻，不再弹 Sheet（V2.13 / DC-033）
+          // 交谈只入见闻（V2.13）；多句走串行队列（V2.14.2），勿 forEach 一次写入
           if (result.kind === "talk") {
-            result.dialogue.forEach((line, index) =>
-              addJournal(index === 0 ? `${result.npc.name}：${line}` : line),
+            enqueueJournal(
+              result.dialogue.map((line, index) => ({
+                text: index === 0 ? `${result.npc.name}：${line}` : line,
+              })),
             );
           }
           if (result.kind === "trade") {
@@ -922,8 +930,7 @@ export function App(): JSX.Element {
     clearRetryTimer();
     setReconnect(initialReconnectState());
     setGuideTipText(null);
-    setJournal([]);
-    journalIdRef.current = 0;
+    clearJournal();
     setPanel("none");
   };
 
@@ -977,6 +984,7 @@ export function App(): JSX.Element {
           <SceneView
             room={room}
             journal={journal}
+            onJournalSettled={onJournalSettled}
             onGo={(d) => void onGo(d)}
             onSelectNpc={setSelectedEntity}
             onSelectItem={(itemId) => {

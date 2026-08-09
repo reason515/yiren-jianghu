@@ -14,6 +14,8 @@ import type { SceneNpc, SceneRoom } from "../lib/sceneTypes.js";
 export interface SceneViewProps {
   room: SceneRoom;
   journal: JournalEntry[];
+  /** 见闻一行展示完毕（打字结束），供串行队列放出下一句。 */
+  onJournalSettled?: (id: number) => void;
   onGo: (dir: string) => void;
   onSelectNpc: (npc: SceneNpc) => void;
   onSelectItem: (itemId: string) => void;
@@ -23,6 +25,7 @@ export interface SceneViewProps {
 export function SceneView({
   room,
   journal,
+  onJournalSettled,
   onGo,
   onSelectNpc,
   onSelectItem,
@@ -42,7 +45,7 @@ export function SceneView({
       <p className="scene-desc">{room.longDesc || room.shortDesc}</p>
       {room.canSleep && <span className="scene-hint">此地可歇脚入眠。</span>}
 
-      <JournalFeed entries={journal} />
+      <JournalFeed entries={journal} onEntrySettled={onJournalSettled} />
 
       <section className="scene-block">
         <div className="scene-block-head">

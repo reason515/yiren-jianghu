@@ -24,9 +24,18 @@ describe("toCharacterView", () => {
       PROFILE,
       [
         {
+          id: "xuanmen_sword",
+          name: "玄门剑法",
+          category: "weapon",
+          level: 0,
+          maxLevel: 300,
+          practicePoints: 0,
+        },
+        {
           id: "xuanmen_force",
           name: "玄门内功",
           category: "force",
+          description: "吐纳凝神。",
           level: 12,
           maxLevel: 300,
           practicePoints: 4,
@@ -38,7 +47,13 @@ describe("toCharacterView", () => {
       ],
     );
 
-    expect(view.skills[0]).toMatchObject({ category: "force", level: 12 });
+    expect(view.skills[0]).toMatchObject({
+      id: "xuanmen_force",
+      category: "force",
+      level: 12,
+      description: "吐纳凝神。",
+    });
+    expect(view.skills[1]?.id).toBe("xuanmen_sword");
     expect(view.equipment).toEqual([
       { slot: "weapon", item: { id: "it_sword", name: "铁剑" } },
       { slot: "armor" },

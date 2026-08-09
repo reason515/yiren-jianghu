@@ -33,14 +33,21 @@ export interface ApiClient {
   sceneAction(input: SceneActionInput): Promise<SceneActionResult>;
   getMap(): Promise<MapData>;
   getCharacter(): Promise<CharacterProfile>;
+  updateCharacterName(name: string): Promise<{ name: string }>;
   getInventory(): Promise<InvItemView[]>;
   getSkills(): Promise<SkillRowView[]>;
   equipInventory(itemId: string): Promise<{ ok: true }>;
   unequipInventory(itemId: string): Promise<{ ok: true }>;
   useInventory(itemId: string): Promise<{ ok: true; effect: string }>;
   learnSkill(skillId: string): Promise<unknown>;
-  practiceSkill(skillId: string, count?: number): Promise<unknown>;
-  studySkill(skillId: string, count?: number): Promise<unknown>;
+  practiceSkill(
+    skillId: string,
+    count?: number,
+  ): Promise<{ qiSpent: number; leveled: boolean; iterations: number }>;
+  studySkill(
+    skillId: string,
+    count?: number,
+  ): Promise<{ jingSpent: number; leveled: boolean; iterations: number }>;
   getQuests(): Promise<QuestOverviewResponse>;
   acceptQuest(questId: string): Promise<unknown>;
   reportQuest(questId: string): Promise<unknown>;
@@ -99,6 +106,8 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
   const get = <T>(path: string) => req<T>(path);
   const post = <T>(path: string, body: unknown) =>
     req<T>(path, { method: "POST", body: JSON.stringify(body) });
+  const put = <T>(path: string, body: unknown) =>
+    req<T>(path, { method: "PUT", body: JSON.stringify(body) });
 
   return {
     baseUrl,
@@ -111,6 +120,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     sceneAction: (input) => post("/scene/action", input),
     getMap: () => get("/map"),
     getCharacter: () => get("/characters/me"),
+    updateCharacterName: (name) => put("/characters/name", { name }),
     getInventory: () => get("/inventory"),
     getSkills: () => get("/skills"),
     equipInventory: (itemId) => post("/inventory/equip", { itemId }),

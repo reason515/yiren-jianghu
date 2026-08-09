@@ -69,4 +69,16 @@ describe("StatusBar（主界面顶栏生存状态）", () => {
     maxes.forEach((el) => expect(el.textContent).toBe("–"));
     expect(host.querySelector('[data-testid="status-silver"] b')?.textContent).toBe("–");
   });
+
+  it("提供 onOpen 时可点击打开人物簿", () => {
+    let opened = 0;
+    const { host } = render(
+      <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={12} onOpen={() => (opened += 1)} />,
+    );
+    const bar = host.querySelector<HTMLElement>('[data-testid="status-bar"]')!;
+    expect(bar.getAttribute("role")).toBe("button");
+    expect(bar.classList.contains("clickable")).toBe(true);
+    act(() => bar.click());
+    expect(opened).toBe(1);
+  });
 });

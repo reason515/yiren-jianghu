@@ -64,7 +64,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`（全屏两步：序章引导 + 立名与根基，组合 ink-* 原语 + 卷轴 + 宣纸控件，见 §4.13）/ `DepartureOverlay`（起程过场：建角后进入场景前，水墨远景 + 宣纸卡横排叙事，对齐内容包初始房间与主线）
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）/ `StatusBar`（主界面顶栏：细轨进度条 + 双色读数 + 银两简牍印记，sticky 吸顶，V2.13）
-- 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（角色面板：四维当前·先天 + 武功门类/精通 + 装备/行囊）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
+- 战斗/模板：`CombatView`（手动战斗：状态 Bar + 战报演出 + 动作按钮 + 结果横幅）/ `CharacterSheet`（人物簿四页签：身势/武学/行囊/档案，行内展开动作）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
 - 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `PvpView`（论剑：赛季余日 + 对手列表 + 邀战）+ `PvpReplayView`（战报叙事回放，与 PVE 共用 `battleEventLine`）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
@@ -91,11 +91,14 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 战斗结束后先收束结果横幅，再在同一叙事回合展示收益/任务推进；逃跑和落败只给状态结果，不伪造奖励。断线恢复时优先请求 status，存在 ongoing 会话才重开战局浮层。
 - 绝招按钮的可用态是服务端最终裁决；客户端可基于最近 state 做弱提示，但 400 错误须以 toast 显示服务端武侠文案，并保留当前战局。
 
-## 4.4 人物簿接线契约（E14.2）
+## 4.4 人物簿接线契约（E14.2 / DC-035）
 
-- 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。
-- 行止、四维、经验、有效潜能、银两取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。
-- 请教/演练/参悟与佩上/卸下/使用均只提交受控意图；请求期间禁用重复操作，成功后重新拉取人物簿快照，再以一条 toast 告知结果。不得乐观扣减资源、改等级或改行囊数量。
+- 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。武功列表客户端按「已学优先」排序；`description` / `practicePoints` 随技能快照展示。
+- **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签 `ChoiceRow`——**身势**（行止当前/上限细轨 + 四维）/ **武学**（紧凑行，点开再出请教·演练·参悟）/ **行囊**（当前佩挂置顶 + 行囊点开再佩卸用）/ **档案**（性别、改名、放弃）。默认打开「身势」。
+- **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿。
+- 行止、四维、经验、有效潜能、银两、性别取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。
+- 请教/演练/参悟与佩上/卸下/使用、改名（`PUT /characters/name`）均只提交受控意图；请求期间禁用重复操作，成功后重新拉取人物簿快照，再以一条 toast 告知结果。不得乐观扣减资源、改等级或改行囊数量。
+- **演练/参悟 toast**须带花费与是否升段（`qiSpent` / `jingSpent` / `leveled`）；请教结果文案本轮不专项改写（归属与场景师父请教另议）。
 - 放弃角色属于不可逆操作：人物簿只能触发 `ConfirmSheet`，确认成功后清空旧角色快照并回到建角流程。
 
 ## 4.5 挂机接线契约（E14.4）
@@ -149,7 +152,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - **组件质感基线**：可点元素有 `:active` 按压态；chip 分类色 tint（action 玉色/perform 金色/npc/item/danger 朱砂）；Sheet 上滑动画挂载即播（@keyframes）。
 - **导航收敛**：底部导航 = 高频 5 项（角色/挂机/任务/论剑/论坛）+「更多」抽屉（榜单/地图/离开）；战局为情境按钮。
 - **场景首字印章**：场景标题旁接 `ArtPlaceholder`（DC-006 轻量插画边界）；已接任务的场景显示「当前要事」卡片（相位用 `PHASE_LABEL` 中文，不泄漏内部类型名）。
-- **主界面顶栏生存状态（V2.7 落地）**：`StatusBar` sticky 吸顶，气/精/精力/内力 + 银两（stat 色点 + 语义标签 + tabular-nums，数据来自 resume/refreshCharacter 角色快照）；场景叙事前加「见闻」章回引首；ExitPad 九宫格 190px 缩小（占用比叙事区小，玉色出口 + 中心房间名），交互语义不变。
+- **主界面顶栏生存状态（V2.7 落地 / DC-035）**：`StatusBar` sticky 吸顶，气/精/精力/内力 + 银两（stat 色点 + 语义标签 + tabular-nums，数据来自 resume/refreshCharacter 角色快照）；**整条可点打开人物簿（默认身势）**；场景叙事前加「见闻」章回引首；ExitPad 九宫格 190px 缩小（占用比叙事区小，玉色出口 + 中心房间名），交互语义不变。
 - **主界面质感基线（V2.8，DC-028，对齐登录页）**：①场景舞台背景 `.scene-stage`——复用 atmosphere ink-* 原语弱化铺底（疏星/孤月/地平天光/远中两层山峦/流雾/暗角；fixed z-0 + 内容层 z-1；**叙事可读优先，远景只做氛围**）；②顶栏——铜金底边 + stat 点 8px 发光（同色 glow）+ 项间细分隔；③ExitPad 简牍内凹面板 + **空位方位字罗盘暗示**（CSS `::before` 伪元素按 `[data-dir]` 出字，`--not(.has)` 极淡显示，无点击语义，DOM/测试零改动）；④场景首字印章（ArtPlaceholder）——纸纹噪点 + 内染辉光 + 微斜 -2deg（对齐 auth-seal 金石质感）；⑤「见闻」双侧墨线引首；⑥底部导航——渐变浮起 + 面板激活指示线（`app-nav-btn.on::after` 玉色短线）；⑦stat token 亮度：内力用黛紫与精力区分（精力绿/内力紫不可同绿）。
 - **主界面信息结构与滚动（V2.9，DC-029，按用户反馈）**：①**生存项必须显示「当前/上限」双值**（服务端 `vitalsMax` 与 sceneService 同一 `computeMaxVitals` 规则引擎，勿重复实现公式）；银两是货币非状态——独立金色胶囊徽章放右侧，与生存状态组视觉隔离；②开放世界**场景页不放「当前要事」大卡**（任务由玩家从导航「任务」查，避免引导过度）；③ExitPad 重构为**只渲染可前往方向**的居中罗盘（三行 flex 居中：北行/西·中心·东/南行，无出口不渲染），方位语义保留、画面干净紧凑；④**滚动坑：固定底导航下，`.scene` 底 padding 必须 ≥ 导航高 + 安全区（76px+）**——否则短视口底部内容被导航遮挡且页面无法滚动（scrollH ≤ clientH 无滚动余量）；⑤Tab 文案「人物N」像占位符——改「此地人物/此地物品/可做之事」；⑥验证纪律：改布局后探针 `scrollHeight > clientHeight` 确认可滚动。
 - **见闻 = 互动动态流（V2.10，DC-030，参照 xkx EventLog）**：①**概念分离**——场景描述是静态所见（留标题下），「见闻」是互动后的动态记录（交谈/交易/拾取/战斗/交差/行止/移动等事件追加，App 层 `addJournal` 统一挂钩）；②`JournalFeed` 形态：折叠卡片（见闻标题 + 虚线分隔头 + 最近 3 条单行摘要）→ 点击展开全屏 Sheet 滚动历史（`slice(-100)`、自动跟随底部、上滑翻看、非底部时悬浮「最新」按钮）；③对话逐行入见闻时首行带人名前缀（`王五：……`）；④**顶栏两行**：生存项 2×2 grid（气/精一行、精力/内力一行），银两徽章右侧居中，避免单行拥挤；⑤**交互项页签化**：人物/物品/动作用无边框页签 + 选中玉色下划线 + 计数徽章（`scene-tab-count`），内容入 `tab-panel` 内凹面板，勿做成一排按钮。

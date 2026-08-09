@@ -20,6 +20,8 @@ export interface SkillRowView {
   id: string;
   name: string;
   category: SkillCategory;
+  /** 内容包短述；人物簿展开行内只读展示。 */
+  description?: string;
   level: number;
   maxLevel: number;
   practicePoints: number;
@@ -62,6 +64,7 @@ interface ApiSkill {
   id: string;
   name: string;
   category: string;
+  description?: string;
   level: number;
   maxLevel: number;
   practicePoints: number;
@@ -91,7 +94,21 @@ export function toCharacterView(
   };
   return {
     ...profile,
-    skills: skills.map((skill) => ({ ...skill, category: asCategory(skill.category) })),
+    skills: skills
+      .map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        category: asCategory(skill.category),
+        ...(skill.description ? { description: skill.description } : {}),
+        level: skill.level,
+        maxLevel: skill.maxLevel,
+        practicePoints: skill.practicePoints,
+      }))
+      .sort((a, b) => {
+        const aLearned = a.level > 0 ? 0 : 1;
+        const bLearned = b.level > 0 ? 0 : 1;
+        return aLearned - bLearned;
+      }),
     equipment: [slot("weapon"), slot("armor")],
     inventory: items,
   };

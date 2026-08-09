@@ -5,12 +5,15 @@ import type { VitalKey } from "../lib/characterTypes.js";
  * 主界面顶栏生存状态（V2.13：细轨进度条 + 双色读数，取代色点 HUD）。
  * - 生存项（气/精/精力/内力）：标签 +「当前/上限」双色数字 + 细墨轨道填充；
  * - 银两：货币非状态，右侧竖排简牍印记，与状态组视觉隔离。
+ * - 整条可点打开人物簿（默认身势页签）。
  * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {
   vitals: Record<VitalKey, number> | null;
   vitalsMax: Record<VitalKey, number> | null;
   silver: number | null;
+  /** 点击顶栏打开人物簿。 */
+  onOpen?: () => void;
 }
 
 const VITAL_META: Array<{ key: VitalKey; label: string; cls: string }> = [
@@ -25,9 +28,27 @@ function pctOf(value: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round((value / max) * 100)));
 }
 
-export function StatusBar({ vitals, vitalsMax, silver }: StatusBarProps): JSX.Element {
+export function StatusBar({ vitals, vitalsMax, silver, onOpen }: StatusBarProps): JSX.Element {
+  const interactive = Boolean(onOpen);
   return (
-    <div className="status-bar" data-testid="status-bar">
+    <div
+      className={`status-bar${interactive ? " clickable" : ""}`}
+      data-testid="status-bar"
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-label={interactive ? "打开人物簿" : undefined}
+      onClick={onOpen}
+      onKeyDown={
+        onOpen
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen();
+              }
+            }
+          : undefined
+      }
+    >
       <div className="status-vitals" role="group" aria-label="生存状态">
         {VITAL_META.map((v) => {
           const cur = vitals?.[v.key];

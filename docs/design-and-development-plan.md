@@ -610,6 +610,7 @@
 | V2.12 自然恢复 + 观察动作 + 见闻增强 | ✅ 完成 | — | 按用户 5 点反馈实现（DC-032）：①**自然恢复**——参照 pkuxkx heart_beat 时间恢复：迁移 0012 `characters.last_heal_at` + 场景入口（getScene/move/act）delta 结算（每分钟按上限比例，封顶 30 分钟窗口防离线累积）；game-core `applyRegen` 纯函数（+2 用例）；真库验证 qi 0→84、jing 0→63；②**观察动作**——NPC schema 加 `description` 字段、14 个 NPC 补原创外观描述（wuxia 文案短句画面感）；`observe` 入 act 白名单 + 路由 + 客户端 EntitySheet 观察按钮 + 描述入见闻（+1 用例）；③**见闻固定高度**——展开改 260px 面板超滚（替代全屏 Sheet）；④**地名 mark 高亮**——移动/观察条目 `mark` 关键词青蓝色（#8fb0c2），与人名玉色/数字金色三色区分（场景名与人名不混淆）；⑤**状态栏数字对齐**——标签 min-width 2em 右对齐；368 用例全绿（+4）；协议文档 §7 补 observe + 恢复行为 |
 | V2.13 顶栏细轨进度条 + 交谈只入见闻 | ✅ 完成 | — | 按用户 2 点反馈（DC-033）：①**顶栏深度重构**——生存项改为「display 标签 + 当前/上限双色 digit 读数 + 3px 细墨轨道填充」（去掉发光色点 HUD）；低值低于 30% 时 fill/当前值朱砂双警示；银两竖排简牍印记（非现代胶囊）；②**交谈去弹窗**——`talk` 只逐行入见闻，关闭对话 Sheet（交易仍开 Shop）；StatusBar +1 低值用例；见 design-system / yjh-mobile-ui 沉淀 |
 | V2.14 见闻新条目打字机显现 | ✅ 完成 | — | 按用户反馈（DC-034）：打字机显现 + **V2.14.2 `useJournalLog` 数据层串行入队**（交谈多句 enqueue 数组，settled 后才追加下一行，根治一次多行）；JournalFeed 只打末行并回调 onEntrySettled；折叠换行滚动；+ journalLog / JournalFeed 用例 |
+| V2.15 人物簿四页签重梳 | ✅ 完成 | — | 按玩家实操方案（DC-035）：CharacterSheet 固定摘要 + 身势/武学/行囊/档案四页签；身势行止当前/上限细轨；武学/行囊行内展开；佩挂置顶；档案改名+放弃；StatusBar 可点进人物；演练/参悟 toast 带花费/升段；请教本轮不动；yjh-mobile-ui §4.4 同步 |
 | G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 

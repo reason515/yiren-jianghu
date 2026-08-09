@@ -687,12 +687,49 @@ export function App(): JSX.Element {
           ? api.practiceSkill(skillId)
           : api.studySkill(skillId);
     void request
-      .then(async () => {
+      .then(async (result) => {
         await refreshCharacter();
         triggerGuide("skill_learned");
-        setError(
-          `${name}${action === "learn" ? "已请教" : action === "practice" ? "已演练" : "已参悟"}。`,
-        );
+        if (action === "learn") {
+          // 请教本轮不专项改结果文案
+          setError(`${name}已请教。`);
+          return;
+        }
+        if (action === "practice") {
+          const spent =
+            result && typeof result === "object" && "qiSpent" in result
+              ? Number((result as { qiSpent: number }).qiSpent)
+              : NaN;
+          const leveled =
+            result && typeof result === "object" && "leveled" in result
+              ? Boolean((result as { leveled: boolean }).leveled)
+              : false;
+          const cost = Number.isFinite(spent) ? `，耗气 ${spent}` : "";
+          setError(`${name}已演练${cost}${leveled ? "，功力精进" : ""}。`);
+          return;
+        }
+        const spent =
+          result && typeof result === "object" && "jingSpent" in result
+            ? Number((result as { jingSpent: number }).jingSpent)
+            : NaN;
+        const leveled =
+          result && typeof result === "object" && "leveled" in result
+            ? Boolean((result as { leveled: boolean }).leveled)
+            : false;
+        const cost = Number.isFinite(spent) ? `，耗精 ${spent}` : "";
+        setError(`${name}已参悟${cost}${leveled ? "，功力精进" : ""}。`);
+      })
+      .catch(notify)
+      .finally(() => setCharacterPending(null));
+  };
+
+  const onRename = (name: string): void => {
+    setCharacterPending("rename");
+    void api
+      .updateCharacterName(name)
+      .then(async () => {
+        await refreshCharacter();
+        setError(`名号已更作「${name}」。`);
       })
       .catch(notify)
       .finally(() => setCharacterPending(null));
@@ -980,7 +1017,7 @@ export function App(): JSX.Element {
               <div className="ink-vignette" />
             </div>
           </div>
-          <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={silver} />
+          <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={silver} onOpen={openCharacter} />
           <SceneView
             room={room}
             journal={journal}
@@ -1191,6 +1228,7 @@ export function App(): JSX.Element {
           onClose={() => setPanel("none")}
           onSkillAction={onSkillAction}
           onInventoryAction={onInventoryAction}
+          onRename={onRename}
           onDiscard={() => setDiscardOpen(true)}
         />
       )}

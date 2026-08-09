@@ -1320,7 +1320,12 @@ export function App(): JSX.Element {
       )}
 
       {combat && combatOpen && (
-        <Sheet open full title={combat.inCombat ? "战局" : "战局已了"} onClose={closeCombat}>
+        <Sheet
+          open
+          full
+          title={combat.inCombat || combatPacing ? "战局" : "战局已了"}
+          onClose={closeCombat}
+        >
           <CombatView
             state={combat}
             onAction={onCombatAction}

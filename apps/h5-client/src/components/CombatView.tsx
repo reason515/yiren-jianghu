@@ -94,6 +94,9 @@ export function CombatView({
         ];
   const foeNames = enemies.map((e) => e.name);
   const visibleLog = state.log.slice(0, visibleCount);
+  const revealDone = visibleCount >= logLen;
+  /** 服务端已终局，但战报余韵未散时不弹所得。 */
+  const showResult = Boolean(state.result) && revealDone;
 
   return (
     <div className="combat" data-testid="combat" role="region" aria-label="战局">
@@ -147,10 +150,10 @@ export function CombatView({
         ))}
       </div>
 
-      {state.result ? (
+      {showResult ? (
         <div className="combat-result-block">
           <p className="combat-result" data-testid="combat-result">
-            {RESULT_TEXT[state.result]}
+            {RESULT_TEXT[state.result!]}
           </p>
           {state.reward && (
             <p className="combat-reward" data-testid="combat-reward">
@@ -172,6 +175,10 @@ export function CombatView({
               离去
             </button>
           )}
+        </div>
+      ) : state.result ? (
+        <div className="combat-float-bar" data-testid="combat-winding-down">
+          <p className="combat-auto-hint">余韵未散……</p>
         </div>
       ) : (
         <div className="combat-float-bar" data-testid="combat-actions">

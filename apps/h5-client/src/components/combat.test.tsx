@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ReactElement } from "react";
-import { CombatView } from "./CombatView.js";
+import { CombatView, LINE_REVEAL_MS } from "./CombatView.js";
 import type { CombatState } from "../lib/combatTypes.js";
 
 function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
@@ -16,6 +16,7 @@ function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 const STATE: CombatState = {
@@ -121,6 +122,41 @@ describe("CombatView（自动战 + 抓时机）", () => {
     const log = host.querySelector("[data-testid=combat-log]");
     expect(log?.querySelector(".cm-self")?.textContent).toBe("你");
     expect(log?.querySelector(".cm-foe")?.textContent).toBe("劫道匪徒");
+  });
+
+  it("战报未读完不展示所得；读完后才出奖励", async () => {
+    vi.useFakeTimers();
+    const ongoing: CombatState = {
+      ...STATE,
+      log: [{ id: 1, text: "你与劫道匪徒对上了。" }],
+    };
+    const finished: CombatState = {
+      ...STATE,
+      inCombat: false,
+      result: "win",
+      reward: { exp: 6, potential: 2, silver: 3, drops: [] },
+      log: [
+        { id: 1, text: "你与劫道匪徒对上了。" },
+        { id: 2, text: "你这一击落在劫道匪徒身上。" },
+        { id: 3, text: "胜负已分。", kind: "victory" },
+      ],
+    };
+    const { host, root } = render(<CombatView state={ongoing} onAction={() => undefined} />);
+    act(() => root.render(<CombatView state={finished} onAction={() => undefined} />));
+    expect(host.querySelector("[data-testid=combat-reward]")).toBeNull();
+    expect(host.querySelector("[data-testid=combat-winding-down]")?.textContent).toContain(
+      "余韵未散",
+    );
+    for (let i = 0; i < 4; i += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(LINE_REVEAL_MS);
+      });
+    }
+    expect(host.querySelector("[data-testid=combat-reward]")?.textContent ?? "").toContain(
+      "阅历 6",
+    );
+    expect(host.querySelector("[data-testid=combat-winding-down]")).toBeNull();
+    vi.useRealTimers();
   });
 
   it("非战斗状态不渲染", () => {

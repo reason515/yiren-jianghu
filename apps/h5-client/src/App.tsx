@@ -63,13 +63,7 @@ import {
   shouldShowGuide,
   type GuideEvent,
 } from "./lib/onboarding.js";
-import type {
-  SceneItem,
-  SceneNpc,
-  SceneRoom,
-  SceneTalkResult,
-  SceneTradeResult,
-} from "./lib/sceneTypes.js";
+import type { SceneItem, SceneNpc, SceneRoom, SceneTradeResult } from "./lib/sceneTypes.js";
 
 /**
  * H5 应用组装（M3 客户端闭环）：
@@ -114,7 +108,6 @@ export function App(): JSX.Element {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<SceneNpc | SceneItem | null>(null);
-  const [dialogue, setDialogue] = useState<SceneTalkResult | null>(null);
   const [trade, setTrade] = useState<SceneTradeResult | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [combatOpen, setCombatOpen] = useState(false);
@@ -797,8 +790,8 @@ export function App(): JSX.Element {
         .sceneAction({ type: action, targetId })
         .then((result) => {
           setSelectedEntity(null);
+          // 交谈只入见闻，不再弹 Sheet（V2.13 / DC-033）
           if (result.kind === "talk") {
-            setDialogue(result);
             result.dialogue.forEach((line, index) =>
               addJournal(index === 0 ? `${result.npc.name}：${line}` : line),
             );
@@ -899,7 +892,6 @@ export function App(): JSX.Element {
     setDiscardOpen(false);
     setRoom(null);
     setSelectedEntity(null);
-    setDialogue(null);
     setTrade(null);
     setCombat(null);
     setCombatOpen(false);
@@ -1212,16 +1204,6 @@ export function App(): JSX.Element {
           onAction={onEntityAction}
           onClose={() => setSelectedEntity(null)}
         />
-      )}
-
-      {dialogue && (
-        <Sheet open title={dialogue.npc.name} onClose={() => setDialogue(null)}>
-          <div className="scene-dialogue">
-            {dialogue.dialogue.map((line, index) => (
-              <p key={`${dialogue.npc.id}-${index}`}>{line}</p>
-            ))}
-          </div>
-        </Sheet>
       )}
 
       {trade && (

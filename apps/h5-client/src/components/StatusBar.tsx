@@ -2,9 +2,9 @@ import type { JSX } from "react";
 import type { VitalKey } from "../lib/characterTypes.js";
 
 /**
- * 主界面顶栏生存状态条（V2.9 双值；V2.10 两行网格，参照 xkx vitals 2×2）。
- * - 生存状态（气/精/精力/内力）：「当前/上限」双值，2×2 网格两行排布，不再单行拥挤；
- * - 银两：货币非状态，右侧独立金色胶囊徽章，与状态组视觉隔离。
+ * 主界面顶栏生存状态（V2.13：细轨进度条 + 双色读数，取代色点 HUD）。
+ * - 生存项（气/精/精力/内力）：标签 +「当前/上限」双色数字 + 细墨轨道填充；
+ * - 银两：货币非状态，右侧竖排简牍印记，与状态组视觉隔离。
  * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {
@@ -20,20 +20,53 @@ const VITAL_META: Array<{ key: VitalKey; label: string; cls: string }> = [
   { key: "neili", label: "内力", cls: "neili" },
 ];
 
+function pctOf(value: number, max: number): number {
+  if (max <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+}
+
 export function StatusBar({ vitals, vitalsMax, silver }: StatusBarProps): JSX.Element {
   return (
     <div className="status-bar" data-testid="status-bar">
       <div className="status-vitals" role="group" aria-label="生存状态">
-        {VITAL_META.map((v) => (
-          <span key={v.key} className={`status-item ${v.cls}`}>
-            <i className="status-dot" aria-hidden="true" />
-            <em>{v.label}</em>
-            <b>{vitals && vitalsMax ? `${vitals[v.key]}/${vitalsMax[v.key]}` : "–"}</b>
-          </span>
-        ))}
+        {VITAL_META.map((v) => {
+          const cur = vitals?.[v.key];
+          const max = vitalsMax?.[v.key];
+          const ready = typeof cur === "number" && typeof max === "number";
+          const pct = ready ? pctOf(cur, max) : 0;
+          const low = ready && pct < 30;
+          return (
+            <div
+              key={v.key}
+              className={`status-vital ${v.cls}${low ? " low" : ""}`}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={ready ? max : 0}
+              aria-valuenow={ready ? cur : 0}
+              aria-label={ready ? `${v.label} ${cur}/${max}` : v.label}
+            >
+              <div className="status-vital-head">
+                <em>{v.label}</em>
+                <b>
+                  {ready ? (
+                    <>
+                      <span className="status-cur">{cur}</span>
+                      <i>/</i>
+                      <span className="status-max">{max}</span>
+                    </>
+                  ) : (
+                    <span className="status-max">–</span>
+                  )}
+                </b>
+              </div>
+              <div className="status-vital-track" aria-hidden="true">
+                <div className="status-vital-fill" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          );
+        })}
       </div>
       <span className="status-silver" data-testid="status-silver">
-        <i className="silver-dot" aria-hidden="true" />
         <em>银两</em>
         <b>{silver ?? "–"}</b>
       </span>

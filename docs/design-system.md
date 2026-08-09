@@ -47,8 +47,8 @@
 | 章节头（此刻可往等） | display | 14px | 400 | `--paper-dim` |
 | 正文（场景描述/见闻） | body | 15px | 400 | `--paper-dim`，行高 1.85 |
 | 交互项（Tab/chip） | body | 14–15px | 400 | 语义色（见 §2.4） |
-| 生存状态标签 | body | 12px | 400 | `--paper-dim` |
-| **生存状态数值** | **digit** | 13px | 400 | `--paper`（银两 `--gold`） |
+| 生存状态标签 | display | 12px | 400 | `--paper-dim`（字距 2px） |
+| **生存状态数值** | **digit** | 13px | **当前 600 / 上限 400** | 当前 `--paper`、上限 `--paper-faint`；银两 `--gold` 600 |
 | 见闻关键字：人名 / 数字 | body 前缀 / digit | 13px | 500 / 400 | `--jade-bright` / `--gold` |
 | 辅助小字 | body | 11–12px | 400 | `--paper-faint` |
 

@@ -43,15 +43,18 @@ function practiceInput(overrides: Partial<Parameters<typeof practiceOnce>[0]> = 
   };
 }
 
-describe("exp 门槛（pkuxkx 对照：武功³/10 > 经验 无法深造）", () => {
-  it("level 20 需 800 经验：799 不行，800 可以", () => {
+describe("exp 门槛（小数值：武功²×2）", () => {
+  it("level 20 需 800 历练：799 不行，800 可以", () => {
     expect(isLevelAllowed(P, 799, 20)).toBe(false);
     expect(isLevelAllowed(P, 800, 20)).toBe(true);
   });
 
-  it("高等所需经验随指数增长", () => {
-    expect(isLevelAllowed(P, 1000, 50)).toBe(false); // 50³/10 = 12500
-    expect(isLevelAllowed(P, 12_500, 50)).toBe(true);
+  it("高等所需历练随平方增长（不再立方爆炸）", () => {
+    // 50²×2 = 5000
+    expect(isLevelAllowed(P, 4999, 50)).toBe(false);
+    expect(isLevelAllowed(P, 5000, 50)).toBe(true);
+    // 100²×2 = 20000
+    expect(isLevelAllowed(P, 20_000, 100)).toBe(true);
   });
 });
 
@@ -172,8 +175,8 @@ describe("practiceOnce（自练）", () => {
     }
     // 0→1 需 1 次，1→2 需 2 次，2→3 需 3 次 = 共 6 次
     expect(actions).toBe(6);
-    // 消耗 = 20 + (21+21) + (22+22+22) = 128
-    expect(qi).toBe(5000 - 128);
+    // 消耗 = 12 + (13+13) + (14+14+14) = 80
+    expect(qi).toBe(5000 - 80);
   });
 
   it("气血不足 → qi；满级 → max_level", () => {
@@ -191,8 +194,8 @@ describe("practiceOnce（自练）", () => {
   it("practicePointsNeeded / practiceCost 确定性", () => {
     expect(practicePointsNeeded(P, 0)).toBe(1);
     expect(practicePointsNeeded(P, 10)).toBe(11);
-    expect(practiceCost(P, 0)).toBe(20);
-    expect(practiceCost(P, 10)).toBe(30);
+    expect(practiceCost(P, 0)).toBe(12);
+    expect(practiceCost(P, 10)).toBe(22);
   });
 });
 
@@ -208,7 +211,7 @@ describe("studyOnce（读书/领悟）", () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.skills["basic_sword"]).toEqual({ level: 1, practicePoints: 0 });
-      expect(r.jingSpent).toBe(studyCost(P, 0)); // 80
+      expect(r.jingSpent).toBe(studyCost(P, 0)); // studyJingBase=40
     }
     r = studyOnce({ params: P, jing: 1, skillId: "basic_sword", skills: {}, maxLevel: MAX_LEVEL });
     expect(r.ok).toBe(false);

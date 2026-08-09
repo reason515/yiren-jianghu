@@ -1,23 +1,24 @@
 # 《一人江湖》机制总表（DC-046）
-# 唯一生效源：系数 + 公式 + 分段表 + 实体数值索引。
-# 改数字或公式只改本文件；控制流（战斗循环/挂机状态机）仍在 game-core。
+# 小数值取向（2026-08-10）：历练门槛平方、战力压到千内、气血短打、技能软顶 100/120。
+# 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:
   expCurve:
     base: 100
     growth: 1.1
   combat:
-    weaponDmgPerLevel: 0.5
-    forceDmgPerLevel: 0.4
+    # P2：略降伤害系数，配合气血压缩保持 4–8 回合短打
+    weaponDmgPerLevel: 0.4
+    forceDmgPerLevel: 0.3
     defenseReduce: 0.5
     damageVariance: 0.1
-    recoverNeiliPerTurn: 20
+    recoverNeiliPerTurn: 12
     fleeBaseChance: 0.7
     parryDamageFactor: 0.3
     recoverNeiliThreshold: 0.3
-    defenseBase: 10
-    dodgeBase: 5
-    parryBase: 5
+    defenseBase: 8
+    dodgeBase: 4
+    parryBase: 4
   afk:
     maxDurationHours: 8
     dailyDiminishRate: 0.5
@@ -26,32 +27,34 @@ coeffs:
     onlineHeartbeatTimeoutSec: 45
     onlineRewardMult: 1.8
   vitals:
-    qiBase: 100
-    jingBase: 100
-    jingliBase: 100
-    qiPerCon: 16
+    # P2：整体约 ×0.5，手机一局短打
+    qiBase: 50
+    jingBase: 50
+    jingliBase: 50
+    qiPerCon: 8
     qiPerStr: 0
-    jingPerInt: 16
-    forceQiPerLevel: 2
+    jingPerInt: 8
+    forceQiPerLevel: 1
     forceJingPerLevel: 1
-    neiliPerLevel: 10
-    jingliPerLevel: 3
+    neiliPerLevel: 8
+    jingliPerLevel: 2
     neiliToQiDiv: 4
     neiliToJingDiv: 12
-    foodBase: 200
-    foodPerCon: 10
-    waterBase: 200
-    waterPerDex: 10
+    foodBase: 100
+    foodPerCon: 5
+    waterBase: 100
+    waterPerDex: 5
   growth:
     learnJingCostBase: 150
     learnTuitionBase: 2
     potentialCostPerLevel: 1
-    expGateExponent: 3
-    expGateDivisor: 10
-    practiceQiBase: 20
+    # P0：历练门槛 = level^2 * 2（exponent=2, divisor=0.5）
+    expGateExponent: 2
+    expGateDivisor: 0.5
+    practiceQiBase: 12
     practiceQiPerLevel: 1
     practicePointsPerAction: 1
-    studyJingBase: 80
+    studyJingBase: 40
     firstLearnJingMult: 2
     practicePointsNeededOffset: 1
   pvp:
@@ -60,35 +63,33 @@ coeffs:
     seasonWeeks: 6
     eloScale: 400
   economy:
-    maxCashflowPerDay: 1000
+    maxCashflowPerDay: 300
   regen:
-    qiPerMin: 0.02
-    jingPerMin: 0.015
-    jingliPerMin: 0.02
-    neiliPerMin: 0.01
-    foodPerMin: 1
-    waterPerMin: 1.5
+    qiPerMin: 0.03
+    jingPerMin: 0.025
+    jingliPerMin: 0.03
+    neiliPerMin: 0.015
+    foodPerMin: 0.8
+    waterPerMin: 1.2
     maxWindowMinutes: 30
   enable:
     basicLevelDivisor: 2
   perform:
     scaleDivisor: 100
   skillPower:
+    # P0：战力 ≈ level * weighted / (attrDivisor * levelScale) → 同属性下约等于 level
     attrDivisor: 6
     strWeight: 5
     zeroLevelExpDiv: 50
     minPower: 1
+    levelScale: 20
 
-# 命名公式：标识符来自 coeffs 叶名 + 运行时变量（见 mechanics.ts RUNTIME_VARS）
 formulas:
-  # 升到下一级所需历练
   expForNextLevel: "round(base * growth^(level - 1))"
-  # 挂机每日递减：调用方先算 fullCycles = floor(hoursUsedToday / maxDurationHours)
   diminishMultiplier: "fullCycles <= 0 ? 1 : max(0, min(1, (1 - dailyDiminishRate)^fullCycles))"
-  # exp 门槛所需历练（isLevelAllowed: exp >= expGateRequired）
+  # P0：level^2 * 2
   expGateRequired: "level^expGateExponent / expGateDivisor"
   potentialCostForNext: "ceil(nextLevel * potentialCostPerLevel)"
-  # isFirstLearn: 1 或 0
   jingCostForLearn: "max(1, ceil(learnJingCostBase / max(1, int))) * (isFirstLearn != 0 ? firstLearnJingMult : 1)"
   practiceCost: "practiceQiBase + level * practiceQiPerLevel"
   practicePointsNeeded: "level + practicePointsNeededOffset"
@@ -99,58 +100,32 @@ formulas:
   maxJingli: "jingliBase + forceLevel * jingliPerLevel"
   maxFood: "foodBase + con * foodPerCon"
   maxWater: "waterBase + dex * waterPerDex"
-  # 伤害基底（未乘招式、未浮动）
   attackDamageBase: "max(1, atk + weaponLevel * weaponDmgPerLevel + forceLevel * forceDmgPerLevel - def * defenseReduce)"
-  # 招式加成：base * (100+moveDamage)/100 + forceLevel*moveForce/100（bindings 含 base）
   moveDamageApplied: "base * (100 + moveDamage) / 100 + forceLevel * moveForce / 100"
   parryDamage: "max(1, round(fullDamage * parryDamageFactor))"
   scalePerformAmount: "amount * (1 + skillRawLevel / scaleDivisor)"
   expectedScore: "1 / (1 + 10^((scoreB - scoreA) / eloScale))"
   effectiveLevel: "floor(basicLevel / basicLevelDivisor) + specialLevel"
-  # skillPower：调用方注入 cubePower/expBonus（piecewise）或零级分支
-  skillPowerBase: "level <= 0 ? floor(combatExp / zeroLevelExpDiv) : cubePower + expBonus"
-  skillPowerWeighted: "floor(max(minPower, power) * weighted / attrDivisor)"
+  # P0：基底=有效等级（无等级时用历练/zeroLevelExpDiv，并封顶 120）
+  skillPowerBase: "level <= 0 ? max(minPower, min(120, floor(combatExp / zeroLevelExpDiv))) : max(minPower, level)"
+  skillPowerWeighted: "max(minPower, floor(power * weighted / (attrDivisor * levelScale)))"
   combatantAttack: "str + weaponLevel"
   combatantDefense: "defenseBase + con"
   combatantDodge: "dodgeBase + dex + dodgeLevel"
   combatantParry: "parryBase + parryLevel"
 
-# 分段表：自上而下首个 when 为真的 then
-piecewise:
-  levelCubePower:
-    - when: "level < 30"
-      then: "floor(level * level * level / 30)"
-    - when: "level < 300"
-      then: "900 + floor(floor(level / 10)^3 / 3)"
-    - when: "level < 600"
-      then: "7400 + floor(floor(level / 15)^3 / 3)"
-    - when: "level < 1200"
-      then: "19800 + floor(floor(level / 20)^3 / 3)"
-    - when: "level < 1800"
-      then: "70600 + floor(floor(level / 30)^3 / 3)"
-    - when: "level < 3000"
-      then: "127200 + floor(floor(level / 50)^3 / 3)"
-    - when: "1"
-      then: "196800 + floor(floor(level / 150)^3 / 3)"
-  combatExpBonus:
-    - when: "expK < 30"
-      then: "floor(combatExp / 100)"
-    - when: "expK < 3000"
-      then: "270 + floor(combatExp / 1000)"
-    - when: "expK < 21000"
-      then: "2270 + floor(combatExp / 3000)"
-    - when: "expK < 180000"
-      then: "5770 + floor(combatExp / 6000)"
-    - when: "expK < 600000"
-      then: "20770 + floor(combatExp / 12000)"
-    - when: "1"
-      then: "46770 + floor(combatExp / 25000)"
+# 大数立方表已退役（小数值）；保留空表以兼容旧校验路径
+piecewise: {}
 
 entityIndex:
   npc_battle_rewards:
     path: npcs[].battleRewards
     fields: [exp, potential, silver]
-    note: 战胜 battle NPC 固定成长与银两
+    note: 战胜 battle NPC 固定成长与银两；中期怪已抬到两位数
+  npc_min_exp:
+    path: npcs[].minExp
+    fields: [minExp]
+    note: 开战历练门槛（阶梯怪谱）；不足则拒战
   npc_drops:
     path: npcs[].drops
     fields: [itemId, chance, min, max, minExp]
@@ -162,7 +137,7 @@ entityIndex:
   npc_teaches:
     path: npcs[].teaches
     fields: [skillId, maxLevel, tuitionSilver]
-    note: 请教目录与学费覆盖
+    note: 请教目录与学费覆盖；教习上限不超过技能软顶
   grind_hourly:
     path: grind_jobs[].hourlyGain
     fields: [exp, potential, silver]
@@ -195,3 +170,4 @@ entityIndex:
   skill_max_level:
     path: skills[].maxLevel
     fields: [maxLevel]
+    note: 首版软顶 basic≤100 / special≤120

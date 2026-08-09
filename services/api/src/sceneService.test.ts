@@ -555,11 +555,11 @@ describe("sceneService.act", () => {
     character.attrs = '{"str":20,"int":20,"con":20,"dex":20}';
     character.last_heal_at = new Date(Date.now() - 10 * 60000).toISOString();
     await scene.getScene("acc_1");
-    // maxQi=420：floor(420*0.02*10)=84；maxJing=420：floor(420*0.015*10)=63
-    expect(character.qi).toBe(84);
-    expect(character.jing).toBe(63);
-    expect(character.food).toBe(290);
-    expect(character.water).toBe(285);
+    // maxQi=210：floor(210*0.03*10)=63；maxJing=210：floor(210*0.025*10)=52
+    expect(character.qi).toBe(63);
+    expect(character.jing).toBe(52);
+    expect(character.food).toBe(292);
+    expect(character.water).toBe(288);
   });
 
   it("自然恢复：last_heal_at 为空时只初始化时钟，不永久跳过", async () => {

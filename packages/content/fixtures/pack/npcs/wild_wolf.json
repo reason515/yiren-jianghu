@@ -2,7 +2,7 @@
   "id": "wild_wolf",
   "name": "后山野狼",
   "kind": "battle",
-  "level": 4,
+  "level": 5,
   "aggressive": true,
   "respawnSec": 45,
   "drops": [
@@ -12,10 +12,11 @@
     }
   ],
   "battleRewards": {
-    "exp": 18,
-    "potential": 6,
-    "silver": 6
+    "exp": 48,
+    "potential": 18,
+    "silver": 14
   },
   "description": "灰褐毛皮，眼睛在夜里发绿。叼着猎物时，喉咙里滚着低沉的呜咽。",
-  "nature": "beast"
+  "nature": "beast",
+  "minExp": 80
 }

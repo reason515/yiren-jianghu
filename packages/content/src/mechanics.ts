@@ -38,8 +38,9 @@ export const REQUIRED_FORMULA_IDS = [
 
 export type FormulaId = (typeof REQUIRED_FORMULA_IDS)[number];
 
-export const REQUIRED_PIECEWISE_IDS = ["levelCubePower", "combatExpBonus"] as const;
-export type PiecewiseId = (typeof REQUIRED_PIECEWISE_IDS)[number];
+/** 可选分段表 id（小数值后不再强制；保留类型供扩展）。 */
+export const OPTIONAL_PIECEWISE_IDS = ["levelCubePower", "combatExpBonus"] as const;
+export type PiecewiseId = string;
 
 /** 允许出现在公式中的额外运行时变量（非 coeffs 叶）。 */
 export const RUNTIME_VARS = new Set([
@@ -86,7 +87,7 @@ const piecewiseSegmentSchema = z.object({
 export const mechanicsSchema = z.object({
   coeffs: paramsSchema,
   formulas: z.record(z.string().min(1)),
-  piecewise: z.record(z.array(piecewiseSegmentSchema).min(1)),
+  piecewise: z.record(z.array(piecewiseSegmentSchema).min(1)).default({}),
   entityIndex: z
     .record(
       z.object({
@@ -161,17 +162,9 @@ export function compileMechanics(input: unknown): CompileMechanicsResult {
   for (const id of REQUIRED_FORMULA_IDS) {
     if (!(id in raw.formulas)) errors.push(`缺少公式：${id}`);
   }
-  for (const id of REQUIRED_PIECEWISE_IDS) {
-    if (!(id in raw.piecewise)) errors.push(`缺少分段表：${id}`);
-  }
   for (const id of Object.keys(raw.formulas)) {
     if (!(REQUIRED_FORMULA_IDS as readonly string[]).includes(id)) {
       errors.push(`未知公式 id：${id}`);
-    }
-  }
-  for (const id of Object.keys(raw.piecewise)) {
-    if (!(REQUIRED_PIECEWISE_IDS as readonly string[]).includes(id)) {
-      errors.push(`未知分段表 id：${id}`);
     }
   }
 
@@ -285,6 +278,7 @@ export function evalPiecewiseWithCoeffs(
 /** 已知实体索引路径（校验用）。 */
 export const KNOWN_ENTITY_INDEX_PATHS = new Set([
   "npcs[].battleRewards",
+  "npcs[].minExp",
   "npcs[].drops",
   "npcs[].goods",
   "npcs[].teaches",

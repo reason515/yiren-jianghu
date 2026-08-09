@@ -273,15 +273,15 @@ describe("sessionService.resume", () => {
     state.skills.push({ id: "cs_1", character_id: "char_1", skill_id: "xuanmen_force", level: 10 });
     const withContent = createSessionService(db, CONTENT);
     const res = await withContent.resume("acc_1");
-    // maxNeili = 10*10 = 100；maxJingli = 100 + 10*3 = 130；
-    // maxQi = 100 + 20*16 + 25*0 + 10*2 + floor(100/4) = 100+320+0+20+25 = 465
+    // maxNeili = 10*8 = 80；maxJingli = 50 + 10*2 = 70；
+    // maxQi = 50 + 20*8 + 10*1 + floor(80/4) = 50+160+10+20 = 240
     expect(res.character?.vitalsMax).toEqual({
-      qi: 465,
-      jing: 100 + 20 * 16 + 10 * 1 + Math.floor(100 / 12),
-      jingli: 130,
-      neili: 100,
-      food: 200 + 20 * 10,
-      water: 200 + 15 * 10,
+      qi: 240,
+      jing: 50 + 20 * 8 + 10 * 1 + Math.floor(80 / 12),
+      jingli: 70,
+      neili: 80,
+      food: 100 + 20 * 5,
+      water: 100 + 15 * 5,
     });
   });
 

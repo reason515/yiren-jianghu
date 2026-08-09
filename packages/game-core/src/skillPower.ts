@@ -1,14 +1,9 @@
-import {
-  evalFormulaWithCoeffs,
-  evalPiecewiseWithCoeffs,
-  type CompiledMechanics,
-  type Params,
-} from "@yjh/content";
+import { evalFormulaWithCoeffs, type CompiledMechanics, type Params } from "@yjh/content";
 import { DEFAULT_MECHANICS, DEFAULT_PARAMS } from "./params.js";
 
 /**
- * C11 技能战力（skill_power，DC-041 / DC-046）。
- * 分段表与合成公式均在 mechanics.yaml。
+ * 技能战力（DC-041 / 小数值重标）。
+ * 基底≈有效等级，经属性权重与 levelScale 压缩后输出落在百～千级，供 A/(A+B) 判定。
  */
 
 export interface SkillPowerAttrs {
@@ -27,18 +22,11 @@ export function skillPower(
   mechanics: CompiledMechanics = DEFAULT_MECHANICS,
 ): number {
   const exp = Math.max(0, combatExp);
-  const expK = Math.floor(exp / 1000);
-  const cubePower =
-    level <= 0 ? 0 : evalPiecewiseWithCoeffs(mechanics, params, "levelCubePower", { level });
-  const expBonus =
-    level <= 0
-      ? 0
-      : evalPiecewiseWithCoeffs(mechanics, params, "combatExpBonus", { combatExp: exp, expK });
   const power = evalFormulaWithCoeffs(mechanics, params, "skillPowerBase", {
     level,
     combatExp: exp,
-    cubePower,
-    expBonus,
+    cubePower: 0,
+    expBonus: 0,
   });
   const weighted =
     usage === "attack"

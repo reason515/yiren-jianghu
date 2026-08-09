@@ -21,17 +21,17 @@ const FRESH: Parameters<typeof computeMaxVitals>[1] = {
 describe("computeMaxVitals（属性表驱动矩阵）", () => {
   it("无内功新角色：动态上限由属性与基础值决定", () => {
     const m = computeMaxVitals(DEFAULT_PARAMS, FRESH);
-    // maxQi = 100 + 20*16 = 420；maxJing 同理；maxNeili = 0；maxJingli = 100
-    expect(m).toEqual({ maxQi: 420, maxJing: 420, maxNeili: 0, maxJingli: 100 });
+    // 小数值：maxQi = 50 + 20*8 = 210；maxJing 同理；maxNeili = 0；maxJingli = 50
+    expect(m).toEqual({ maxQi: 210, maxJing: 210, maxNeili: 0, maxJingli: 50 });
   });
 
   it("内功等级提升：neili/qi/jing/jingli 同步增长", () => {
     const m = computeMaxVitals(DEFAULT_PARAMS, { ...FRESH, forceLevel: 50 });
-    // maxNeili = 50*10 = 500
-    // maxQi = 420 + 50*2 + floor(500/4) = 420 + 100 + 125 = 645
-    // maxJing = 420 + 50*1 + floor(500/12) = 420 + 50 + 41 = 511
-    // maxJingli = 100 + 50*3 = 250
-    expect(m).toEqual({ maxQi: 645, maxJing: 511, maxNeili: 500, maxJingli: 250 });
+    // maxNeili = 50*8 = 400
+    // maxQi = 210 + 50*1 + floor(400/4) = 210 + 50 + 100 = 360
+    // maxJing = 210 + 50*1 + floor(400/12) = 210 + 50 + 33 = 293
+    // maxJingli = 50 + 50*2 = 150
+    expect(m).toEqual({ maxQi: 360, maxJing: 293, maxNeili: 400, maxJingli: 150 });
   });
 
   it("不同属性组合产生不同上限（验证 con/int 分别驱动 qi/jing）", () => {
@@ -62,19 +62,19 @@ describe("computeMaxVitals（属性表驱动矩阵）", () => {
   it("参数表驱动：改系数影响结果（内容包可调）", () => {
     const custom = {
       ...DEFAULT_PARAMS,
-      vitals: { ...DEFAULT_PARAMS.vitals, qiPerCon: 8, forceQiPerLevel: 0 },
+      vitals: { ...DEFAULT_PARAMS.vitals, qiPerCon: 4, forceQiPerLevel: 0 },
     };
     const m = computeMaxVitals(custom, FRESH);
-    expect(m.maxQi).toBe(100 + 20 * 8); // 260，不再是 420
+    expect(m.maxQi).toBe(50 + 20 * 4); // 130
   });
 });
 
 describe("食物/饮水上限", () => {
   it("按体质/身法线性增长", () => {
-    expect(maxFoodCapacity(DEFAULT_PARAMS, 20)).toBe(400);
-    expect(maxFoodCapacity(DEFAULT_PARAMS, 30)).toBe(500);
-    expect(maxWaterCapacity(DEFAULT_PARAMS, 20)).toBe(400);
-    expect(maxWaterCapacity(DEFAULT_PARAMS, 25)).toBe(450);
+    expect(maxFoodCapacity(DEFAULT_PARAMS, 20)).toBe(200);
+    expect(maxFoodCapacity(DEFAULT_PARAMS, 30)).toBe(250);
+    expect(maxWaterCapacity(DEFAULT_PARAMS, 20)).toBe(200);
+    expect(maxWaterCapacity(DEFAULT_PARAMS, 25)).toBe(225);
   });
 });
 
@@ -100,16 +100,16 @@ describe("clampVitals / clampEff", () => {
     expect(clamped.effJing).toBe(0);
   });
 
-  it("正常值保持原样", () => {
+  it("正常值保持原样（在新上限内）", () => {
     const state = {
       qi: 200,
       jing: 200,
-      jingli: 80,
+      jingli: 40,
       neili: 0,
-      food: 300,
-      water: 300,
-      effQi: 400,
-      effJing: 400,
+      food: 180,
+      water: 180,
+      effQi: 200,
+      effJing: 200,
     };
     expect(clampVitals(state, max, caps.foodCap, caps.waterCap)).toEqual(state);
   });
@@ -136,12 +136,12 @@ describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () =
 
   it("按上限比例 + 时间差恢复，封顶上限；食水按绝对值消耗", () => {
     const next = applyRegen(HURT, MAX, 10, DEFAULT_PARAMS);
-    // qi: floor(420 * 0.02 * 10) = 84；jing: floor(420*0.015*10) = 63；
-    // jingli: floor(100*0.02*10) = 20；neili: floor(100*0.01*10) = 10
-    expect(next).toMatchObject({ qi: 84, jing: 63, jingli: 20, neili: 10 });
-    // food: 300 - floor(1*10) = 290；water: 300 - floor(1.5*10) = 285
-    expect(next.food).toBe(290);
-    expect(next.water).toBe(285);
+    // qi: floor(420 * 0.03 * 10) = 126；jing: floor(420*0.025*10) = 105；
+    // jingli: floor(100*0.03*10) = 30；neili: floor(100*0.015*10) = 15
+    expect(next).toMatchObject({ qi: 126, jing: 105, jingli: 30, neili: 15 });
+    // food: 300 - floor(0.8*10) = 292；water: 300 - floor(1.2*10) = 288
+    expect(next.food).toBe(292);
+    expect(next.water).toBe(288);
   });
 
   it("恢复不超上限；时间差超窗口按窗口封顶（防离线累积）；食水不低于 0", () => {
@@ -155,9 +155,9 @@ describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () =
     expect(nearlyFull.jing).toBe(420);
     // 3 小时（180 分钟）远超 30 分钟窗口 → 只按 30 分钟恢复/消耗
     const offline = applyRegen(HURT, MAX, 180, DEFAULT_PARAMS);
-    expect(offline.qi).toBe(Math.floor(420 * 0.02 * 30));
-    expect(offline.food).toBe(270);
-    expect(offline.water).toBe(255);
+    expect(offline.qi).toBe(Math.floor(420 * 0.03 * 30));
+    expect(offline.food).toBe(300 - Math.floor(0.8 * 30));
+    expect(offline.water).toBe(300 - Math.floor(1.2 * 30));
     const drained = applyRegen({ ...HURT, food: 5, water: 3 }, MAX, 10, DEFAULT_PARAMS);
     expect(drained.food).toBe(0);
     expect(drained.water).toBe(0);

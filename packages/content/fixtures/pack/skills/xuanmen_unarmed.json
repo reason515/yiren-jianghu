@@ -5,5 +5,5 @@
   "category": "unarmed",
   "enableSlots": ["unarmed"],
   "description": "掌力中正平和，近身时可卸可打。",
-  "maxLevel": 300
+  "maxLevel": 120
 }

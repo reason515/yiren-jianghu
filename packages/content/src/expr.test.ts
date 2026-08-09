@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compileExpr, evalExpr, ExprError } from "./expr.js";
-import { compileMechanics, evalFormula, evalPiecewise } from "./mechanics.js";
+import { compileMechanics, evalFormula } from "./mechanics.js";
 import { defaultCompiledMechanics } from "./defaultMechanics.js";
 
 describe("expr", () => {
@@ -22,33 +22,22 @@ describe("expr", () => {
   });
 });
 
-describe("mechanics fixture", () => {
+describe("mechanics fixture（小数值）", () => {
   it("compiles pack mechanics.yaml", () => {
     const m = defaultCompiledMechanics();
     expect(m.formulas.has("expForNextLevel")).toBe(true);
     expect(evalFormula(m, "expForNextLevel", { level: 1 })).toBe(100);
-    // level^3 / 10 → 1000/10 = 100
-    expect(evalFormula(m, "expGateRequired", { level: 10 })).toBeCloseTo(100, 5);
+    // level^2 / 0.5 → 100*2 = 200
+    expect(evalFormula(m, "expGateRequired", { level: 10 })).toBeCloseTo(200, 5);
+    expect(evalFormula(m, "expGateRequired", { level: 50 })).toBeCloseTo(5000, 5);
   });
 
-  it("skillPower piecewise matches legacy segments", () => {
+  it("skillPower 压缩：同属性下约等于等级", () => {
     const m = defaultCompiledMechanics();
-    expect(evalPiecewise(m, "levelCubePower", { level: 10 })).toBe(Math.floor((10 * 10 * 10) / 30));
-    expect(evalPiecewise(m, "levelCubePower", { level: 50 })).toBe(
-      900 + Math.floor(Math.floor(50 / 10) ** 3 / 3),
-    );
-    // expK=5 < 30 → floor(combatExp/100)
-    const combatExp = 5000;
-    const expK = Math.floor(combatExp / 1000);
-    expect(evalPiecewise(m, "combatExpBonus", { combatExp, expK })).toBe(
-      Math.floor(combatExp / 100),
-    );
-    // 第二段：expK=50
-    const combatExp2 = 50_000;
-    const expK2 = Math.floor(combatExp2 / 1000);
-    expect(evalPiecewise(m, "combatExpBonus", { combatExp: combatExp2, expK: expK2 })).toBe(
-      270 + Math.floor(combatExp2 / 1000),
-    );
+    const weighted = 20 * m.coeffs.skillPower.strWeight + 10; // 110
+    const power = 50;
+    const got = evalFormula(m, "skillPowerWeighted", { power, weighted });
+    expect(got).toBe(Math.floor((50 * 110) / (6 * 20))); // 45
   });
 
   it("rejects incomplete mechanics", () => {

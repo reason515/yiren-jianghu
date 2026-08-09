@@ -121,8 +121,8 @@ describe("buildCombatant（DC-041：基本功/特殊功激发有效等级）", (
   it("兼容展示字段：attack = str + 有效攻击槎等级；defense/dodge/parry 含属性基线", () => {
     const c = buildCombatant(DEFAULT_PARAMS, SOURCE, opts());
     expect(c.stats.attack).toBe(SOURCE.attrs.str + 60);
-    expect(c.stats.defense).toBe(10 + SOURCE.attrs.con);
-    expect(c.stats.dodge).toBe(5 + SOURCE.attrs.dex + 5);
-    expect(c.stats.parry).toBe(5 + 5);
+    expect(c.stats.defense).toBe(DEFAULT_PARAMS.combat.defenseBase + SOURCE.attrs.con);
+    expect(c.stats.dodge).toBe(DEFAULT_PARAMS.combat.dodgeBase + SOURCE.attrs.dex + 5);
+    expect(c.stats.parry).toBe(DEFAULT_PARAMS.combat.parryBase + 5);
   });
 });

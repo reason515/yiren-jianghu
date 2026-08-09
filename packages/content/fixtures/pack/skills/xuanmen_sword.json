@@ -5,5 +5,5 @@
   "category": "sword",
   "enableSlots": ["sword", "parry"],
   "description": "玄门看家剑法，可攻可守，剑意清正。",
-  "maxLevel": 300
+  "maxLevel": 120
 }

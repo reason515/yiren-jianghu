@@ -17,9 +17,9 @@
     }
   ],
   "battleRewards": {
-    "exp": 8,
-    "potential": 3,
-    "silver": 3
+    "exp": 22,
+    "potential": 8,
+    "silver": 8
   },
   "aggressive": false,
   "respawnSec": 60,
@@ -28,5 +28,6 @@
     "瞧你这身打扮，是来学艺的？村东头王师傅收徒，去晚了可抢不到铺位。",
     "喂，库房那边夜里总有响动。你要是闲得慌，去会会那些“住户”，村里有赏。"
   ],
-  "description": "见了生人先打量三眼，一双眼睛又沉又硬，手始终不离腰间兵器。"
+  "description": "见了生人先打量三眼，一双眼睛又沉又硬，手始终不离腰间兵器。",
+  "minExp": 40
 }

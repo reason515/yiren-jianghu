@@ -442,6 +442,13 @@ export function createCombatService(
       if (existing.rows[0]) throw new CombatError("combat_in_progress", "胜负未分，不可另起争端");
 
       const encounter = resolveEncounterTargets(content, room.npcIds, targetIds);
+      const playerExp = Number(character.exp) || 0;
+      for (const npc of encounter) {
+        const need = npc.minExp ?? 0;
+        if (playerExp < need) {
+          throw new CombatError("underleveled", `${npc.name}并非你如今可惹之人（需历练 ${need}）`);
+        }
+      }
       const ctx = await contextOf(character);
       const state = createBattleState(
         buildCharacterCombatant(

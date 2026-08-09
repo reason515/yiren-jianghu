@@ -420,17 +420,18 @@ describe("skillsService.practice", () => {
     const res = await skills.practice("acc_1", "basic_sword", 1);
     expect(res.skill.level).toBe(1);
     expect(res.leveled).toBe(true);
-    expect(res.qiSpent).toBe(20);
-    expect(state.characters[0]?.qi).toBe(480);
+    expect(res.qiSpent).toBe(12);
+    expect(state.characters[0]?.qi).toBe(488);
     expect(state.skills[0]).toMatchObject({ skill_id: "basic_sword", level: 1 });
   });
 
   it("多次演练：逐级扣气血（含等级成长成本）", async () => {
     const { skills, state } = boot();
     const res = await skills.practice("acc_1", "basic_sword", 3);
-    expect(res.qiSpent).toBe(62);
+    // 12 + 13 + 13 = 38
+    expect(res.qiSpent).toBe(38);
     expect(res.skill.level).toBe(2);
-    expect(state.characters[0]?.qi).toBe(438);
+    expect(state.characters[0]?.qi).toBe(462);
   });
 
   it("气血不足 → qi；满级 → max_level；中途力竭保留已练部分", async () => {
@@ -439,11 +440,12 @@ describe("skillsService.practice", () => {
       code: "qi",
     });
 
-    const { skills: s2, state } = boot({ qi: 35 });
+    // 仅够 1 次（12），不够第 2 次（再需 13）
+    const { skills: s2, state } = boot({ qi: 20 });
     const res = await s2.practice("acc_1", "basic_sword", 10);
     expect(res.iterations).toBe(1);
-    expect(res.qiSpent).toBe(20);
-    expect(state.characters[0]?.qi).toBe(15);
+    expect(res.qiSpent).toBe(12);
+    expect(state.characters[0]?.qi).toBe(8);
 
     const { skills: s3, state: st3 } = boot();
     st3.skills.push({
@@ -473,8 +475,8 @@ describe("skillsService.study", () => {
     const { skills, state } = boot();
     const res = await skills.study("acc_1", "basic_sword", 1);
     expect(res.skill.level).toBe(1);
-    expect(res.jingSpent).toBe(80);
-    expect(state.characters[0]?.jing).toBe(420);
+    expect(res.jingSpent).toBe(40);
+    expect(state.characters[0]?.jing).toBe(460);
   });
 
   it("精不足 → jing", async () => {

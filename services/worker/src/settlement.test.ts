@@ -14,11 +14,11 @@ describe("settleStudy", () => {
       maxLevel: 100,
       attempts: 5,
     });
-    // studyCost = 80 + level；0级80、1级81、2级82…精 300 够 3 次（80+81+81=242）
-    expect(res.attempts).toBe(3);
-    expect(res.jingSpent).toBe(242);
-    // 每次 1 点：0 级需 1 点升级，1 级需 2 点升级
-    expect(res.skills.basic_sword).toMatchObject({ level: 2, practicePoints: 0 });
+    // studyCost = 40 + level；请求 5 次：40+41+41+42+42=206（精 300 够跑满）
+    expect(res.attempts).toBe(5);
+    expect(res.jingSpent).toBe(206);
+    // 每次 1 点：0→1 需 1 点，1→2 需 2 点；第 4–5 次在 2 级攒点
+    expect(res.skills.basic_sword).toMatchObject({ level: 2, practicePoints: 2 });
     expect(res.levelsGained).toBe(2);
   });
 

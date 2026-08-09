@@ -2,7 +2,7 @@
   "id": "bandit",
   "name": "劫道匪徒",
   "kind": "battle",
-  "level": 6,
+  "level": 8,
   "skills": [
     {
       "skillId": "basic_sword",
@@ -19,9 +19,10 @@
     }
   ],
   "battleRewards": {
-    "exp": 30,
-    "potential": 10,
-    "silver": 12
+    "exp": 72,
+    "potential": 26,
+    "silver": 22
   },
-  "description": "獐头鼠目，专挑落单的行人下手，嘴上横，脚下却虚。"
+  "description": "獐头鼠目，专挑落单的行人下手，嘴上横，脚下却虚。",
+  "minExp": 200
 }

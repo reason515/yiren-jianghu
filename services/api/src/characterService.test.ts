@@ -237,15 +237,15 @@ describe("characterService", () => {
     const service = createCharacterService(db, CONTENT);
     await service.createCharacter("acc_1", INPUT);
     const character = await service.getCharacter("acc_1");
-    // 无内功时：maxQi = 100 + 20*16 + 25*0(强韧) + 0 = 420；maxJing = 100 + 20*16 = 420；
-    // maxJingli = 100；maxNeili = 0；maxFood = 200 + 20*10 = 400；maxWater = 200 + 15*10 = 350
+    // 无内功时：maxQi = 50 + 20*8 = 210；maxJing = 50 + 20*8 = 210；
+    // maxJingli = 50；maxNeili = 0；maxFood = 100 + 20*5 = 200；maxWater = 100 + 15*5 = 175
     expect(character?.vitalsMax).toEqual({
-      qi: 420,
-      jing: 420,
-      jingli: 100,
+      qi: 210,
+      jing: 210,
+      jingli: 50,
       neili: 0,
-      food: 400,
-      water: 350,
+      food: 200,
+      water: 175,
     });
     // 有内功时内力/气血随等级增长
     state.skills.push({
@@ -255,7 +255,8 @@ describe("characterService", () => {
       level: 10,
     });
     const withForce = await service.getCharacter("acc_1");
-    expect(withForce?.vitalsMax).toMatchObject({ neili: 100, jingli: 130 });
+    // neili=10*8=80；jingli=50+10*2=70
+    expect(withForce?.vitalsMax).toMatchObject({ neili: 80, jingli: 70 });
   });
 
   it("拒绝已有角色、重复名号和不合规属性", async () => {

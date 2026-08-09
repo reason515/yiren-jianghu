@@ -5,5 +5,5 @@
   "category": "dodge",
   "enableSlots": ["dodge"],
   "description": "步法如云，进退有度。",
-  "maxLevel": 300
+  "maxLevel": 120
 }

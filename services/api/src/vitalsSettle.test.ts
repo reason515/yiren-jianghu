@@ -79,6 +79,7 @@ describe("settleCharacterVitals（DC-044）", () => {
       { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
       "a1",
     );
-    expect(next).toMatchObject({ qi: 84, jing: 63, food: 290, water: 285 });
+    // maxQi/Jing=210：floor(210*0.03*10)=63 / floor(210*0.025*10)=52；食水按 0.8/1.2 扣
+    expect(next).toMatchObject({ qi: 63, jing: 52, food: 292, water: 288 });
   });
 });

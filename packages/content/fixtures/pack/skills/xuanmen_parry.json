@@ -5,5 +5,5 @@
   "category": "parry",
   "enableSlots": ["parry"],
   "description": "以剑为屏，格挡化解。",
-  "maxLevel": 300
+  "maxLevel": 120
 }

@@ -295,7 +295,7 @@ describe("sceneService.useItem", () => {
     const { scene, state } = boot();
     const res = await scene.useItem("acc_1", "it_yao");
     expect(res).toEqual({ ok: true, effect: "heal_qi" });
-    // maxQi = 100 + 20*16 + 25*0 = 420；100 + 50 = 150
+    // maxQi = 50 + 20*8 = 210；100 + 50 = 150（未触顶）
     expect(state.characters[0]?.qi).toBe(150);
     expect(state.items.find((i) => i.id === "it_yao")?.quantity).toBe(1);
 
@@ -306,7 +306,7 @@ describe("sceneService.useItem", () => {
   it("干粮补食物（上限钳制）；非可用物 → cannot_use", async () => {
     const { scene, state } = boot();
     await scene.useItem("acc_1", "it_food");
-    // maxFood = 200 + 20*10 = 400；100 + 30 = 130
+    // maxFood = 100 + 20*5 = 200；100 + 30 = 130（未触顶）
     expect(state.characters[0]?.food).toBe(130);
 
     await expect(scene.useItem("acc_1", "it_herbs")).rejects.toMatchObject({

@@ -58,22 +58,22 @@ export const paramsSchema = z.object({
     .default({}),
   /** 状态（Vitals）公式系数：C2 动态上限（首版无年龄阶段，采用成年人常数，参照 pkuxkx 31–60 段公式） */
   vitals: z.object({
-    qiBase: z.number().int().nonnegative().default(100),
-    jingBase: z.number().int().nonnegative().default(100),
-    jingliBase: z.number().int().nonnegative().default(100),
-    qiPerCon: z.number().int().nonnegative().default(16),
+    qiBase: z.number().int().nonnegative().default(50),
+    jingBase: z.number().int().nonnegative().default(50),
+    jingliBase: z.number().int().nonnegative().default(50),
+    qiPerCon: z.number().int().nonnegative().default(8),
     qiPerStr: z.number().int().nonnegative().default(0),
-    jingPerInt: z.number().int().nonnegative().default(16),
-    forceQiPerLevel: z.number().int().nonnegative().default(2),
+    jingPerInt: z.number().int().nonnegative().default(8),
+    forceQiPerLevel: z.number().int().nonnegative().default(1),
     forceJingPerLevel: z.number().int().nonnegative().default(1),
-    neiliPerLevel: z.number().int().positive().default(10),
-    jingliPerLevel: z.number().int().nonnegative().default(3),
+    neiliPerLevel: z.number().int().positive().default(8),
+    jingliPerLevel: z.number().int().nonnegative().default(2),
     neiliToQiDiv: z.number().int().positive().default(4),
     neiliToJingDiv: z.number().int().positive().default(12),
-    foodBase: z.number().int().positive().default(200),
-    foodPerCon: z.number().int().nonnegative().default(10),
-    waterBase: z.number().int().positive().default(200),
-    waterPerDex: z.number().int().nonnegative().default(10),
+    foodBase: z.number().int().positive().default(100),
+    foodPerCon: z.number().int().nonnegative().default(5),
+    waterBase: z.number().int().positive().default(100),
+    waterPerDex: z.number().int().nonnegative().default(5),
   }),
   /** 成长（学习/练习/读书）：exp 门槛与资源消耗 */
   growth: z.object({
@@ -81,12 +81,14 @@ export const paramsSchema = z.object({
     /** 收费请教默认学费（两银/次）；NPC teaches.tuitionSilver 可覆盖；门派请教强制 0（DC-039）。 */
     learnTuitionBase: z.number().int().nonnegative().default(2),
     potentialCostPerLevel: z.number().positive().default(1),
-    expGateExponent: z.number().positive().default(3),
-    expGateDivisor: z.number().positive().default(10),
-    practiceQiBase: z.number().int().positive().default(20),
+    /** 历练门槛指数（小数值：2 → level²×…） */
+    expGateExponent: z.number().positive().default(2),
+    /** 历练门槛除数（小数值：0.5 → level²×2） */
+    expGateDivisor: z.number().positive().default(0.5),
+    practiceQiBase: z.number().int().positive().default(12),
     practiceQiPerLevel: z.number().int().nonnegative().default(1),
     practicePointsPerAction: z.number().positive().default(1),
-    studyJingBase: z.number().int().positive().default(80),
+    studyJingBase: z.number().int().positive().default(40),
     /** 0 级首学精耗倍率（原硬编码 ×2） */
     firstLearnJingMult: z.number().positive().default(2),
     /** practicePointsNeeded = level + offset */
@@ -112,12 +114,14 @@ export const paramsSchema = z.object({
   perform: z.object({
     scaleDivisor: z.number().positive().default(100),
   }),
-  /** skill_power 合成系数（分段见 piecewise） */
+  /** skill_power 合成系数（小数值：输出约等于有效等级） */
   skillPower: z.object({
     attrDivisor: z.number().positive().default(6),
     strWeight: z.number().positive().default(5),
     zeroLevelExpDiv: z.number().positive().default(50),
     minPower: z.number().positive().default(1),
+    /** 分母放大：weighted/(attrDivisor*levelScale) 使同属性下战力≈level */
+    levelScale: z.number().positive().default(20),
   }),
 });
 
@@ -212,6 +216,11 @@ export const npcSchema = z.object({
   /** 外观描述（V2.12 观察动作）：玩家「观察」时显示，短句画面感（wuxia 规范）。 */
   description: z.string().default(""),
   level: z.number().int().nonnegative().optional(),
+  /**
+   * 开战历练门槛（阶梯怪谱）：玩家历练 < minExp 则拒战。
+   * 新手怪 0；中期怪抬高，避免长期刷野狗。
+   */
+  minExp: z.number().int().nonnegative().optional(),
   attrs: z
     .object({ str: z.number(), int: z.number(), con: z.number(), dex: z.number() })
     .optional(),

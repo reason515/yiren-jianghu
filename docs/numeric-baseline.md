@@ -19,7 +19,7 @@
 
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
-| exp 门槛 | 武功³/10 > 实战经验 无法深造（`feature/skill.c`、learn 检查） | `expGateExponent=3, expGateDivisor=10`（同式） | 曲线合理且与 pkuxkx 对齐，直接沿用 |
+| exp 门槛 | 武功³/10 > 实战经验 无法深造（`feature/skill.c`） | **小数值** `level²×2`（exponent=2, divisor=0.5） | 保留门槛语义，去掉立方爆炸；技能 100 需 2 万历练而非 10 万 |
 | 学习精耗 | `150/int`（learn.c）；0 级首学 ×2 | `learnJingCostBase=150` ÷ int；**0 级 ×2**（DC-039） | 沿用 pkuxkx 比例；首学加倍对齐 learn.c |
 | 学费（银两） | 武馆教头：交银充学习次数（jiaotou.c，每两银约 10 次） | **按次扣银**：`learnTuitionBase=2`；NPC `teaches.tuitionSilver` 可覆盖；门派请教强制 0（DC-039） | GUI 无 give 指令；按次报价更直观；机制借鉴教头非村武师 |
 | 潜能上限 | `max_potential = 100+sqrt(exp)/10`（updated.c，已废弃） | 无硬上限 + 有效潜能 = potential − learned_points | 移动端免于"刷潜能上限"挫败；已定修正（DC-017） |
@@ -44,9 +44,9 @@
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
 | 有效等级 | `query_skill`：基本/2+特殊（`feature/skill.c`） | 同式；GUI 激发（DC-041） | 对齐 xkx；无人物 level 阶梯加成 |
-| 命中 | `skill_power` + `random(ap+dp)<dp` 躲 / 再架（`probable.h`/`combatd.c`） | `piecewise.levelCubePower` / `combatExpBonus` + `skillPower*` 公式 | DC-041/046；旧线性命中系数已删除 |
+| 命中 | `skill_power` 分段立方（桌面大数） | **小数值** 战力≈有效等级（`levelScale=20` 压缩）+ A/(A+B) | 保留判定结构，输出落在百～千 |
 | 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架伤 ×`parryDamageFactor`(0.3) | 对齐 combatd；去掉独立「未命中」态 |
-| 伤害 | 武器+action%+内功−防御 | 基底 `weaponDmgPerLevel=0.5` 等 + 招式 damage/force% + 浮动 ±10% | 招式进伤害；绝招按原级缩放 |
+| 伤害 / 气血 | 成人段大血条 | 气血压半（qiBase=50, qiPerCon=8）+ 伤害系数略降 | 手机 4–8 回合短打 |
 | 逃跑 | flee 判定 | `fleeBaseChance=0.7` | PvE 逃生友好 |
 
 ## 2.4 挂机（afk）
@@ -73,7 +73,8 @@
 
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
-| 现金流出上限 | `moneyd.c MAX_CASHFLOW_ALLOWED`（40 两金） | `maxCashflowPerDay=1000` | 吸收"超限卖出静默失败"教训，明确拒绝（C9）；银两掉落见 NPC/任务实体 |
+| 现金流出上限 | `moneyd.c MAX_CASHFLOW_ALLOWED`（40 两金） | `maxCashflowPerDay=300` | 小银两经济；防通胀帽同步下调 |
+| 阶梯怪谱 | 无统一门槛 | NPC `minExp` + 抬高中期奖励 | 野狗入门；守卫/狼/匪分档拒战 |
 
 # 3. 调整纪律
 
@@ -84,6 +85,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-10 | 小数值 P0–P2：门槛²×2、战力压缩、软顶 100/120、气血压半、中期怪分档 | mechanics 调参 | 防后期爆炸、手机短打 |
 | 2026-08-10 | 生效源改为 `mechanics.yaml`；公式 DSL + 清理死字段 | DC-046 | review/运行时同一文件；旧 params.json 退役 |
 | 2026-08-09 | 学习首学精耗 ×2；学费 `learnTuitionBase=2`；建角赠银 10 | DC-039 双轨学艺 | 对齐 xkx learn 首学加倍 + 武馆教头交银语义（按次 GUI） |
 | 2026-08-09 | 生计挂机 hourlyGain + jingPerHour + maxExp | DC-042 | 新手无战斗也能攒银/历练/潜能；见 grind_jobs |

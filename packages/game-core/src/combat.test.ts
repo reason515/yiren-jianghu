@@ -97,15 +97,15 @@ describe("命中判定与伤害（纯函数，DC-041 skillPower 模型）", () =
         parry: 0,
       },
     });
-    // base = 30 + 20*0.5 + 10*0.4 - 100*0.5 = 30+10+4-50 = -6 → 下限 1
+    // base = 30 + 20*0.4 + 10*0.3 - 100*0.5 = 30+8+3-50 = -9 → 下限 1
     expect(computeAttackDamage(DEFAULT_PARAMS, atk, def, rng)).toBe(1);
     const def2 = { ...def, stats: { ...def.stats, defense: 0 } };
-    // base = 30+10+4-0 = 44（无浮动）
-    expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]))).toBe(44);
+    // base = 30+8+3-0 = 41（无浮动）
+    expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]))).toBe(41);
 
     const move: MoveInfo = { id: "m1", name: "式一", damage: 50, force: 20 };
-    // base(44) * 1.5 + forceLevel(10)*20/100 = 66 + 2 = 68（无浮动）
-    expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]), move)).toBe(68);
+    // base(41) * 1.5 + forceLevel(10)*20/100 = 61.5 + 2 = 63.5 → round 64
+    expect(computeAttackDamage(DEFAULT_PARAMS, atk, def2, stubRng([0.5]), move)).toBe(64);
   });
 
   it("resolveAttack 分支：dodge / parry / damage（ap=dp=pp 时概率恰为 0.5）", () => {

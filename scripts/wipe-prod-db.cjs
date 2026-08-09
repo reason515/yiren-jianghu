@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-/** 生产库清空（DC-041：升级后允许清空，不做旧档保活）。用法：node scripts/wipe-prod-db.cjs */
+/**
+ * 生产库清空并重建 schema（允许改已应用迁移后全量 migrate；不做旧档保活）。
+ * 用法：node scripts/wipe-prod-db.cjs
+ */
 const fs = require("node:fs");
 const { Client } = require("ssh2");
 
@@ -9,9 +12,16 @@ const [HOST, USER, PASSWORD] = fs
   .split("\n")
   .map((s) => s.trim());
 
+const sql = [
+  "DROP SCHEMA public CASCADE;",
+  "CREATE SCHEMA public;",
+  "GRANT ALL ON SCHEMA public TO yiren;",
+  "GRANT ALL ON SCHEMA public TO public;",
+].join(" ");
+
 const remote = [
   "cd /opt/yiren-jianghu",
-  'docker compose -f docker-compose.prod.yml exec -T postgres psql -U yiren -d yiren_jianghu -v ON_ERROR_STOP=1 -c "TRUNCATE accounts RESTART IDENTITY CASCADE;"',
+  `docker compose -f docker-compose.prod.yml exec -T postgres psql -U yiren -d yiren_jianghu -v ON_ERROR_STOP=1 -c "${sql}"`,
   "echo WIPE_OK",
 ].join(" && ");
 
@@ -30,7 +40,7 @@ ssh
           if (out.trim()) console.log(out.trim());
           if (errOut.trim()) console.error(errOut.trim());
           const ok = code === 0 && out.includes("WIPE_OK");
-          console.log(ok ? "✅ 生产库已清空（accounts CASCADE）" : "❌ 清空失败");
+          console.log(ok ? "✅ 生产库已重建 schema（待 migrate up）" : "❌ 清空失败");
           ssh.end();
           process.exit(ok ? 0 : 1);
         })

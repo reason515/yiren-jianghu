@@ -618,7 +618,7 @@
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 | 武功双轨学艺（DC-039） | ✅ 完成 | — | 收费请教（村武馆按次扣银+精+潜能）+ 门派拜师落库 master/sect；TeachSheet 当面请教；废除远程万能请教；迁移 0013；建角赠银 10 |
 | 门派辈分阶梯（DC-040） | ✅ 完成 | — | 拜谁学谁；generation；先大师兄后掌门（minSkills）；迁移 0014 |
-| xkx 式武学全套（DC-041，服务端） | 🔄 进行中 | H5 UI 待接 | 迁移 0015（`skill_enable` jsonb + `character_moves`/`character_performs`）；`game-core` `enable.ts`/`movePick.ts`/`skillPower.ts`/`perform.ts`/`combatantFactory.ts`（api/worker 共用一份构造逻辑）；`combatService` 普攻按已解锁+已激发招式 `pickMove`、绝招须 `character_performs` 已学、按 `performToBattleAction(perform, skillLevel)` 缩放；`skillsService` 新增 `enable`/`learnPerform`/`getMastery`，升级自动写入解锁招式；`characterService`/`sceneService` 随附 `skillEnable`/`moves`/`performs`/结构化 NPC 武功与教习摘要；新增路由 `POST /skills/enable`、`POST /skills/learn-perform`、`GET /skills/mastery`；H5（CharacterSheet 激发 UI、TeachSheet 学绝招、EntitySheet 武功列表、apiClient/characterTypes）与 D8/E 阶段一并排期 |
+| xkx 式武学全套（DC-041） | ✅ 完成 | — | 基本/特殊 + GUI 激发（有效=基本/2+特殊）；招式达级解锁、普攻 `pickMove`；绝招须学会后手动；命中 `skillPower` A/(A+B)；场景/详情可看师父武功；迁移 0015；H5 CharacterSheet/TeachSheet/EntitySheet；生产可 wipe（`scripts/wipe-prod-db.cjs`） |
 
 # 5. 风险与开放问题
 

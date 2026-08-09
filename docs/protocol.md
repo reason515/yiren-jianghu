@@ -64,6 +64,7 @@ POST /afk/start (auth)
 POST /afk/stop (auth)
 GET /afk/status (auth)
 GET /afk/reports (auth)
+GET /afk/grind-jobs (auth)
 GET /pvp/season (auth)
 GET /pvp/opponents (auth)
 POST /pvp/match (auth)
@@ -151,8 +152,17 @@ pvp.report
 - `POST /skills/learn-perform { performId, npcId }`（DC-041）：学会绝招须同房师父/教头当面传授，且该 NPC `teaches` 含此绝招所属武功；须满足 `learnMinLevel` + `learnRequires`（前置技能等级门槛）；写入 `character_performs`，此后战斗中 `POST /combat/action { action: "perform", performId }` 方可使用。已学绝招不可重复学。
 - `GET /skills/mastery`：人物簿「武学」页一站式视图——`skills`（含 `kind`/`enableSlots`）、`skillEnable`、各槎 `effective` 有效等级、已学 `moves`、已学 `performs`。无角色返回 404。
 
+# 9. 挂机约定（DC-026 / DC-042）
+
+- `POST /afk/start`：`kind` ∈ `study` | `quest` | `grind`。
+  - `study`：`config.skillId`；
+  - `quest`：已接击杀相位差事 + `templateId`（DC-026）；
+  - `grind`：`config.jobId` 指向内容包 `grindJobs`；历练达 `maxExp` 时拒绝（`grind_unavailable`）。无战斗、不需战术模板。
+- `GET /afk/grind-jobs`：返回当前角色仍可接的生计杂役（已按 `maxExp` 过滤），含每小时收益与耗精。
+- Worker 按时长结算三件套（经验/潜能/银两）并耗精；精尽停工写失败战报；每日递减同修炼挂机。
+
 ---
 
-# 9. 约定补遗
+# 10. 约定补遗
 
 （章节编号续接；机器可读清单仍以 §2 为准。）

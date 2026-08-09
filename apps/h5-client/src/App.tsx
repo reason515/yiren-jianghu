@@ -45,6 +45,7 @@ import {
   toAfkQuestOptions,
   toAfkSkillOptions,
   toAfkStatusView,
+  type AfkGrindOption,
   type AfkQuestOption,
   type AfkReportData,
   type AfkSkillOption,
@@ -133,6 +134,7 @@ export function App(): JSX.Element {
   const [afkSkills, setAfkSkills] = useState<AfkSkillOption[]>([]);
   const [afkQuests, setAfkQuests] = useState<AfkQuestOption[]>([]);
   const [afkTemplates, setAfkTemplates] = useState<AfkTemplateOption[]>([]);
+  const [afkGrindJobs, setAfkGrindJobs] = useState<AfkGrindOption[]>([]);
   const [afkPending, setAfkPending] = useState(false);
   const [afkReport, setAfkReport] = useState<AfkReportData | null>(null);
   const [afkReportOpen, setAfkReportOpen] = useState(false);
@@ -257,17 +259,19 @@ export function App(): JSX.Element {
   const refreshAfk = useCallback(
     async (pendingReportIds: string[] = []): Promise<void> => {
       try {
-        const [status, reports, skills, templates, quests] = await Promise.all([
+        const [status, reports, skills, templates, quests, grindJobs] = await Promise.all([
           api.getAfkStatus(),
           api.getAfkReports(),
           api.getSkills(),
           api.getTemplates(),
           api.getQuests(),
+          api.getAfkGrindJobs(),
         ]);
         setAfkStatus(toAfkStatusView(status));
         setAfkSkills(toAfkSkillOptions(skills));
         setAfkTemplates(templates.map((template) => ({ id: template.id, name: template.name })));
         setAfkQuests(toAfkQuestOptions(toQuestPanelData(quests).quests));
+        setAfkGrindJobs(grindJobs);
         const unread = reports.find((report) => pendingReportIds.includes(report.jobId));
         if (unread) {
           setAfkReport(unread);
@@ -1083,6 +1087,7 @@ export function App(): JSX.Element {
     setAfkSkills([]);
     setAfkQuests([]);
     setAfkTemplates([]);
+    setAfkGrindJobs([]);
     setAfkPending(false);
     setAfkReport(null);
     setAfkReportOpen(false);
@@ -1251,6 +1256,7 @@ export function App(): JSX.Element {
           skills={afkSkills}
           quests={afkQuests}
           templates={afkTemplates}
+          grindJobs={afkGrindJobs}
           active={afkStatus.active}
           statusMessage={afkStatus.message}
           pending={afkPending}

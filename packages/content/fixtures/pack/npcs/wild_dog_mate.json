@@ -4,25 +4,13 @@
   "kind": "battle",
   "level": 1,
   "skills": [
-    {
-      "skillId": "basic_sword",
-      "level": 0
-    }
+    { "skillId": "basic_unarmed", "level": 4 },
+    { "skillId": "basic_dodge", "level": 2 }
   ],
   "aggressive": true,
   "respawnSec": 30,
-  "drops": [
-    {
-      "itemId": "dry_food",
-      "chance": 0.3
-    }
-  ],
-  "battleRewards": {
-    "exp": 4,
-    "potential": 1,
-    "silver": 1
-  },
+  "drops": [{ "itemId": "dry_food", "chance": 0.3 }],
+  "battleRewards": { "exp": 4, "potential": 1, "silver": 1 },
   "description": "比那只灰狗更瘦，却跟得更紧。眼珠子转，像在等一声口哨。",
-  "nature": "beast",
-  "battleAllies": ["wild_dog"]
+  "nature": "beast"
 }

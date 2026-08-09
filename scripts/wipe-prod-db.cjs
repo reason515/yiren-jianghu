@@ -11,7 +11,7 @@ const [HOST, USER, PASSWORD] = fs
 
 const remote = [
   "cd /opt/yiren-jianghu",
-  "docker compose -f docker-compose.prod.yml exec -T postgres psql -U yiren -d yiren_jianghu -v ON_ERROR_STOP=1 -c \"TRUNCATE accounts RESTART IDENTITY CASCADE;\"",
+  'docker compose -f docker-compose.prod.yml exec -T postgres psql -U yiren -d yiren_jianghu -v ON_ERROR_STOP=1 -c "TRUNCATE accounts RESTART IDENTITY CASCADE;"',
   "echo WIPE_OK",
 ].join(" && ");
 

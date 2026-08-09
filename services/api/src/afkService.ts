@@ -49,13 +49,13 @@ export interface AfkReportView {
 }
 
 export interface AfkStartInput {
-  /** 挂机法门（服务端校验 study/quest；路由层只透传）。 */
+  /** 挂机法门（服务端校验 study/quest/grind；路由层只透传）。 */
   kind: string;
-  /** 战术模板 id（quest 模式必填；study 无需）。 */
+  /** 战术模板 id（quest 模式必填；study/grind 无需）。 */
   templateId?: string;
   /** 分钟；缺省取参数表上限。 */
   durationMinutes?: number;
-  /** 挂机配置：study → { skillId }；quest → { questId? }。 */
+  /** 挂机配置：study → { skillId }；quest → { questId }；grind → { jobId }。 */
   config?: Record<string, unknown>;
 }
 
@@ -64,6 +64,17 @@ export interface AfkService {
   stop(accountId: string): Promise<AfkReportView>;
   status(accountId: string): Promise<AfkJobView | null>;
   reports(accountId: string, limit?: number): Promise<AfkReportView[]>;
+  /** 当前角色可接的生计杂役（按 maxExp 过滤）。 */
+  grindJobs(accountId: string): Promise<AfkGrindJobView[]>;
+}
+
+export interface AfkGrindJobView {
+  id: string;
+  name: string;
+  description: string;
+  maxExp: number;
+  hourlyGain: AfkGainsView;
+  jingPerHour: number;
 }
 
 type AfkJobRow = {
@@ -95,20 +106,27 @@ function gainsView(g: Partial<Record<(typeof GAIN_KEYS)[number], number>>): AfkG
 function narrativeFor(kind: AfkJobKind, status: string): string {
   if (status === "cancelled") return "你收住架势，江湖路长，改日再练。";
   if (status === "failed") {
-    return kind === "quest" ? "这一程走得勉强，事未了结，只得折返。" : "气机不继，此行无功而返。";
+    if (kind === "quest") return "这一程走得勉强，事未了结，只得折返。";
+    if (kind === "grind") return "力不从心，杂役只好暂且放下。";
+    return "气机不继，此行无功而返。";
   }
-  return kind === "quest" ? "事已了结，一路风尘，尽数落袋。" : "收功睁眼，只觉筋骨松活，神完气足。";
+  if (kind === "quest") return "事已了结，一路风尘，尽数落袋。";
+  if (kind === "grind") return "日头偏西，杂役已毕，银钱与历练一并入囊。";
+  return "收功睁眼，只觉筋骨松活，神完气足。";
 }
 
 export function createAfkService(db: Db, content: ContentPack): AfkService {
   const skillsById = new Map(content.skills.map((s) => [s.id, s]));
   const questsById = new Map(content.quests.map((quest) => [quest.id, quest]));
+  const grindById = new Map((content.grindJobs ?? []).map((job) => [job.id, job]));
   const maxHours = content.params.afk.maxDurationHours;
   const maxMinutes = Math.floor(maxHours * 60);
 
-  const activeCharacter = async (accountId: string): Promise<{ id: string } | null> => {
-    const rows = await db.query<{ id: string }>(
-      "SELECT id FROM characters WHERE account_id = $1 AND status = 'active'",
+  const activeCharacter = async (
+    accountId: string,
+  ): Promise<{ id: string; exp: number } | null> => {
+    const rows = await db.query<{ id: string; exp: number }>(
+      "SELECT id, exp FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     return rows.rows[0] ?? null;
@@ -156,7 +174,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
     async start(accountId, input) {
       const ch = await activeCharacter(accountId);
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
-      if (input.kind !== "study" && input.kind !== "quest") {
+      if (input.kind !== "study" && input.kind !== "quest" && input.kind !== "grind") {
         throw new AfkError("invalid_kind", "不识得的挂机法门");
       }
       const minutes = input.durationMinutes ?? maxMinutes;
@@ -169,6 +187,15 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         const skillId = typeof config.skillId === "string" ? config.skillId : "";
         if (!skillId || !skillsById.has(skillId)) {
           throw new AfkError("invalid_config", "修炼挂机须指定一门已知武功");
+        }
+      }
+
+      if (input.kind === "grind") {
+        const jobId = typeof config.jobId === "string" ? config.jobId : "";
+        const grind = grindById.get(jobId);
+        if (!grind) throw new AfkError("invalid_config", "生计挂机须择一桩杂役");
+        if (grind.maxExp > 0 && ch.exp >= grind.maxExp) {
+          throw new AfkError("grind_unavailable", "历练已够，此等杂役再做无益");
         }
       }
 
@@ -315,6 +342,21 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         });
       }
       return out;
+    },
+
+    async grindJobs(accountId) {
+      const ch = await activeCharacter(accountId);
+      if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
+      return (content.grindJobs ?? [])
+        .filter((job) => job.maxExp === 0 || ch.exp < job.maxExp)
+        .map((job) => ({
+          id: job.id,
+          name: job.name,
+          description: job.description,
+          maxExp: job.maxExp,
+          hourlyGain: gainsView(job.hourlyGain),
+          jingPerHour: job.jingPerHour,
+        }));
     },
   };
 }

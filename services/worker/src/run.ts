@@ -3,11 +3,12 @@ import { buildReport, processTick, type AfkJobState, type SkillMap } from "@yjh/
 import type { ContentPack } from "@yjh/content";
 import { attemptsForHours, settleStudy } from "./settlement.js";
 import { settleQuestBattle } from "./questSettlement.js";
+import { settleGrind } from "./grindSettlement.js";
 
 /**
  * F2 Worker 结算：以 last_tick_at 推进 running 作业。
  * 每桩作业在独立事务内以 FOR UPDATE 锁住；修炼逐次参悟，行侠按 DC-026
- * 自动推进一场已绑定的击杀任务战斗，所有资源、任务、掉落与战报同事务提交。
+ * 自动推进已绑定击杀任务，生计（DC-042）按时长发三件套；资源与战报同事务提交。
  */
 export interface SettlementSummary {
   scanned: number;
@@ -50,9 +51,13 @@ function gains(value?: Partial<{ exp: number; potential: number; silver: number 
 /** 战报叙事（可变数值由 UI 单列展示）。 */
 function narrativeFor(kind: string, status: string): string {
   if (status === "failed") {
-    return kind === "quest" ? "风尘未定，事未办妥，只得折返。" : "气机不继，此行无功而返。";
+    if (kind === "quest") return "风尘未定，事未办妥，只得折返。";
+    if (kind === "grind") return "力不从心，杂役只好暂且放下。";
+    return "气机不继，此行无功而返。";
   }
-  return kind === "quest" ? "尘埃落定，所托之事已有交代。" : "收功睁眼，只觉筋骨松活，神完气足。";
+  if (kind === "quest") return "尘埃落定，所托之事已有交代。";
+  if (kind === "grind") return "日头偏西，杂役已毕，银钱与历练一并入囊。";
+  return "收功睁眼，只觉筋骨松活，神完气足。";
 }
 
 function stateOf(job: JobRow, now: number, currentGains = gains()): AfkJobState {
@@ -60,7 +65,7 @@ function stateOf(job: JobRow, now: number, currentGains = gains()): AfkJobState 
   return {
     id: job.id,
     characterId: job.character_id,
-    kind: job.kind as "study" | "quest",
+    kind: job.kind as "study" | "quest" | "grind",
     status: "running",
     phase: job.phase,
     startedAt: Date.parse(job.started_at),
@@ -367,6 +372,90 @@ async function settleStudyJob(
   return done ? "completed" : "settled";
 }
 
+async function settleGrindJob(
+  client: PoolClient,
+  job: JobRow,
+  content: ContentPack,
+  now: number,
+  deltaHours: number,
+): Promise<"settled" | "completed"> {
+  const config = parse<Record<string, unknown>>(job.config);
+  const jobId = typeof config.jobId === "string" ? config.jobId : "";
+  const def = (content.grindJobs ?? []).find((entry) => entry.id === jobId);
+  const priorGains = gains(config.gains as ReturnType<typeof gains>);
+  if (!def) {
+    return finishQuestJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "此等杂役已不在簿中",
+      config,
+      gains: priorGains,
+    });
+  }
+
+  const charRows = await client.query<{ jing: number; exp: number }>(
+    "SELECT jing, exp FROM characters WHERE id = $1",
+    [job.character_id],
+  );
+  const character = charRows.rows[0];
+  if (!character) {
+    return finishQuestJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "行止之人已不在此地",
+      config,
+      gains: priorGains,
+    });
+  }
+
+  const settled = settleGrind({
+    params: content.params,
+    job: stateOf(job, now, priorGains),
+    now,
+    deltaHours,
+    jing: character.jing,
+    hourlyGain: def.hourlyGain,
+    jingPerHour: def.jingPerHour,
+    maxExp: def.maxExp,
+    characterExp: character.exp,
+  });
+
+  const tickGains = settled.outcome.gained;
+  const totalGains = gains({
+    exp: priorGains.exp + tickGains.exp,
+    potential: priorGains.potential + tickGains.potential,
+    silver: priorGains.silver + tickGains.silver,
+  });
+  const nextConfig = { ...config, gains: totalGains };
+
+  await client.query(
+    "UPDATE characters SET jing = jing - $1, exp = exp + $2, potential = potential + $3, silver = silver + $4 WHERE id = $5",
+    [settled.jingSpent, tickGains.exp, tickGains.potential, tickGains.silver, job.character_id],
+  );
+
+  if (settled.outcome.status !== "running") {
+    return finishQuestJob(client, job, now, {
+      status: settled.outcome.status === "completed" ? "completed" : "failed",
+      phase: settled.outcome.status === "completed" ? "done" : "failed",
+      reason: settled.outcome.job.stopReason ?? "杂役了结",
+      config: nextConfig,
+      gains: totalGains,
+    });
+  }
+
+  await client.query(
+    "UPDATE afk_jobs SET phase = 'work', day = $1, hours_today = $2, config = $3, last_tick_at = $4, updated_at = now() WHERE id = $5",
+    [
+      settled.outcome.job.day,
+      settled.outcome.job.hoursToday,
+      JSON.stringify(nextConfig),
+      new Date(now).toISOString(),
+      job.id,
+    ],
+  );
+  return "settled";
+}
+
 async function settleOne(
   client: PoolClient,
   job: JobRow,
@@ -376,9 +465,9 @@ async function settleOne(
   const lastTick = job.last_tick_at ? Date.parse(job.last_tick_at) : Date.parse(job.started_at);
   const deltaHours = (now - lastTick) / 3_600_000;
   if (deltaHours <= 0) return "skipped";
-  return job.kind === "quest"
-    ? settleQuest(client, job, content, now)
-    : settleStudyJob(client, job, content, now, deltaHours);
+  if (job.kind === "quest") return settleQuest(client, job, content, now);
+  if (job.kind === "grind") return settleGrindJob(client, job, content, now, deltaHours);
+  return settleStudyJob(client, job, content, now, deltaHours);
 }
 
 export async function settleDueJobs(opts: {
@@ -393,7 +482,7 @@ export async function settleDueJobs(opts: {
   );
   for (const job of jobs.rows) {
     summary.scanned += 1;
-    if (job.kind !== "study" && job.kind !== "quest") {
+    if (job.kind !== "study" && job.kind !== "quest" && job.kind !== "grind") {
       summary.skipped += 1;
       continue;
     }

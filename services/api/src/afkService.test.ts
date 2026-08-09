@@ -69,12 +69,23 @@ const PACK = {
     },
   ],
   story: [],
+  grindJobs: [
+    {
+      id: "village_chore",
+      name: "村中杂役",
+      description: "劈柴挑水",
+      maxExp: 2000,
+      hourlyGain: { exp: 36, potential: 18, silver: 8 },
+      jingPerHour: 12,
+    },
+  ],
 } as unknown as ContentPack;
 
 interface CharState {
   id: string;
   account_id: string;
   status: string;
+  exp?: number;
 }
 
 interface TplState {
@@ -141,11 +152,14 @@ function mockDb() {
             .map((s) => ({ account_id: s.account_id, expires_at: s.expires_at })) as unknown as T[],
         };
       }
-      if (text.includes("SELECT id FROM characters")) {
+      if (
+        text.includes("SELECT id, exp FROM characters") ||
+        text.includes("SELECT id FROM characters")
+      ) {
         return {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
-            .map((c) => ({ id: c.id })) as unknown as T[],
+            .map((c) => ({ id: c.id, exp: c.exp ?? 0 })) as unknown as T[],
         };
       }
       if (text.includes("FROM character_quests WHERE character_id = $1 AND quest_id = $2")) {
@@ -304,6 +318,30 @@ describe("afkService.start", () => {
       rules: [],
       defaultAction: { type: "attack" },
     });
+  });
+
+  it("生计挂机：择杂役即可；历练超限拒绝", async () => {
+    const { afk, state } = boot();
+    const view = await afk.start("acc_1", {
+      kind: "grind",
+      durationMinutes: 60,
+      config: { jobId: "village_chore" },
+    });
+    expect(view.kind).toBe("grind");
+    expect(JSON.parse(state.jobs[0]!.config)).toEqual({ jobId: "village_chore" });
+
+    state.jobs = [];
+    state.characters[0]!.exp = 2000;
+    await expect(
+      afk.start("acc_1", {
+        kind: "grind",
+        durationMinutes: 60,
+        config: { jobId: "village_chore" },
+      }),
+    ).rejects.toMatchObject({ code: "grind_unavailable" });
+
+    const jobs = await afk.grindJobs("acc_1");
+    expect(jobs).toEqual([]);
   });
 
   it("非法参数：kind/时长/武功/模板归属", async () => {

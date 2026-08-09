@@ -134,7 +134,7 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 | 列 | 类型 | 说明 |
 |---|---|---|
 | id / character_id | uuid | FK CASCADE |
-| kind | text | quest/study/grind/fishing/peiyao |
+| kind | text | quest/study/grind（fishing/peiyao 预留，首版用 grind 统一生计） |
 | status | text | running/paused/completed/failed/cancelled |
 | phase | text | 状态机相位（init/hunt/fight/rest…） |
 | template_id / template_snapshot | uuid / jsonb | 绑定的战术模板（含快照） |

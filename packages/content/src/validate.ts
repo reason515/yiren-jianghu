@@ -46,6 +46,7 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
   issues.push(...dup(pack.performs, "performs"));
   issues.push(...dup(pack.quests, "quests"));
   issues.push(...dup(pack.story, "story"));
+  issues.push(...dup(pack.grindJobs ?? [], "grindJobs"));
 
   // 技能（DC-041）
   for (const skill of pack.skills) {

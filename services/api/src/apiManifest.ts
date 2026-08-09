@@ -74,6 +74,7 @@ export const API_MANIFEST: ApiRoute[] = [
   { method: "POST", path: "/afk/stop", auth: true, domain: "afk" },
   { method: "GET", path: "/afk/status", auth: true, domain: "afk" },
   { method: "GET", path: "/afk/reports", auth: true, domain: "afk" },
+  { method: "GET", path: "/afk/grind-jobs", auth: true, domain: "afk" },
   // 异步 PVP
   { method: "GET", path: "/pvp/season", auth: true, domain: "pvp" },
   { method: "GET", path: "/pvp/opponents", auth: true, domain: "pvp" },

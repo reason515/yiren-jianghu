@@ -92,6 +92,16 @@ export interface ApiClient {
   startAfk(config: AfkStartConfig): Promise<AfkJobData>;
   stopAfk(): Promise<AfkReportData>;
   getAfkReports(): Promise<AfkReportData[]>;
+  getAfkGrindJobs(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      description: string;
+      maxExp: number;
+      hourlyGain: { exp: number; potential: number; silver: number };
+      jingPerHour: number;
+    }>
+  >;
   getTemplates(): Promise<Array<{ id: string; name: string }>>;
   getForumSections(): Promise<ForumSection[]>;
   getForumPosts(sectionId?: string): Promise<ForumPost[]>;
@@ -181,6 +191,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     startAfk: (config) => post("/afk/start", config),
     stopAfk: () => post("/afk/stop", {}),
     getAfkReports: () => get("/afk/reports"),
+    getAfkGrindJobs: () => get("/afk/grind-jobs"),
     getTemplates: () => get("/templates"),
     getForumSections: () => get("/forum/sections"),
     getForumPosts: (sectionId) =>

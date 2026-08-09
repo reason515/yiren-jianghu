@@ -72,8 +72,9 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
 - **DB 轮询替代 Redis 延迟队列**：以 `last_tick_at` 为基准结算 `deltaHours`——离线期间照常推进，**崩溃恢复天然覆盖**（启动即跑一轮）。封测规模（<1k 作业）轮询足够；量大再上 Redis。
 - **并发幂等三件套**：每作业一个事务 + `SELECT ... FOR UPDATE` 行锁抢占（多实例不重复结算）+ 原子写回（作业状态/角色资源/技能在同事务提交）。
 - **结算粒度**：挂机频率参数进内容包 params（`afk.studyAttemptsPerHour`），worker 按时长换算次数并**封顶**（2000）防失控；精/气血耗尽即停（不报错）。
-- **能力闭环优先于 UI 暴露**：API 接受某个 `kind` 不等于 Worker 已能结算它。开放新的挂机入口前，确认 `run.ts` 的作业分发会进入对应结算分支、能落终态战报，并用真实库 E2E 验证资源/进度变化；未实现的种类不得在客户端伪装成可用。当前 Worker 已实际结算 `study` 与 `quest` 两类作业（行侠见下一条 DC-026）。
+- **能力闭环优先于 UI 暴露**：API 接受某个 `kind` 不等于 Worker 已能结算它。开放新的挂机入口前，确认 `run.ts` 的作业分发会进入对应结算分支、能落终态战报，并用真实库 E2E 验证资源/进度变化；未实现的种类不得在客户端伪装成可用。当前 Worker 已实际结算 `study`、`quest`、`grind` 三类作业（行侠见 DC-026；生计见 DC-042）。
 - **行侠（quest）挂机结算（DC-026）**：启动仅接受「已接且当前相位为击杀」的任务（afkService 校验，`quest_unavailable`），战术模板必填并固化快照；Worker 每 tick 以固定种子（`jobId|killIndex|purpose` 派生，战斗/掉落分离）驱动一场目标战斗，胜利发放 NPC `battleRewards`/`drops`、推进任务，任务完成自动置 `reported` 并连同交差奖励在同一事务落库；败/逃/平局写 `failed` 并保留资源损耗；跨 tick 累计收益存 `config.gains`。确定性种子保证事务回滚重试结果不变。
+- **生计（grind）挂机结算（DC-042）**：内容包 `grindJobs`（对标配药/钓鱼「时间换银+少量成长」）；无战斗、不需战术；按时长发 exp/potential/silver 并耗精；`maxExp` 限制仅新手可用；精尽停工。AfkSheet 默认「生计」页；`GET /afk/grind-jobs` 按历练过滤。
 - **终态写战报**：`report` jsonb（含 wuxia 叙事）+ `read_at` 未读（resume 拉取后置已读）。
 - 集成验证：e2e 直接调用 `settleDueJobs({ pool, content, now })`（now 前移模拟时长），断言资源消耗信号而非精确成长值（成长细节归纯函数单测）。
 

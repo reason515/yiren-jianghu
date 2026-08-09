@@ -22,6 +22,7 @@ const COLLECTIONS = [
   "performs",
   "quests",
   "story",
+  "grind_jobs",
 ] as const;
 
 async function readJson(file: string): Promise<unknown> {
@@ -76,6 +77,7 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
     performs: loaded.performs,
     quests: loaded.quests,
     story: loaded.story,
+    grindJobs: loaded.grind_jobs,
     ...(worldMap ? { worldMap } : {}),
   });
 

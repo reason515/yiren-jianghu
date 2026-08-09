@@ -1,0 +1,8 @@
+{
+  "id": "village_fish",
+  "name": "溪边垂钓",
+  "description": "村外浅溪抛竿。钓上几尾可换银两，亦能静心长些历练。",
+  "maxExp": 5000,
+  "hourlyGain": { "exp": 28, "potential": 14, "silver": 10 },
+  "jingPerHour": 10
+}

@@ -2,6 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
 import { ChoiceRow } from "./base/ChoiceRow.js";
 import type {
+  AfkGrindOption,
   AfkQuestOption,
   AfkSkillOption,
   AfkStartConfig,
@@ -9,16 +10,15 @@ import type {
 } from "../lib/afkTypes.js";
 
 /**
- * 挂机启动面板：修炼（study）与行侠（quest）均已由 Worker 实际结算。
- * 互斥选择用分段控件/chips（禁原生 select）；客户端只提交受控意图：
- * - 修炼：已学武功 + 时长；
- * - 行侠：已接且当前为击杀相位的差事 + 战术模板 + 时长。
+ * 挂机启动面板：修炼 / 行侠 / 生计（DC-042）。
+ * 互斥选择用分段控件/chips（禁原生 select）；客户端只提交受控意图。
  */
 export interface AfkSheetProps {
   open: boolean;
   skills: AfkSkillOption[];
   quests: AfkQuestOption[];
   templates: AfkTemplateOption[];
+  grindJobs: AfkGrindOption[];
   active: boolean;
   statusMessage: string;
   pending?: boolean;
@@ -34,6 +34,7 @@ export function AfkSheet({
   skills,
   quests,
   templates,
+  grindJobs,
   active,
   statusMessage,
   pending = false,
@@ -41,10 +42,11 @@ export function AfkSheet({
   onStop,
   onClose,
 }: AfkSheetProps): JSX.Element | null {
-  const [mode, setMode] = useState<"study" | "quest">("study");
+  const [mode, setMode] = useState<"study" | "quest" | "grind">("grind");
   const [skillId, setSkillId] = useState(skills[0]?.id ?? "");
   const [questId, setQuestId] = useState(quests[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
+  const [grindJobId, setGrindJobId] = useState(grindJobs[0]?.id ?? "");
   const [duration, setDuration] = useState(DURATIONS[0]!);
 
   useEffect(() => {
@@ -61,28 +63,44 @@ export function AfkSheet({
     }
   }, [templateId, templates]);
 
-  const canStart = mode === "study" ? Boolean(skillId) : Boolean(questId && templateId);
+  useEffect(() => {
+    if (!grindJobs.some((job) => job.id === grindJobId)) setGrindJobId(grindJobs[0]?.id ?? "");
+  }, [grindJobId, grindJobs]);
+
+  const canStart =
+    mode === "study"
+      ? Boolean(skillId)
+      : mode === "quest"
+        ? Boolean(questId && templateId)
+        : Boolean(grindJobId);
 
   const start = (): void => {
     if (mode === "study") {
       onStart({ kind: "study", durationMinutes: duration, config: { skillId } });
-    } else if (questId && templateId) {
+    } else if (mode === "quest" && questId && templateId) {
       onStart({
         kind: "quest",
         templateId,
         durationMinutes: duration,
         config: { questId },
       });
+    } else if (mode === "grind" && grindJobId) {
+      onStart({ kind: "grind", durationMinutes: duration, config: { jobId: grindJobId } });
     }
   };
 
+  const lead =
+    mode === "study"
+      ? "收束心神，择一门功夫细细参悟。离线时光虽静，寸进仍由服务端记下。"
+      : mode === "quest"
+        ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
+        : "不需动武，只换些碎银与历练。村中杂役、溪边垂钓，皆是入江湖的第一笔盘缠。";
+
+  const startLabel = mode === "study" ? "开始参悟" : mode === "quest" ? "启程行侠" : "开始生计";
+
   return (
     <Sheet open={open} title="行止" onClose={onClose}>
-      <p className="afk-lead">
-        {mode === "study"
-          ? "收束心神，择一门功夫细细参悟。离线时光虽静，寸进仍由服务端记下。"
-          : "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"}
-      </p>
+      <p className="afk-lead">{lead}</p>
 
       {active ? (
         <div className="afk-running">
@@ -98,6 +116,7 @@ export function AfkSheet({
             <ChoiceRow
               label="行止法门"
               options={[
+                { value: "grind", label: "生计", disabled: pending },
                 { value: "study", label: "修炼", disabled: pending },
                 { value: "quest", label: "行侠", disabled: pending },
               ]}
@@ -127,7 +146,7 @@ export function AfkSheet({
                 <p className="afk-empty">尚无可参悟的武功，先向师长请教一门本事。</p>
               )}
             </div>
-          ) : (
+          ) : mode === "quest" ? (
             <>
               <div className="field">
                 <span className="field-label">应下差事</span>
@@ -170,6 +189,38 @@ export function AfkSheet({
                 )}
               </div>
             </>
+          ) : (
+            <div className="field">
+              <span className="field-label">杂役</span>
+              {grindJobs.length > 0 ? (
+                <div className="chips" role="group" aria-label="杂役">
+                  {grindJobs.map((job) => (
+                    <button
+                      key={job.id}
+                      type="button"
+                      className={`tactic-chip${grindJobId === job.id ? " on" : ""}`}
+                      disabled={pending}
+                      onClick={() => setGrindJobId(job.id)}
+                    >
+                      {job.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="afk-empty">眼下没有可做的杂役——历练已够，或簿中暂无安排。</p>
+              )}
+              {grindJobId ? (
+                <p className="afk-hint">
+                  {grindJobs.find((job) => job.id === grindJobId)?.description}
+                  {(() => {
+                    const job = grindJobs.find((entry) => entry.id === grindJobId);
+                    if (!job) return null;
+                    const g = job.hourlyGain;
+                    return ` · 每时约历练 ${g.exp}、潜能 ${g.potential}、银 ${g.silver}`;
+                  })()}
+                </p>
+              ) : null}
+            </div>
           )}
 
           <div className="field">
@@ -194,7 +245,7 @@ export function AfkSheet({
             disabled={!canStart || pending}
             onClick={start}
           >
-            {pending ? "安排行止中…" : mode === "study" ? "开始参悟" : "启程行侠"}
+            {pending ? "安排行止中…" : startLabel}
           </button>
         </div>
       )}

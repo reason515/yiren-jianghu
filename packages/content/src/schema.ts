@@ -376,6 +376,25 @@ export const storySchema = z.object({
   conditions: z.array(z.string()).default([]),
 });
 
+/**
+ * 生计挂机（DC-042，对标 pkuxkx 配药/钓鱼新手打工）：
+ * 无战斗，按时长发银两/经验/潜能；maxExp 限制仅新手可用。
+ */
+export const grindJobSchema = z.object({
+  id,
+  name: z.string().min(1),
+  description: z.string().default(""),
+  /** 历练超过此值不可再接（0 = 不限）。 */
+  maxExp: z.number().int().nonnegative().default(0),
+  hourlyGain: z.object({
+    exp: z.number().nonnegative(),
+    potential: z.number().nonnegative(),
+    silver: z.number().nonnegative(),
+  }),
+  /** 每小时耗精；精尽则挂机失败停止。 */
+  jingPerHour: z.number().nonnegative().default(10),
+});
+
 // ---------- manifest ----------
 export const manifestSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -417,6 +436,7 @@ export const contentPackSchema = z.object({
   performs: z.array(performSchema).default([]),
   quests: z.array(questSchema).default([]),
   story: z.array(storySchema).default([]),
+  grindJobs: z.array(grindJobSchema).default([]),
   /** 天下图（可选；缺省时服务端仅返回本域房间图） */
   worldMap: worldMapSchema.optional(),
 });
@@ -431,6 +451,7 @@ export type Move = z.infer<typeof moveSchema>;
 export type Perform = z.infer<typeof performSchema>;
 export type Quest = z.infer<typeof questSchema>;
 export type StoryNode = z.infer<typeof storySchema>;
+export type GrindJob = z.infer<typeof grindJobSchema>;
 export type Manifest = z.infer<typeof manifestSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;
 export type WorldMapNode = z.infer<typeof worldMapNodeSchema>;

@@ -66,6 +66,12 @@
   line-height: 1.7;
   margin: 0;
 }
+.afk-hint {
+  color: var(--paper-dim);
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 8px 0 0;
+}
 .afk-report {
   display: flex;
   flex-direction: column;

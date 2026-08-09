@@ -792,7 +792,10 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       };
       try {
         return await afk.start(accountId, {
-          kind: body.kind === "study" || body.kind === "quest" ? body.kind : "",
+          kind:
+            body.kind === "study" || body.kind === "quest" || body.kind === "grind"
+              ? body.kind
+              : "",
           templateId: typeof body.templateId === "string" ? body.templateId : undefined,
           durationMinutes:
             typeof body.durationMinutes === "number" ? body.durationMinutes : undefined,
@@ -842,6 +845,17 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       const accountId = authContexts.get(req)?.accountId ?? "";
       try {
         return await afk.reports(accountId);
+      } catch (err) {
+        if (err instanceof AfkError && err.code === "no_character")
+          return envelope(reply, 404, "no_character", "尚未立名闯江湖");
+        throw err;
+      }
+    });
+
+    app.get("/afk/grind-jobs", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await afk.grindJobs(accountId);
       } catch (err) {
         if (err instanceof AfkError && err.code === "no_character")
           return envelope(reply, 404, "no_character", "尚未立名闯江湖");

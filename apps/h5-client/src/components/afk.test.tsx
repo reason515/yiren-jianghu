@@ -29,6 +29,17 @@ const QUESTS = [{ id: "q_hunt", name: "缉拿匪首", targetName: "劫道匪徒"
 
 const TEMPLATES = [{ id: "tpl_1", name: "稳扎稳打" }];
 
+const GRINDS = [
+  {
+    id: "village_chore",
+    name: "村中杂役",
+    description: "帮村民劈柴挑水。",
+    maxExp: 2000,
+    hourlyGain: { exp: 36, potential: 18, silver: 8 },
+    jingPerHour: 12,
+  },
+];
+
 describe("GrindBanner（挂机状态条）", () => {
   it("运行中显示状态消息与停止按钮", () => {
     let stopped = 0;
@@ -60,12 +71,18 @@ describe("AfkSheet（挂机启动）", () => {
         skills={SKILLS}
         quests={QUESTS}
         templates={TEMPLATES}
+        grindJobs={GRINDS}
         active={false}
         statusMessage=""
         onStart={(c) => (config = c)}
         onStop={() => (stopped += 1)}
         onClose={() => undefined}
       />,
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+        .find((b) => b.textContent === "修炼")!
+        .click(),
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".tactic-chip")]
@@ -93,6 +110,7 @@ describe("AfkSheet（挂机启动）", () => {
         skills={SKILLS}
         quests={QUESTS}
         templates={TEMPLATES}
+        grindJobs={GRINDS}
         active={false}
         statusMessage=""
         onStart={(c) => (config = c)}
@@ -131,6 +149,7 @@ describe("AfkSheet（挂机启动）", () => {
         skills={SKILLS}
         quests={[]}
         templates={[]}
+        grindJobs={GRINDS}
         active={false}
         statusMessage=""
         onStart={() => undefined}
@@ -155,6 +174,7 @@ describe("AfkSheet（挂机启动）", () => {
         skills={[]}
         quests={QUESTS}
         templates={TEMPLATES}
+        grindJobs={GRINDS}
         active={false}
         statusMessage=""
         onStart={() => undefined}
@@ -162,8 +182,38 @@ describe("AfkSheet（挂机启动）", () => {
         onClose={() => undefined}
       />,
     );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+        .find((b) => b.textContent === "修炼")!
+        .click(),
+    );
     expect(host.textContent).toContain("先向师长请教");
     expect(host.querySelector<HTMLButtonElement>(".btn.primary")?.disabled).toBe(true);
+  });
+
+  it("生计：默认页可选杂役并提交 grind 意图", () => {
+    let config: unknown = null;
+    const { host } = render(
+      <AfkSheet
+        open
+        skills={SKILLS}
+        quests={QUESTS}
+        templates={TEMPLATES}
+        grindJobs={GRINDS}
+        active={false}
+        statusMessage=""
+        onStart={(c) => (config = c)}
+        onStop={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(host.textContent).toContain("村中杂役");
+    act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
+    expect(config).toEqual({
+      kind: "grind",
+      durationMinutes: 60,
+      config: { jobId: "village_chore" },
+    });
   });
 });
 

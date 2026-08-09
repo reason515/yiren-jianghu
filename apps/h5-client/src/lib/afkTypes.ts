@@ -3,7 +3,7 @@ import type { QuestView } from "./questTypes.js";
 
 /**
  * 挂机 UI 数据：服务端是作业、结算和战报的唯一事实来源；客户端只组装受控意图。
- * 修炼（study）与行侠（quest）均已由 Worker 实际结算（行侠见 DC-026）。
+ * 修炼（study）、行侠（quest）、生计（grind，DC-042）均由 Worker 实际结算。
  */
 
 export interface AfkSkillOption {
@@ -26,6 +26,16 @@ export interface AfkTemplateOption {
   name: string;
 }
 
+/** 生计挂机可选杂役（服务端按历练上限过滤）。 */
+export interface AfkGrindOption {
+  id: string;
+  name: string;
+  description: string;
+  maxExp: number;
+  hourlyGain: AfkGains;
+  jingPerHour: number;
+}
+
 export type AfkStartConfig =
   | { kind: "study"; durationMinutes: number; config: { skillId: string } }
   | {
@@ -33,11 +43,12 @@ export type AfkStartConfig =
       templateId: string;
       durationMinutes: number;
       config: { questId: string };
-    };
+    }
+  | { kind: "grind"; durationMinutes: number; config: { jobId: string } };
 
 export interface AfkJobData {
   id: string;
-  kind: "study" | "quest";
+  kind: "study" | "quest" | "grind";
   status: string;
   phase: string;
   startedAt: string;
@@ -95,9 +106,11 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
     ? Math.max(0, Math.round(((end - Date.now()) / 3_600_000) * 10) / 10)
     : null;
   const suffix = hours === null ? "" : hours > 0 ? ` · 约余 ${hours} 时辰` : " · 正待结算";
+  const label =
+    status.kind === "study" ? "静心参悟" : status.kind === "quest" ? "行侠途中" : "生计途中";
   return {
     active: status.status === "running" || status.status === "paused",
-    message: status.kind === "study" ? `静心参悟${suffix}` : `行侠途中${suffix}`,
+    message: `${label}${suffix}`,
     ...(status.stopReason ? { reason: status.stopReason } : {}),
   };
 }

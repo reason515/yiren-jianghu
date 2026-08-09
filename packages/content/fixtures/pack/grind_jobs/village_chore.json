@@ -1,0 +1,8 @@
+{
+  "id": "village_chore",
+  "name": "村中杂役",
+  "description": "帮村民劈柴挑水、扫庭院。不需动武，只换些碎银与历练。",
+  "maxExp": 2000,
+  "hourlyGain": { "exp": 36, "potential": 18, "silver": 8 },
+  "jingPerHour": 12
+}

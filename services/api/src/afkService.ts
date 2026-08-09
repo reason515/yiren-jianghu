@@ -262,7 +262,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           presence,
           templateId,
           JSON.stringify(templateSnapshot),
-          JSON.stringify({ ...config, gains: zeroGains(), journal: [] }),
+          JSON.stringify({ ...config, gains: zeroGains(), journal: [], carry: {} }),
           job.day,
           startedIso,
           endIso,

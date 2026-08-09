@@ -1172,7 +1172,7 @@ export function App(): JSX.Element {
   }
 
   return (
-    <div className="app">
+    <div className={`app${afkStatus.active ? " afk-on" : ""}`}>
       <ReconnectingOverlay
         visible={reconnect.phase === "reconnecting"}
         attempt={reconnect.attempt}

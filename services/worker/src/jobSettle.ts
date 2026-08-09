@@ -85,6 +85,60 @@ function scaledGain(base: { exp: number; potential: number; silver: number }, mu
   };
 }
 
+/** 角色资源列是 integer/bigint，短 tick 小数直接写入会触发 invalid input syntax。 */
+export type ResourceCarry = {
+  exp: number;
+  potential: number;
+  silver: number;
+  jing: number;
+};
+
+export function emptyCarry(): ResourceCarry {
+  return { exp: 0, potential: 0, silver: 0, jing: 0 };
+}
+
+export function parseCarry(value: unknown): ResourceCarry {
+  const raw = (value ?? {}) as Partial<ResourceCarry>;
+  return {
+    exp: Number(raw.exp) || 0,
+    potential: Number(raw.potential) || 0,
+    silver: Number(raw.silver) || 0,
+    jing: Number(raw.jing) || 0,
+  };
+}
+
+/** 累计小数，本次只落库 floor 部分，余数进 carry（在线 60s tick 不丢收益）。 */
+export function splitApplied(
+  carry: ResourceCarry,
+  delta: ResourceCarry,
+): { applied: ResourceCarry; nextCarry: ResourceCarry } {
+  const sum: ResourceCarry = {
+    exp: carry.exp + delta.exp,
+    potential: carry.potential + delta.potential,
+    silver: carry.silver + delta.silver,
+    jing: carry.jing + delta.jing,
+  };
+  const applied: ResourceCarry = {
+    exp: Math.floor(sum.exp),
+    potential: Math.floor(sum.potential),
+    silver: Math.floor(sum.silver),
+    jing: Math.floor(sum.jing),
+  };
+  return {
+    applied,
+    nextCarry: {
+      exp: sum.exp - applied.exp,
+      potential: sum.potential - applied.potential,
+      silver: sum.silver - applied.silver,
+      jing: sum.jing - applied.jing,
+    },
+  };
+}
+
+function toDbInt(n: number): number {
+  return Math.max(0, Math.round(n));
+}
+
 /** 战报叙事（可变数值由 UI 单列展示）。 */
 export function narrativeFor(kind: string, status: string): string {
   if (status === "cancelled") {
@@ -365,9 +419,9 @@ async function settleQuestBattleOnce(
       battle.combatant.qi,
       battle.combatant.jing,
       battle.combatant.neili,
-      npcRewards.exp + questBonus.exp,
-      npcRewards.potential + questBonus.potential,
-      npcRewards.silver + questBonus.silver,
+      toDbInt(npcRewards.exp + questBonus.exp),
+      toDbInt(npcRewards.potential + questBonus.potential),
+      toDbInt(npcRewards.silver + questBonus.silver),
       job.character_id,
     ],
   );
@@ -378,7 +432,7 @@ async function settleQuestBattleOnce(
     );
   }
 
-  const line = `会过${target.name}，略有斩获。`;
+  const line = `你寻到${target.name}，与之交手，略有斩获。`;
   journalLines.push(line);
   const nextConfig = appendJournal({ ...config, gains: totalGains }, [line]);
 
@@ -416,6 +470,7 @@ async function settleGrindOnce(
   rewardMult: number,
   journalLines: string[],
   journalSeq: number,
+  emitJournal: boolean,
 ): Promise<"settled" | "completed"> {
   const config = parse<Record<string, unknown>>(job.config);
   const jobId = typeof config.jobId === "string" ? config.jobId : "";
@@ -460,6 +515,12 @@ async function settleGrindOnce(
   });
 
   const tickGains = settled.outcome.gained;
+  const { applied, nextCarry } = splitApplied(parseCarry(config.carry), {
+    exp: tickGains.exp,
+    potential: tickGains.potential,
+    silver: tickGains.silver,
+    jing: settled.jingSpent,
+  });
   const totalGains = gains({
     exp: priorGains.exp + tickGains.exp,
     potential: priorGains.potential + tickGains.potential,
@@ -467,18 +528,20 @@ async function settleGrindOnce(
   });
 
   const lines: string[] = [];
-  if (rewardMult > 1) {
+  if (emitJournal) {
     const text = grindOnlineLine(def, journalSeq + lines.length);
     lines.push(text);
     journalLines.push(text);
   }
 
-  const nextConfig = appendJournal({ ...config, gains: totalGains }, lines);
+  const nextConfig = appendJournal({ ...config, gains: totalGains, carry: nextCarry }, lines);
 
-  await client.query(
-    "UPDATE characters SET jing = jing - $1, exp = exp + $2, potential = potential + $3, silver = silver + $4 WHERE id = $5",
-    [settled.jingSpent, tickGains.exp, tickGains.potential, tickGains.silver, job.character_id],
-  );
+  if (applied.exp || applied.potential || applied.silver || applied.jing) {
+    await client.query(
+      "UPDATE characters SET jing = jing - $1, exp = exp + $2, potential = potential + $3, silver = silver + $4 WHERE id = $5",
+      [applied.jing, applied.exp, applied.potential, applied.silver, job.character_id],
+    );
+  }
 
   if (settled.outcome.status !== "running") {
     return finishTerminalJob(client, job, now, {
@@ -560,7 +623,7 @@ async function settleStudyJob(
     hourlyGain: gains(),
   });
   await client.query("UPDATE characters SET jing = jing - $1 WHERE id = $2", [
-    settled.jingSpent,
+    toDbInt(settled.jingSpent),
     job.character_id,
   ]);
   const progress = settled.skills[skillId];
@@ -627,6 +690,7 @@ async function settleOnlineLoop(
         mult,
         journalLines,
         current.journal_seq + journalLines.length,
+        true,
       );
     } else if (current.kind === "quest") {
       step = await settleQuestBattleOnce(client, current, content, tickNow, mult, journalLines);
@@ -678,7 +742,17 @@ async function settleOfflineDelta(
   if (job.kind === "quest") {
     step = await settleQuestBattleOnce(client, job, content, now, 1, []);
   } else if (job.kind === "grind") {
-    step = await settleGrindOnce(client, job, content, now, deltaHours, 1, [], job.journal_seq);
+    step = await settleGrindOnce(
+      client,
+      job,
+      content,
+      now,
+      deltaHours,
+      1,
+      [],
+      job.journal_seq,
+      false,
+    );
   } else if (job.kind === "study") {
     step = await settleStudyJob(client, job, content, now, deltaHours);
   } else {

@@ -117,7 +117,10 @@ textarea {
   background: var(--ink-soft);
 }
 .sheet-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 12px 16px calc(16px + var(--safe-b));
 }
 .sheet.sheet-full .sheet-scroll {

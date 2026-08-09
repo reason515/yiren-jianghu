@@ -11,19 +11,35 @@
   border-radius: 6px;
   font-size: 13px;
 }
+/* 运行中横幅固定在底栏之上，避免被导航遮住且主场景仍可滚 */
+.grind-banner.active,
+.grind-banner.stopped {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(58px + var(--safe-b));
+  z-index: 45;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
 .grind-banner.active {
-  background: rgba(95, 143, 120, 0.14);
+  background: rgba(95, 143, 120, 0.18);
   border: 1px solid var(--jade);
   color: var(--jade-bright);
+  backdrop-filter: blur(8px);
 }
 .grind-banner.stopped {
-  background: var(--ink-soft);
+  background: rgba(26, 23, 20, 0.94);
   border: 1px solid var(--line-strong);
   color: var(--paper-dim);
+  backdrop-filter: blur(8px);
+}
+.app.afk-on .scene {
+  padding-bottom: calc(148px + var(--safe-b));
 }
 .grind-message {
   line-height: 1.6;
   flex: 1;
+  min-width: 0;
 }
 .grind-stop,
 .grind-dismiss {
@@ -34,6 +50,7 @@
   background: var(--ink-lift);
   color: var(--paper);
   font-size: 13px;
+  flex-shrink: 0;
 }
 .grind-stop {
   color: var(--cinnabar);
@@ -102,6 +119,7 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 .grind-banner-main {
   display: flex;
@@ -126,6 +144,7 @@
   min-height: 44px;
   padding: 0 12px;
   font: inherit;
+  flex-shrink: 0;
 }
 .afk-report {
   display: flex;

@@ -106,6 +106,10 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - PR 模板在 `.github/pull_request_template.md`，含计划任务与 pkuxkx 权利登记勾选项。
 - 每完成一个计划任务，在 `docs/design-and-development-plan.md` 的执行记录表中更新状态。
 
+## 任务收尾（默认自动）
+
+权威细则：`.cursor/rules/yjh-task-wrapup.mdc`（alwaysApply）。验证通过后自动：① 提炼 → ② 门禁全绿后提交并 push → ③ 运行时有变则部署。本项目优先于此条，不受通用「未要求就不提交」约束；仅当次明确禁止时跳过。
+
 ## 文档约定
 
 - 文档集中在 `docs/`；对外阅读文档用统一格式：**标题用居中加粗 title block（不用 H1），正文从 H1 开始**。
@@ -203,5 +207,5 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - 内容工作 → 读 `yjh-content-pack` skill。
 - 玩家可见文案 → 读 `yjh-wuxia-copywriting` skill（绝招/房间/NPC/任务/剧情）。
 - 计划任务状态 → `docs/design-and-development-plan.md` 执行记录表。
-- 项目级规则与技能触发 → `.cursor/rules/yjh-agents.mdc`（Cursor）与 `.pi/agent/AGENTS.md`（pi / 兼容入口）；skill 权威目录 → `.cursor/skills/`。
+- 项目级规则与技能触发 → `.cursor/rules/yjh-agents.mdc` + `.cursor/rules/yjh-task-wrapup.mdc`（收尾强制）；`.pi/agent/AGENTS.md`（pi 兼容）；skill 权威目录 → `.cursor/skills/`。
 - 新增服务/包 → 复制现有包骨架（package.json + tsconfig 继承 `tsconfig.base.json` + src/index.ts + src/index.test.ts），并记得在根 workspace 声明。

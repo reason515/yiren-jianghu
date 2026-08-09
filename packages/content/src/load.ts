@@ -9,6 +9,7 @@ import { contentPackSchema, type ContentPack } from "./schema.js";
  *   <dir>/manifest.json
  *   <dir>/params.json
  *   <dir>/rooms/*.json(.yaml)   … 其余子目录同构
+ *   <dir>/maps/world.json       … 可选天下图（单文件）
  * 支持 .json 与 .yaml/.yml 文件。
  */
 
@@ -52,6 +53,9 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
     loaded[name] = await loadCollection(dir, name);
   }
 
+  // 天下图为单文件（maps/world.json），非集合实体列表。
+  const worldMap = await readJson(join(dir, "maps", "world.json")).catch(() => undefined);
+
   const pack = contentPackSchema.parse({
     manifest,
     params,
@@ -62,9 +66,13 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
     performs: loaded.performs,
     quests: loaded.quests,
     story: loaded.story,
+    ...(worldMap ? { worldMap } : {}),
   });
 
-  const fileCount = 2 + COLLECTIONS.reduce((acc, name) => acc + (loaded[name]?.length ?? 0), 0);
+  const fileCount =
+    2 +
+    COLLECTIONS.reduce((acc, name) => acc + (loaded[name]?.length ?? 0), 0) +
+    (worldMap ? 1 : 0);
 
   return { pack, fileCount };
 }

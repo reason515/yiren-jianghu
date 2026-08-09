@@ -97,8 +97,8 @@ const PACK = {
       name: "村口守卫",
       kind: "npc",
       description: "粗布劲装，腰挎短刀。",
-      skills: [],
-      equipment: [],
+      skills: [{ skillId: "basic_sword", level: 10 }],
+      equipment: ["cubu_yi", "iron_sword"],
       drops: [],
       goods: [],
       aggressive: false,
@@ -110,7 +110,7 @@ const PACK = {
       kind: "vendor",
       description: "胖乎乎，笑呵呵，柜台摆满油盐酱醋。",
       skills: [],
-      equipment: [],
+      equipment: ["cubu_yi"],
       drops: [],
       goods: [{ itemId: "dry_food", buy: 1, sell: 1 }],
       aggressive: false,
@@ -421,10 +421,12 @@ describe("sceneService.getScene", () => {
 });
 
 describe("sceneService.getMap", () => {
-  it("返回带网格的房间、去重无向边与当前所在标记", async () => {
+  it("返回当前区域房间、去重无向边、当前所在标记与天下图", async () => {
     const { scene } = await boot();
     const map = await scene.getMap("acc_1");
+    expect(map.areaId).toBe("newbie");
     expect(map.rooms.length).toBeGreaterThan(0);
+    expect(map.rooms.every((r) => r.id.startsWith("village_"))).toBe(true);
     expect(map.rooms.find((r) => r.state === "current")?.id).toBe("village_start");
     expect(map.rooms.every((r) => r.grid.length === 2)).toBe(true);
     // 双向出口只出一条无向边
@@ -434,6 +436,7 @@ describe("sceneService.getMap", () => {
         (e.from === "village_square" && e.to === "village_start"),
     );
     expect(pairs).toHaveLength(1);
+    expect(map.world.nodes.some((n) => n.id === "newbie" && n.state === "current")).toBe(true);
     await expect(scene.getMap("acc_x")).rejects.toMatchObject({ code: "no_character" });
   });
 
@@ -486,9 +489,28 @@ describe("sceneService.act", () => {
     });
   });
 
-  it("观察返回当前房间 NPC/物品的外观描述（V2.12）", async () => {
+  it("观察返回 NPC 外形/武功/衣着多行与物品外观（V2.16）", async () => {
     const { scene } = await boot();
     await scene.move("acc_1", "east");
+    await expect(
+      scene.act("acc_1", { type: "observe", targetId: "village_guard" }),
+    ).resolves.toEqual({
+      kind: "observe",
+      targetType: "npc",
+      name: "村口守卫",
+      description: [
+        "粗布劲装，腰挎短刀。",
+        "武功初窥门径，招式仍显生疏。",
+        "身上穿着粗布衣。",
+        "腰间悬着铁剑。",
+      ].join("\n"),
+      lines: [
+        "粗布劲装，腰挎短刀。",
+        "武功初窥门径，招式仍显生疏。",
+        "身上穿着粗布衣。",
+        "腰间悬着铁剑。",
+      ],
+    });
     await scene.move("acc_1", "east");
     await expect(
       scene.act("acc_1", { type: "observe", targetId: "general_shop" }),
@@ -496,13 +518,19 @@ describe("sceneService.act", () => {
       kind: "observe",
       targetType: "npc",
       name: "杂货铺掌柜",
-      description: "胖乎乎，笑呵呵，柜台摆满油盐酱醋。",
+      description: [
+        "胖乎乎，笑呵呵，柜台摆满油盐酱醋。",
+        "气息寻常，看不出深浅。",
+        "身上穿着粗布衣。",
+      ].join("\n"),
+      lines: ["胖乎乎，笑呵呵，柜台摆满油盐酱醋。", "气息寻常，看不出深浅。", "身上穿着粗布衣。"],
     });
     await expect(scene.act("acc_1", { type: "observe", targetId: "dry_food" })).resolves.toEqual({
       kind: "observe",
       targetType: "item",
       name: "干粮",
       description: "硬得能砸核桃的干粮。",
+      lines: ["硬得能砸核桃的干粮。"],
     });
     await expect(scene.act("acc_1", { type: "observe", targetId: "nope" })).rejects.toMatchObject({
       code: "target_not_here",

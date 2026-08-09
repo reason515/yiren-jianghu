@@ -1,4 +1,4 @@
-/** 区域舆图数据（GET /map 服务端组装：内容包 rooms.grid + exits 驱动）。 */
+/** 区域/天下舆图数据（GET /map 服务端组装）。 */
 
 export interface MapRoomView {
   id: string;
@@ -12,7 +12,28 @@ export interface MapEdgeView {
   to: string;
 }
 
+export interface WorldNodeView {
+  id: string;
+  name: string;
+  kind: string;
+  geo: [number, number];
+  scale: string;
+  state: "current" | "known";
+}
+
+export interface WorldRoadView {
+  from: string;
+  to: string;
+  mode: string;
+}
+
 export interface MapData {
+  areaId: string;
+  areaLabel: string;
   rooms: MapRoomView[];
   edges: MapEdgeView[];
+  world: {
+    nodes: WorldNodeView[];
+    roads: WorldRoadView[];
+  };
 }

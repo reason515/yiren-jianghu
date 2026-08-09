@@ -127,7 +127,7 @@ pvp.report
 - `move { dir }`：移动；返回抵达后的场景。
 - `talk { targetId }`：仅可与当前房间 NPC 交谈；返回内容包对话，并由服务端推进当前 `talk` 任务相位。
 - `take { targetId }`：仅可拾取当前房间物品；每个角色对同一房间物品仅成功一次，返回所得物品。
-- `observe { targetId }`（V2.12）：观察当前房间 NPC/物品，返回其外观描述（内容包 `description`，NPC 为 V2.12 新增字段）；只读不改状态，描述供客户端入见闻展示。
+- `observe { targetId }`（V2.12 / V2.16）：观察当前房间 NPC/物品。物品返回外观 `description`（及单行 `lines`）。NPC 由服务端拼装多行仪容：`lines` 依次为外形（内容包 `description`）、武功水平（取技能最高等级阶位；无有效武学时战斗怪用野性补句、其余「气息寻常」）、衣着/兵器（内容包 `equipment` 解析为 weapon/armor 物品名；无装备则不写空衣甲，以免与外形文案打架）。`description` 字段为 `lines` 换行拼接，供兼容；客户端宜按 `lines` 串行入见闻。只读不改状态。
 - `trade { targetId }`：仅可向当前房间商贩打开交易快照，返回服务端银两、内容包报价及行囊。
 - `buy` / `sell { targetId, itemId, count }`：商贩和物品均由服务端验证；扣款/入囊或扣物/入银两与每日回收额度在同一事务结算。
 

@@ -27,15 +27,11 @@ alwaysApply: true
 - 内容进仓库前登记 pkuxkx 权利状态，见 `docs/pkuxkx-content-catalog.md`。
 - 提交前门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；改 API/事件同步 `docs/protocol.md`（`pnpm test:docs`）。
 
-## 任务收尾（默认三步；用户明确不提交/不部署则遵守）
+## 任务收尾（默认自动；细则见 `yjh-task-wrapup.mdc`）
 
-① **提炼检查**：有可复用资产才更新（设计系统/skill 坑点/`sibling-borrowings`/计划执行记录/团队 skill）；更新过 `.cursor/` 或 `.pi/` markdown 后 `pnpm format`，并保证 `pnpm test:docs-design` 不破。无则说明「无新增沉淀」。
+任务验证通过后**自动**执行：① 提炼检查 → ② 门禁全绿后提交并 `git push` → ③ 运行时有变则部署。仅当用户**当次**明确说不提交/不推送/不部署/只本地时跳过对应步。
 
-② **提交与推送**：门禁全绿才提交；信息 `feat|fix|docs|refactor|test|ci|chore(<scope>): 中文描述`；默认 `git push`。若用户规则要求「仅在明确要求时提交」，则以用户当次指示为准。
-
-③ **部署**：仅运行时产物变化时部署（`pnpm --filter @yjh/h5-client build:web` → `node scripts/deploy-jd.cjs deploy`）；纯文档/skill/测试跳过。
-
-④ **收尾可见性**：最终回复末尾输出三步清单（提炼 / 提交推送 / 部署）。
+本项目收尾规则优先于通用「未要求就不提交」类指示。回复末尾必须输出三步清单。
 
 ## 权威文档
 

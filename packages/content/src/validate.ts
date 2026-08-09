@@ -216,6 +216,39 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
     }
   }
 
+  // 天下图：节点 id = rooms.area；道路两端须落在节点上
+  if (pack.worldMap) {
+    const areas = new Set(pack.rooms.map((r) => r.area));
+    const nodeIds = new Set(pack.worldMap.nodes.map((n) => n.id));
+    for (const node of pack.worldMap.nodes) {
+      if (!areas.has(node.id)) {
+        issues.push({
+          code: "world_unknown_area",
+          severity: "error",
+          message: `天下图节点 ${node.id} 无对应房间 area`,
+        });
+      }
+    }
+    for (const area of areas) {
+      if (!nodeIds.has(area)) {
+        issues.push({
+          code: "world_missing_area",
+          severity: "warning",
+          message: `房间 area「${area}」未登记于天下图`,
+        });
+      }
+    }
+    for (const road of pack.worldMap.roads) {
+      if (!nodeIds.has(road.from) || !nodeIds.has(road.to)) {
+        issues.push({
+          code: "broken_world_road",
+          severity: "error",
+          message: `天下图道路 ${road.from}→${road.to} 引用不存在节点`,
+        });
+      }
+    }
+  }
+
   // 参数边界
   const { afk } = pack.params;
   if (afk.maxDurationHours < 1 || afk.maxDurationHours > 12) {

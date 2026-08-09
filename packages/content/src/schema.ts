@@ -293,6 +293,28 @@ export const manifestSchema = z.object({
   description: z.string().default(""),
 });
 
+// ---------- 天下图（map-design §5：区域节点 + 道路链，非房间网格） ----------
+export const worldMapNodeSchema = z.object({
+  /** 对应 rooms[].area */
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.enum(["village", "metropolis", "sect", "pass", "landmark"]),
+  /** 相对地理坐标，北在上 */
+  geo: z.tuple([z.number(), z.number()]),
+  scale: z.enum(["village", "capital", "pass", "landmark"]).default("village"),
+});
+
+export const worldMapRoadSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  mode: z.enum(["road", "path"]).default("road"),
+});
+
+export const worldMapSchema = z.object({
+  nodes: z.array(worldMapNodeSchema).min(1),
+  roads: z.array(worldMapRoadSchema).default([]),
+});
+
 // ---------- 内容包整体 ----------
 export const contentPackSchema = z.object({
   manifest: manifestSchema,
@@ -304,6 +326,8 @@ export const contentPackSchema = z.object({
   performs: z.array(performSchema).default([]),
   quests: z.array(questSchema).default([]),
   story: z.array(storySchema).default([]),
+  /** 天下图（可选；缺省时服务端仅返回本域房间图） */
+  worldMap: worldMapSchema.optional(),
 });
 
 export type ContentPack = z.infer<typeof contentPackSchema>;
@@ -316,3 +340,6 @@ export type Perform = z.infer<typeof performSchema>;
 export type Quest = z.infer<typeof questSchema>;
 export type StoryNode = z.infer<typeof storySchema>;
 export type Manifest = z.infer<typeof manifestSchema>;
+export type WorldMap = z.infer<typeof worldMapSchema>;
+export type WorldMapNode = z.infer<typeof worldMapNodeSchema>;
+export type WorldMapRoad = z.infer<typeof worldMapRoadSchema>;

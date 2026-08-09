@@ -1,5 +1,10 @@
-/* 区域地图样式（E9；map-design：墨色舆图、玉色当前、铜金线、北标） */
+/* 区域/天下地图样式（E9；map-design：墨色舆图、玉色当前、铜金线、北标） */
 
+.map-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .map-wrap {
   position: relative;
   touch-action: none;
@@ -19,15 +24,24 @@
   fill: none;
   opacity: 0.72;
 }
-.map-node rect {
+.map-edge.world-road {
+  stroke-width: 2.5;
+  opacity: 0.85;
+  stroke-dasharray: 6 4;
+}
+.map-node rect,
+.map-node polygon {
   fill: var(--ink-lift);
   stroke: var(--line-strong);
 }
-.map-node.visited rect {
+.map-node.visited rect,
+.map-node.known rect,
+.map-node.known polygon {
   fill: rgba(201, 168, 105, 0.06);
   stroke: var(--gold-muted);
 }
-.map-node.current rect {
+.map-node.current rect,
+.map-node.current polygon {
   fill: rgba(95, 143, 120, 0.24);
   stroke: var(--jade-bright);
   stroke-width: 2.5;
@@ -40,10 +54,14 @@
 .map-node.locked {
   opacity: 0.38;
 }
+.map-node.scale-capital rect {
+  stroke-width: 2;
+}
 .map-node text {
   fill: var(--paper);
   font-size: 14px;
   font-family: var(--font-body);
+  pointer-events: none;
 }
 .map-north {
   fill: var(--gold);
@@ -75,4 +93,11 @@
 .map-controls button:active {
   transform: translateY(1px);
   filter: brightness(1.15);
+}
+.map-world-hint {
+  margin: 0;
+  color: var(--paper-faint);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
 }

@@ -72,8 +72,9 @@ describe("ExitPad（方位罗盘）", () => {
 });
 
 describe("SceneView（叙事优先 + 见闻动态流 + 交互 Tab）", () => {
-  it("渲染标题与叙事长文，出口与人物可交互", () => {
+  it("渲染标题与叙事长文，出口与人物可交互；可往区有舆图入口", () => {
     let selected = "";
+    let mapOpened = false;
     const { host } = render(
       <SceneView
         room={ROOM}
@@ -82,12 +83,18 @@ describe("SceneView（叙事优先 + 见闻动态流 + 交互 Tab）", () => {
         onSelectNpc={(n) => (selected = n.name)}
         onSelectItem={() => undefined}
         onAction={() => undefined}
+        onOpenMap={() => {
+          mapOpened = true;
+        }}
       />,
     );
     expect(host.querySelector(".scene-title")?.textContent).toBe("村口广场");
     expect(host.textContent).toContain("稻香未散");
     expect(host.textContent).toContain("见闻");
     expect(host.textContent).toContain("村口守卫：站住，你从哪里来？");
+    expect(host.querySelector(".scene-map-entry")?.textContent).toBe("舆图");
+    act(() => host.querySelector<HTMLButtonElement>(".scene-map-entry")!.click());
+    expect(mapOpened).toBe(true);
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
         .find((c) => c.textContent === "王师傅")!

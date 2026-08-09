@@ -20,6 +20,8 @@ export interface SceneViewProps {
   onSelectNpc: (npc: SceneNpc) => void;
   onSelectItem: (itemId: string) => void;
   onAction: (command: string) => void;
+  /** 打开本域/天下舆图（默认本域）。 */
+  onOpenMap?: () => void;
 }
 
 export function SceneView({
@@ -30,6 +32,7 @@ export function SceneView({
   onSelectNpc,
   onSelectItem,
   onAction,
+  onOpenMap,
 }: SceneViewProps): JSX.Element {
   const [tab, setTab] = useState<"npcs" | "items" | "actions">("npcs");
   const hasNpcs = room.npcs.length > 0;
@@ -50,6 +53,16 @@ export function SceneView({
       <section className="scene-block">
         <div className="scene-block-head">
           <h2>此刻可往</h2>
+          {onOpenMap && (
+            <button
+              type="button"
+              className="scene-map-entry"
+              onClick={onOpenMap}
+              aria-label="打开舆图"
+            >
+              舆图
+            </button>
+          )}
         </div>
         <ExitPad exits={room.exits} roomName={room.name} onGo={onGo} />
       </section>

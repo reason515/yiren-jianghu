@@ -9,6 +9,7 @@
       "level": 15
     }
   ],
+  "equipment": ["cubu_yi", "iron_sword"],
   "aggressive": false,
   "respawnSec": 60,
   "drops": [
@@ -22,5 +23,5 @@
     "potential": 10,
     "silver": 12
   },
-  "description": "獐头鼠目，提一把缺口朴刀。专挑落单的行人下手，嘴上横，脚下却虚。"
+  "description": "獐头鼠目，专挑落单的行人下手，嘴上横，脚下却虚。"
 }

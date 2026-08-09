@@ -54,6 +54,7 @@
 | DC-033 | 2026-08 | 顶栏细轨进度条 + 交谈只入见闻（V2.13） | ①**顶栏深度重构**：生存项由「色点 + 纯文本」改为「标签 + 当前/上限双色读数 + 3px 细墨轨道填充」（2×2 grid 保留）；低值（低于 30%）fill/当前值转朱砂双警示；银两由现代胶囊改为竖排简牍印记（非 pill）；去掉发光色点 HUD 感；②**交谈去弹窗**：`talk` 结果只逐行 `addJournal`（首行人名前缀），关闭对话 Sheet；交易仍开 Shop Sheet（需买卖交互） | 用户反馈：数字对齐后顶栏仍丑；人物对话信息不该再弹窗打断阅读，应与观察一样进入见闻 | docs/design-and-development-plan.md V2.13、design-system §2.2、h5-client StatusBar/App | ✅ |
 | DC-034 | 2026-08 | 见闻新条目打字机显现（V2.14） | 见闻折叠卡与展开面板中，**仅首屏之后新追加的条目**以每批 2 字、约 32ms 间隔打字机显现，打字中带淡玉底与墨笔光标，打完褪去；**多行串行由 `useJournalLog` 数据层保证**（`entries` 同时最多新增一行，settled 后再放出队列；交谈多句与观察同一 enqueue，禁止 forEach 一次写入）；首屏历史立刻全文；遵守 `prefers-reduced-motion` | 用户反馈：新见闻不易察觉；交谈仍一次多行——根因是一次写入多条 state，须在入队层串行 | docs/design-and-development-plan.md V2.14、h5-client JournalFeed / journalLog | ✅ |
 | DC-035 | 2026-08 | 人物簿四页签重梳（V2.15） | 人物簿从单卷长列表改为**固定摘要 + 四页签**（状态 / 武学 / 行囊 / 档案；下划线页签 + 固定高度面板）：状态展示行止「当前/上限」细轨与四维；武学仅已学、空态提示；行囊佩挂（兵器+衣甲，无独立饰品槽）；档案含仪容短述、性别、改名、放弃；建角赠穿 `cubu_yi`；顶栏可点进人物；演练/参悟 toast 带花费与升段。**请教归属本轮不动** | 玩家实操：查生存/练功/配装被长列表淹没；对齐 uiux-v2「顶栏进人物」与 xkx 页签+仪容节奏（不借 enable/命令） | docs/design-and-development-plan.md V2.15、yjh-mobile-ui §4.4、h5-client CharacterSheet/StatusBar | ✅ |
+| DC-036 | 2026-08 | 观察 NPC 多行仪容（V2.16） | `observe` NPC 返回 `lines`：外形（`description`）+ 武功水平阶位（`game-core` `buildNpcObserveLines`，与人物簿境界同档）+ 衣着/兵器（`equipment`→weapon/armor 名）；无装备不写空衣甲。客户端按 `lines` 串行入见闻。关键 NPC 补 equipment，外形文案与装备解耦 | 观察仅吐单行 description，与档案仪容结构不对齐；玩家打量对方应同步感知外形/武功/装束 | protocol.md §7、game-core/look.ts、sceneService、yjh-mobile-ui | ✅ |
 
 # 3. 被替代决策（变更历史）
 

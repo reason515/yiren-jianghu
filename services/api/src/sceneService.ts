@@ -1,5 +1,12 @@
 import type { ContentPack, Item, Npc, Room, Skill } from "@yjh/content";
-import { applyRegen, computeMaxVitals, maxFoodCapacity, maxWaterCapacity } from "@yjh/game-core";
+import {
+  applyRegen,
+  buildNpcObserveLines,
+  computeMaxVitals,
+  maxFoodCapacity,
+  maxWaterCapacity,
+  type ObserveGear,
+} from "@yjh/game-core";
 import type { Db } from "./db.js";
 import type { QuestsService } from "./questsService.js";
 
@@ -76,7 +83,10 @@ export interface ObserveView {
   kind: "observe";
   targetType: "npc" | "item";
   name: string;
+  /** 兼容单行展示；NPC 为多行拼装后的换行文本。 */
   description: string;
+  /** V2.16：观察多行（外形 / 武功 / 衣着），客户端串行入见闻。 */
+  lines?: string[];
 }
 
 export type SceneActionInput =
@@ -95,6 +105,7 @@ export interface ContentIndex {
   items: Map<string, Item>;
   skills: Map<string, Skill>;
   params: ContentPack["params"];
+  worldMap?: ContentPack["worldMap"];
 }
 
 export function buildContentIndex(pack: ContentPack): ContentIndex {
@@ -104,6 +115,7 @@ export function buildContentIndex(pack: ContentPack): ContentIndex {
     items: new Map(pack.items.map((i) => [i.id, i])),
     skills: new Map(pack.skills.map((s) => [s.id, s])),
     params: pack.params,
+    worldMap: pack.worldMap,
   };
 }
 
@@ -132,8 +144,32 @@ export interface MapEdgeView {
 }
 
 export interface MapView {
+  /** 当前所在区域 id（rooms.area） */
+  areaId: string;
+  /** 区域显示名（天下图节点名，缺省回退 areaId） */
+  areaLabel: string;
   rooms: MapRoomView[];
   edges: MapEdgeView[];
+  world: {
+    nodes: WorldNodeView[];
+    roads: WorldRoadView[];
+  };
+}
+
+/** 天下图节点（内容包 worldMap；state 由角色所在 area 标记）。 */
+export interface WorldNodeView {
+  id: string;
+  name: string;
+  kind: string;
+  geo: [number, number];
+  scale: string;
+  state: "current" | "known";
+}
+
+export interface WorldRoadView {
+  from: string;
+  to: string;
+  mode: string;
 }
 
 type CharacterLocation = { id: string; room_path: string };
@@ -358,25 +394,73 @@ export function createSceneService(
     async getMap(accountId) {
       const character = await activeCharacter(db, accountId);
       if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
+      const here = roomFor(character.room_path);
+      const areaId = here.area;
+      const areaLabel = content.worldMap?.nodes.find((node) => node.id === areaId)?.name ?? areaId;
+
+      // 本域舆图：只渲染当前 area 的房间（各域 grid 独立，跨域叠加会重叠）
       const rooms: MapRoomView[] = [];
-      const seenEdges = new Set<string>();
-      const edges: MapEdgeView[] = [];
+      const areaRoomIds = new Set<string>();
       for (const room of content.rooms.values()) {
-        if (!room.grid) continue; // 无网格坐标的房间不入舆图
+        if (room.area !== areaId || !room.grid) continue;
+        areaRoomIds.add(room.id);
         rooms.push({
           id: room.id,
           name: room.name,
           grid: room.grid,
           state: room.id === character.room_path ? "current" : "visited",
         });
+      }
+      const seenEdges = new Set<string>();
+      const edges: MapEdgeView[] = [];
+      for (const room of content.rooms.values()) {
+        if (!areaRoomIds.has(room.id)) continue;
         for (const exit of room.exits) {
+          if (!areaRoomIds.has(exit.roomId)) continue;
           const key = [room.id, exit.roomId].sort().join("|");
           if (seenEdges.has(key)) continue;
           seenEdges.add(key);
           edges.push({ from: room.id, to: exit.roomId });
         }
       }
-      return { rooms, edges };
+
+      const worldNodes: WorldNodeView[] = (content.worldMap?.nodes ?? []).map((node) => ({
+        id: node.id,
+        name: node.name,
+        kind: node.kind,
+        geo: node.geo,
+        scale: node.scale,
+        state: node.id === areaId ? "current" : "known",
+      }));
+      // 无天下图内容时，用本包出现过的 area 兜底成单点，避免前端空态崩溃。
+      if (worldNodes.length === 0) {
+        const areas = new Set([...content.rooms.values()].map((r) => r.area));
+        let i = 0;
+        for (const area of areas) {
+          worldNodes.push({
+            id: area,
+            name: area === areaId ? areaLabel : area,
+            kind: "landmark",
+            geo: [i * 80, 0],
+            scale: "village",
+            state: area === areaId ? "current" : "known",
+          });
+          i += 1;
+        }
+      }
+      const worldRoads: WorldRoadView[] = (content.worldMap?.roads ?? []).map((road) => ({
+        from: road.from,
+        to: road.to,
+        mode: road.mode,
+      }));
+
+      return {
+        areaId,
+        areaLabel,
+        rooms,
+        edges,
+        world: { nodes: worldNodes, roads: worldRoads },
+      };
     },
 
     async move(accountId, dir) {
@@ -405,7 +489,7 @@ export function createSceneService(
         return { kind: "talk", npc: { id: npc.id, name: npc.name }, dialogue: npc.dialogue };
       }
 
-      // V2.12 观察：NPC/物品外观描述入见闻（只读，不改状态）。
+      // V2.12/V2.16 观察：NPC 外形+武功+衣着 / 物品外观入见闻（只读，不改状态）。
       if (input.type === "observe") {
         const character = await activeCharacter(db, accountId);
         if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
@@ -414,21 +498,39 @@ export function createSceneService(
           ? content.npcs.get(input.targetId)
           : undefined;
         if (npc) {
+          const gear: ObserveGear[] = [];
+          for (const itemId of npc.equipment) {
+            const item = content.items.get(itemId);
+            if (!item) continue;
+            if (item.kind === "weapon" || item.kind === "armor") {
+              gear.push({ kind: item.kind, name: item.name });
+            }
+          }
+          const lines = buildNpcObserveLines({
+            description: npc.description,
+            kind: npc.kind,
+            skillLevels: npc.skills.map((s) => s.level),
+            gear,
+          });
           return {
             kind: "observe",
             targetType: "npc",
             name: npc.name,
-            description: npc.description || "此人风尘仆仆，看不出深浅，只觉一双眼睛格外沉静。",
+            description: lines.join("\n"),
+            lines,
           };
         }
         if (room.itemIds.includes(input.targetId)) {
           const item = content.items.get(input.targetId);
           if (item) {
+            const description =
+              item.description || "看久了，也看不出什么特别之处，只是件寻常物什。";
             return {
               kind: "observe",
               targetType: "item",
               name: item.name,
-              description: item.description || "看久了，也看不出什么特别之处，只是件寻常物什。",
+              description,
+              lines: [description],
             };
           }
         }

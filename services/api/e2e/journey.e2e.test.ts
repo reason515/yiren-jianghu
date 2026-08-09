@@ -449,17 +449,23 @@ describe("F3 全链路旅程", () => {
     expect(quest.rows[0]?.status).toBe("reported");
   });
 
-  it("8. 地图：GET /map 返回带网格舆图且当前房间被标记", async () => {
+  it("8. 地图：GET /map 返回当前区域舆图、天下图且当前房间被标记", async () => {
     const map = await app.inject({ method: "GET", url: "/map", headers: auth(tokenA) });
     expect(map.statusCode).toBe(200);
     const data = map.json() as {
+      areaId: string;
+      areaLabel: string;
       rooms: Array<{ id: string; grid: [number, number]; state: string }>;
       edges: Array<{ from: string; to: string }>;
+      world: { nodes: Array<{ id: string; state: string }>; roads: unknown[] };
     };
+    expect(data.areaId).toBeTruthy();
+    expect(data.areaLabel).toBeTruthy();
     expect(data.rooms.length).toBeGreaterThan(0);
     expect(data.rooms.every((r) => r.grid.length === 2)).toBe(true);
     expect(data.rooms.some((r) => r.state === "current")).toBe(true);
     expect(data.edges.length).toBeGreaterThan(0);
+    expect(data.world.nodes.some((n) => n.id === data.areaId && n.state === "current")).toBe(true);
   });
 
   it("9. PVP：第二账号建角 → 赛季 → 对手 → 对战 → 战报 → 榜单", async () => {

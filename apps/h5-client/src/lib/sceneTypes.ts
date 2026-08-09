@@ -62,12 +62,14 @@ export interface SceneTakeResult {
   item: { id: string; name: string; quantity: number };
 }
 
-/** V2.12 观察结果：NPC/物品外观描述（入见闻展示）。 */
+/** V2.12/V2.16 观察结果：NPC 多行仪容 / 物品外观（入见闻展示）。 */
 export interface SceneObserveResult {
   kind: "observe";
   targetType: "npc" | "item";
   name: string;
   description: string;
+  /** 多行短述（外形 / 武功 / 衣着）；缺省时客户端回退单行 description。 */
+  lines?: string[];
 }
 
 export type SceneActionResult =

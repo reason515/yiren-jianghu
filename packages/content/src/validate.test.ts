@@ -141,4 +141,30 @@ describe("validateContentPack", () => {
     const issues = validateContentPack(pack);
     expect(issues.some((i) => i.code === "goods_price_inverted")).toBe(true);
   });
+
+  it("flags world map unknown area and broken road", () => {
+    const pack = basePack();
+    pack.worldMap = {
+      nodes: [
+        {
+          id: "ghost_land",
+          name: "虚空",
+          kind: "landmark",
+          geo: [0, 0],
+          scale: "landmark",
+        },
+        {
+          id: "newbie",
+          name: "青石村",
+          kind: "village",
+          geo: [1, 1],
+          scale: "village",
+        },
+      ],
+      roads: [{ from: "newbie", to: "nowhere", mode: "road" }],
+    };
+    const issues = validateContentPack(pack);
+    expect(issues.some((i) => i.code === "world_unknown_area")).toBe(true);
+    expect(issues.some((i) => i.code === "broken_world_road")).toBe(true);
+  });
 });

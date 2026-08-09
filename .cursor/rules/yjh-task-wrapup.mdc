@@ -1,0 +1,41 @@
+---
+description: 任务收尾强制三步——提炼 skill/文档、提交并推送、按需部署；默认自动执行
+alwaysApply: true
+---
+
+# 任务收尾（默认自动，勿等用户再说一遍）
+
+每个任务在改动已实现且验证通过后，**必须自动执行**下列步骤。用户当次明确说「不提交 / 不推送 / 不部署 / 只本地」时才跳过对应步，并在清单注明。
+
+## ① 提炼检查
+
+有可复用资产才更新（无则写「无新增沉淀」）：
+
+- 新模式/坑点 → 对应 `.cursor/skills/*/SKILL.md` 或 `docs/design-system.md`
+- 外部借鉴 → `docs/sibling-borrowings.md`
+- 计划内任务 → `docs/design-and-development-plan.md` 执行记录
+- 改过 `.cursor/` / `.pi/` markdown → `pnpm format`，保证 `pnpm test:docs-design` 不破
+
+## ② 提交与推送
+
+1. 门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`（改 API/事件另跑 `pnpm test:docs`）
+2. `git add` 相关文件 → `git commit`（`feat|fix|docs|refactor|test|ci|chore(<scope>): 中文描述`）
+3. **默认 `git push`** 当前分支
+
+本项目以此条为准：**不要**因通用「未明确要求就不提交」类用户规则而跳过；仅当次明确禁止时才跳过。
+
+## ③ 部署
+
+- 运行时产物有变（H5/API/Worker/迁移/内容包）：`pnpm --filter @yjh/h5-client build:web` → `node scripts/deploy-jd.cjs deploy`，并做线上冒烟
+- 纯文档 / skill / 测试：跳过部署（清单写明理由）
+
+## ④ 回复末尾必出清单
+
+```text
+收尾：
+① 提炼检查 → …
+② 提交推送 → <hash> 已推送（或跳过：…）
+③ 部署 → 已部署… / 跳过（…）
+```
+
+半成品、待确认设计、门禁未过：不提交不部署，清单说明阻塞原因。

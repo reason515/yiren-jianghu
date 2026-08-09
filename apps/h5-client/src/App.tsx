@@ -621,6 +621,11 @@ export function App(): JSX.Element {
     void onGo(exit.dir);
   };
 
+  const onSelectWorldArea = (areaId: string): void => {
+    const node = mapData?.world.nodes.find((entry) => entry.id === areaId);
+    setError(node ? `${node.name}尚在远方，须循官道逐程而行。` : "那处方位未明，只可远望。");
+  };
+
   const refreshLeaderboard = useCallback(async (): Promise<void> => {
     try {
       const [growth, season] = await Promise.all([
@@ -854,11 +859,16 @@ export function App(): JSX.Element {
         .sceneAction({ type: "observe", targetId })
         .then((result) => {
           setSelectedEntity(null);
-          if (result.kind === "observe") {
-            addJournal(`${result.name}：${result.description}`, undefined, [
-              { text: result.name, cls: "place" },
-            ]);
-          }
+          if (result.kind !== "observe") return;
+          const body =
+            result.lines && result.lines.length > 0 ? result.lines : [result.description];
+          enqueueJournal([
+            {
+              text: `${result.name}：${body[0]}`,
+              mark: [{ text: result.name, cls: "place" }],
+            },
+            ...body.slice(1).map((text) => ({ text })),
+          ]);
         })
         .catch(notify);
       return;
@@ -1029,6 +1039,7 @@ export function App(): JSX.Element {
               if (item) setSelectedEntity(item);
             }}
             onAction={() => openQuests()}
+            onOpenMap={openMap}
           />
           <GrindBanner
             active={afkStatus.active}
@@ -1192,9 +1203,13 @@ export function App(): JSX.Element {
       {panel === "map" && mapData && (
         <MapSheet
           open
+          areaLabel={mapData.areaLabel}
           rooms={mapData.rooms}
           edges={mapData.edges}
+          worldNodes={mapData.world.nodes}
+          worldRoads={mapData.world.roads}
           onNavigate={onMapNavigate}
+          onSelectWorldArea={onSelectWorldArea}
           onClose={() => setPanel("none")}
         />
       )}

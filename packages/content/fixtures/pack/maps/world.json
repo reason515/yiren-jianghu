@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {
+      "id": "newbie",
+      "name": "青石村",
+      "kind": "village",
+      "geo": [-36, 78],
+      "scale": "village"
+    },
+    {
+      "id": "city",
+      "name": "青石城",
+      "kind": "metropolis",
+      "geo": [0, 0],
+      "scale": "capital"
+    },
+    {
+      "id": "sect",
+      "name": "玄门剑宗",
+      "kind": "sect",
+      "geo": [28, -86],
+      "scale": "pass"
+    }
+  ],
+  "roads": [
+    { "from": "newbie", "to": "city", "mode": "road" },
+    { "from": "city", "to": "sect", "mode": "road" }
+  ]
+}

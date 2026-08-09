@@ -80,4 +80,32 @@ describe("JournalFeed（见闻动态流）", () => {
     expect(host.querySelector("[data-typing='1']")).toBeNull();
     expect(host.querySelector(".jl-caret")).toBeNull();
   });
+
+  it("多行同时到达时一行一行串行推进，不并行", () => {
+    vi.useFakeTimers();
+    const { host, root } = render(<JournalFeed entries={entries} />);
+    const next: JournalEntry[] = [
+      ...entries,
+      { id: 4, text: "甲：第一行说完。" },
+      { id: 5, text: "乙：第二行随后。" },
+    ];
+    act(() => root.render(<JournalFeed entries={next} />));
+    // 只打第一行：第二行尚未出现在 DOM
+    expect(host.querySelectorAll("[data-typing='1']").length).toBe(1);
+    expect(host.textContent).not.toContain("第二行随后");
+    expect(host.textContent).not.toContain("第一行说完");
+    // 打完第一行
+    act(() => {
+      vi.advanceTimersByTime(32 * 20);
+    });
+    expect(host.textContent).toContain("第一行说完");
+    // 第二行此时才开始打，全文尚未齐
+    expect(host.textContent).not.toContain("第二行随后");
+    expect(host.querySelectorAll("[data-typing='1']").length).toBe(1);
+    act(() => {
+      vi.advanceTimersByTime(32 * 20);
+    });
+    expect(host.textContent).toContain("第二行随后");
+    expect(host.querySelector("[data-typing='1']")).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ReactElement } from "react";
@@ -24,6 +24,7 @@ beforeAll(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("JournalFeed（见闻动态流）", () => {
@@ -49,6 +50,8 @@ describe("JournalFeed（见闻动态流）", () => {
     // combat 条目高亮
     const combat = [...host.querySelectorAll<HTMLElement>(".journal-summary-line.hl")];
     expect(combat.length).toBe(1);
+    // 首屏历史不打字机
+    expect(host.querySelector("[data-typing='1']")).toBeNull();
   });
 
   it("点击折叠卡展开全屏历史，全部条目可见", () => {
@@ -58,5 +61,23 @@ describe("JournalFeed（见闻动态流）", () => {
     expect(panel).not.toBeNull();
     expect(panel?.textContent).toContain("经验");
     expect(panel?.textContent).toContain("你赢了这一场");
+  });
+
+  it("新追加条目打字机逐批显现，打完后光标消失", () => {
+    vi.useFakeTimers();
+    const { host, root } = render(<JournalFeed entries={entries} />);
+    const next: JournalEntry[] = [...entries, { id: 4, text: "村口守卫：站住，你从哪里来？" }];
+    act(() => root.render(<JournalFeed entries={next} />));
+    // 刚追加：应在打字中，全文尚未齐
+    expect(host.querySelector("[data-typing='1']")).not.toBeNull();
+    expect(host.querySelector(".jl-caret")).not.toBeNull();
+    expect(host.textContent).not.toContain("你从哪里来？");
+    // 推进足够间隔打完（约 16 字 → 8 批 × 32ms）
+    act(() => {
+      vi.advanceTimersByTime(32 * 20);
+    });
+    expect(host.textContent).toContain("你从哪里来？");
+    expect(host.querySelector("[data-typing='1']")).toBeNull();
+    expect(host.querySelector(".jl-caret")).toBeNull();
   });
 });

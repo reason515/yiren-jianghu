@@ -1,10 +1,12 @@
-import { useLayoutEffect, useRef, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode } from "react";
 
 /**
- * 见闻（动态文字流，V2.10 参照 xkx EventLog；V2.11 关键字高亮；V2.12 固定高度展开）。
+ * 见闻（动态文字流，V2.10 参照 xkx EventLog；V2.11 关键字高亮；V2.12 固定高度展开；
+ * V2.14 新条目打字机显现）。
  * 场景描述是「静态所见」；见闻是「互动后的动态记录」——交谈/交易/拾取/战斗/交差等
  * 事件追加到此处，可展开固定高度面板滚动翻看历史、自动跟随最新。
  * 渲染时人名前缀（`名字：`）玉色、数字金色、地名（mark）青蓝，避免全文同色平淡。
+ * 新追加条目以「几个字一批」打字机显现，便于注意到变化（首屏历史不动画）。
  */
 export interface JournalEntry {
   id: number;
@@ -23,6 +25,9 @@ export interface JournalFeedProps {
 const SUMMARY_COUNT = 3;
 /** 展开面板固定高度（超出滚动，V2.12）。 */
 const PANEL_HEIGHT = 260;
+/** 打字机：每批字数 / 间隔（「几个几个」出现）。 */
+const TYPE_CHUNK = 2;
+const TYPE_INTERVAL_MS = 32;
 
 /** 人名前缀：行首「XXX：」玉色（说话者/角色）。 */
 const NAME_RE = /^([\u4e00-\u9fff·A-Za-z]{1,12}?[：:])/;
@@ -104,14 +109,70 @@ function renderRich(text: string, keyBase: string, mark?: JournalEntry["mark"]):
   return parts;
 }
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** 新条目打字机：按批揭示字符；历史条目立刻全文。打字中带玉色提示与光标。 */
+function TypewriterRich({
+  entry,
+  keyBase,
+  animate,
+  onReveal,
+}: {
+  entry: JournalEntry;
+  keyBase: string;
+  animate: boolean;
+  onReveal?: () => void;
+}): JSX.Element {
+  const full = entry.text.length;
+  const skip = !animate || prefersReducedMotion();
+  const [shown, setShown] = useState(() => (skip ? full : 0));
+  const onRevealRef = useRef(onReveal);
+  onRevealRef.current = onReveal;
+  const typing = shown < full;
+
+  useEffect(() => {
+    if (!animate || prefersReducedMotion()) {
+      setShown(full);
+      return;
+    }
+    setShown(0);
+    let i = 0;
+    const timer = window.setInterval(() => {
+      i = Math.min(full, i + TYPE_CHUNK);
+      setShown(i);
+      onRevealRef.current?.();
+      if (i >= full) window.clearInterval(timer);
+    }, TYPE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [animate, entry.id, entry.text, full]);
+
+  return (
+    <span className={typing ? "jl-typing" : undefined} data-typing={typing ? "1" : undefined}>
+      {renderRich(entry.text.slice(0, shown), keyBase, entry.mark)}
+      {typing && <span className="jl-caret" aria-hidden="true" />}
+    </span>
+  );
+}
+
 export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element {
   const panelRef = useRef<HTMLElement>(null);
   const followingRef = useRef(true);
   const pinningRef = useRef(false);
+  /** 首屏已有条目的 id 上限；大于此值的才打字机显现。 */
+  const baselineRef = useRef<number | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [following, setFollowing] = useState(true);
   const lastId = entries.length > 0 ? entries[entries.length - 1]!.id : 0;
   const latestFew = entries.slice(-SUMMARY_COUNT);
+
+  if (baselineRef.current === null) {
+    baselineRef.current = lastId;
+  }
+
+  const shouldAnimate = (id: number): boolean => id > (baselineRef.current ?? 0);
 
   const pinToBottom = (): void => {
     const panel = panelRef.current;
@@ -185,8 +246,13 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
             )}
             <div aria-live="polite" aria-relevant="additions text">
               {entries.slice(-100).map((entry) => (
-                <p key={entry.id} className={entry.kind === "combat" ? "hl" : ""}>
-                  {renderRich(entry.text, `p${entry.id}`, entry.mark)}
+                <p key={entry.id} className={entry.kind === "combat" ? "hl" : undefined}>
+                  <TypewriterRich
+                    entry={entry}
+                    keyBase={`p${entry.id}`}
+                    animate={shouldAnimate(entry.id)}
+                    onReveal={entry.id === lastId && followingRef.current ? pinToBottom : undefined}
+                  />
                 </p>
               ))}
               {entries.length === 0 && <p>尚无新的见闻</p>}
@@ -217,7 +283,11 @@ export function JournalFeed({ entries, onClose }: JournalFeedProps): JSX.Element
                   key={entry.id}
                   className={`journal-summary-line${entry.kind === "combat" ? " hl" : ""}`}
                 >
-                  {renderRich(entry.text, `s${entry.id}`, entry.mark)}
+                  <TypewriterRich
+                    entry={entry}
+                    keyBase={`s${entry.id}`}
+                    animate={shouldAnimate(entry.id)}
+                  />
                 </span>
               ))
             ) : (

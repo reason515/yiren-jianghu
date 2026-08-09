@@ -87,7 +87,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.3 PVE 战斗接线契约（E14.5 / DC-037 / DC-038）
 
 - 开战用 `POST /combat/start { targetIds }`（兼容 `{ targetId }`）；服务端并入同房 `battleAllies`，同场最多 5 敌。战斗内刷新/恢复用 `GET /combat/status`；玩家意图：`attack`（客户端自动节拍）/ `recover` / `flee`，或 `{ action: "perform", performId, targetId? }`。客户端不得计算绝招效果、消耗、冷却、胜负或掉落。
-- `CombatView`：多敌血条 + 战报主阅读 + 屏底悬浮动作条（绝招/回气/逃跑，无普攻按钮）；`state`/`events` 为唯一事实来源。进行中 × = 收起面板（自动普攻仍推进）；结束后 × /「离去」关闭。
+- `CombatView`：全屏 Sheet（`full`）+ 顶部紧凑 HUD（敌气血 / 我方气·内力，不显示精）+ 中部可滚战报 + 底部动作条或结果所得；`state`/`events` 为唯一事实来源。进行中 × = 收起面板（自动普攻仍推进）；结束后 × /「离去」关闭。所得阅历/潜能/银两配色对齐人物簿。
 - **战报呈现**（关键字着色、击间闲笔、人兽鸟/境界分流、字号行距、逐行显现）权威见 `yjh-combat-presentation`；文案神韵见 `yjh-wuxia-copywriting`。改 CombatView 战报区 / `combatNarrative` 时先读该 skill。
 - 战斗结束后先收束结果横幅，再在同一叙事回合展示收益/任务推进；逃跑和落败只给状态结果，不伪造奖励。断线恢复时优先请求 status，存在 ongoing 会话才重开战局浮层。
 - 绝招按钮的可用态是服务端最终裁决；客户端可基于最近 state 做弱提示，但 400 错误须以 toast 显示服务端武侠文案，并保留当前战局。

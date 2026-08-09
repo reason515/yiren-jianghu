@@ -8,25 +8,21 @@ import {
 } from "../lib/combatTypes.js";
 import { latestPerformLine } from "../lib/effects.js";
 
-const LINE_REVEAL_MS = 720;
+/** 战报逐行显现间隔（毫秒）；显现中暂停自动普攻。 */
+export const LINE_REVEAL_MS = 1100;
 
 function CombatVital(props: {
   label: string;
   value: number;
   max: number;
-  tone: "qi" | "jing" | "neili";
+  tone: "qi" | "neili";
 }): JSX.Element {
   const { label, value, max, tone } = props;
   const pct = max > 0 ? Math.min(100, Math.max(0, Math.round((value / max) * 100))) : 0;
   const low = pct < 30;
   return (
     <div className={`combat-vital ${tone}${low ? " low" : ""}`}>
-      <div className="combat-vital-meta">
-        <span className="combat-vital-label">{label}</span>
-        <span className="combat-vital-nums">
-          {value}/{max}
-        </span>
-      </div>
+      <span className="combat-vital-label">{label}</span>
       <div
         className="combat-vital-track"
         role="progressbar"
@@ -36,6 +32,9 @@ function CombatVital(props: {
       >
         <div className="combat-vital-fill" style={{ width: `${pct}%` }} />
       </div>
+      <span className="combat-vital-nums">
+        {value}/{max}
+      </span>
     </div>
   );
 }
@@ -81,24 +80,26 @@ export function CombatView({
 
   if (!state.inCombat && !state.result) return null;
 
-  const enemies = state.enemies.length > 0 ? state.enemies : null;
+  const enemies =
+    state.enemies.length > 0
+      ? state.enemies
+      : [
+          {
+            id: "b0",
+            name: state.enemyName,
+            qi: state.enemyQi,
+            maxQi: state.enemyMaxQi,
+            down: state.enemyQi <= 0,
+          },
+        ];
+  const foeNames = enemies.map((e) => e.name);
   const visibleLog = state.log.slice(0, visibleCount);
 
   return (
     <div className="combat" data-testid="combat" role="region" aria-label="战局">
-      <div className="combat-sides">
+      <div className="combat-hud" data-testid="combat-hud">
         <div className="combat-foes" data-testid="combat-foes">
-          {(
-            enemies ?? [
-              {
-                id: "b0",
-                name: state.enemyName,
-                qi: state.enemyQi,
-                maxQi: state.enemyMaxQi,
-                down: state.enemyQi <= 0,
-              },
-            ]
-          ).map((foe) => {
+          {enemies.map((foe) => {
             const pct =
               foe.maxQi > 0
                 ? Math.min(100, Math.max(0, Math.round((foe.qi / foe.maxQi) * 100)))
@@ -109,18 +110,16 @@ export function CombatView({
                 className={`combat-foe${foe.down ? " down" : ""}`}
                 data-testid={`combat-foe-${foe.id}`}
               >
-                <div className="combat-foe-meta">
-                  <span className="combat-name">
-                    {foe.name}
-                    {foe.down ? " · 已伏" : ""}
-                  </span>
-                  <span className="combat-foe-nums">
-                    {foe.qi}/{foe.maxQi}
-                  </span>
-                </div>
+                <span className="combat-name foe-name">
+                  {foe.name}
+                  {foe.down ? " · 已伏" : ""}
+                </span>
                 <div className="combat-vital-track foe-track">
                   <div className="combat-vital-fill" style={{ width: `${pct}%` }} />
                 </div>
+                <span className="combat-foe-nums">
+                  {foe.qi}/{foe.maxQi}
+                </span>
               </div>
             );
           })}
@@ -128,9 +127,8 @@ export function CombatView({
         <div className="combat-self" data-testid="combat-self">
           <span className="combat-name self-title">你</span>
           <CombatVital label="气" value={state.playerQi} max={state.playerMaxQi} tone="qi" />
-          <CombatVital label="精" value={state.playerJing} max={state.playerMaxJing} tone="jing" />
           <CombatVital
-            label="内力"
+            label="内"
             value={state.playerNeili}
             max={state.playerMaxNeili}
             tone="neili"
@@ -144,7 +142,7 @@ export function CombatView({
             key={line.id}
             className={`combat-line${combatLineClassName(line.kind)}${flashId === line.id ? " perform-flash" : ""}`}
           >
-            {renderCombatSegments(line)}
+            {renderCombatSegments(line, { foeNames })}
           </p>
         ))}
       </div>
@@ -156,8 +154,12 @@ export function CombatView({
           </p>
           {state.reward && (
             <p className="combat-reward" data-testid="combat-reward">
-              所得：阅历 {state.reward.exp} · 潜能 {state.reward.potential} · 银两{" "}
-              {state.reward.silver}
+              所得：
+              <span className="rw-exp">阅历 {state.reward.exp}</span>
+              <span className="rw-sep"> · </span>
+              <span className="rw-pot">潜能 {state.reward.potential}</span>
+              <span className="rw-sep"> · </span>
+              <span className="rw-silver">银两 {state.reward.silver}</span>
             </p>
           )}
           {onDismiss && (

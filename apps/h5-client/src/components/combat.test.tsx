@@ -30,7 +30,7 @@ const STATE: CombatState = {
   playerNeili: 60,
   playerMaxNeili: 100,
   log: [
-    { id: 1, text: "剑未至，风先裂——你抢先进攻，匪徒仓促招架。" },
+    { id: 1, text: "剑未至，风先裂——你抢先进攻，劫道匪徒仓促招架。" },
     { id: 2, text: "你觑准破绽，一招追风破正中敌手胸口。", kind: "perform" },
   ],
   performs: [
@@ -41,12 +41,13 @@ const STATE: CombatState = {
 };
 
 describe("CombatView（自动战 + 抓时机）", () => {
-  it("渲染双方状态与战报；无普攻，绝招/逃跑发意图", () => {
+  it("渲染双方状态与战报；无普攻，绝招/逃跑发意图；战斗中不显示精", () => {
     const commands: Array<{ action: string; performId?: string }> = [];
     const { host } = render(<CombatView state={STATE} onAction={(c) => commands.push(c)} />);
     expect(host.textContent).toContain("劫道匪徒");
     expect(host.textContent).toContain("气");
     expect(host.textContent).toContain("180/200");
+    expect(host.querySelector("[data-testid=combat-self]")?.textContent).not.toMatch(/精/);
     expect(host.textContent).toContain("交手自行推进");
     expect(host.querySelector("[data-testid=combat-log]")?.textContent).toContain("追风破");
     expect([...host.querySelectorAll(".chip")].some((c) => c.textContent === "普攻")).toBe(false);
@@ -106,9 +107,20 @@ describe("CombatView（自动战 + 抓时机）", () => {
     );
     expect(host.querySelector("[data-testid=combat-result]")?.textContent).toContain("尘埃落定");
     expect(host.querySelector("[data-testid=combat-actions]")).toBeNull();
-    expect(host.querySelector("[data-testid=combat-reward]")?.textContent).toContain("阅历 6");
+    const reward = host.querySelector("[data-testid=combat-reward]");
+    expect(reward?.textContent).toContain("阅历 6");
+    expect(reward?.querySelector(".rw-exp")).toBeTruthy();
+    expect(reward?.querySelector(".rw-pot")).toBeTruthy();
+    expect(reward?.querySelector(".rw-silver")).toBeTruthy();
     act(() => host.querySelector<HTMLButtonElement>("[data-testid=combat-leave]")!.click());
     expect(dismissed).toBe(true);
+  });
+
+  it("战报中「你」与敌名分色", () => {
+    const { host } = render(<CombatView state={STATE} onAction={() => undefined} />);
+    const log = host.querySelector("[data-testid=combat-log]");
+    expect(log?.querySelector(".cm-self")?.textContent).toBe("你");
+    expect(log?.querySelector(".cm-foe")?.textContent).toBe("劫道匪徒");
   });
 
   it("非战斗状态不渲染", () => {

@@ -6,14 +6,27 @@ export interface SheetProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** 全屏铺满视口（战斗等独占流程）。 */
+  full?: boolean;
 }
 
-export function Sheet({ open, title, onClose, children }: SheetProps): JSX.Element | null {
+export function Sheet({
+  open,
+  title,
+  onClose,
+  children,
+  full = false,
+}: SheetProps): JSX.Element | null {
   if (!open) return null;
   return (
-    <div className="overlay" role="presentation" data-testid="sheet-overlay" onClick={onClose}>
+    <div
+      className={`overlay${full ? " overlay-full" : ""}`}
+      role="presentation"
+      data-testid="sheet-overlay"
+      onClick={onClose}
+    >
       <div
-        className="sheet"
+        className={`sheet${full ? " sheet-full" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

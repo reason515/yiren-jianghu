@@ -44,7 +44,7 @@ export function PvpReplayView({ open, match, onClose }: PvpReplayViewProps): JSX
                 if (!line) return null;
                 return (
                   <p key={line.id} className={`combat-line${combatLineClassName(line.kind)}`}>
-                    {renderCombatSegments(line)}
+                    {renderCombatSegments(line, { foeNames: [match.defenderName] })}
                   </p>
                 );
               })

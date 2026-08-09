@@ -959,7 +959,7 @@ export function App(): JSX.Element {
     const handle = window.setInterval(() => {
       if (combatBusyRef.current || combatPacingRef.current) return;
       combatActionRef.current({ action: "attack" });
-    }, 2800);
+    }, 4200);
     return () => window.clearInterval(handle);
   }, [combat?.inCombat]);
 
@@ -1320,7 +1320,7 @@ export function App(): JSX.Element {
       )}
 
       {combat && combatOpen && (
-        <Sheet open title={combat.inCombat ? "战局" : "战局已了"} onClose={closeCombat}>
+        <Sheet open full title={combat.inCombat ? "战局" : "战局已了"} onClose={closeCombat}>
           <CombatView
             state={combat}
             onAction={onCombatAction}

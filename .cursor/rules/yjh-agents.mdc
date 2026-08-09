@@ -19,10 +19,12 @@ alwaysApply: true
 | 移动端界面/交互/信息架构（H5、组件、数值展示） | `yjh-mobile-ui` | `.cursor/skills/yjh-mobile-ui/SKILL.md` |
 | 界面粗糙/太丑/像管理后台/UI 升级（先取证分级） | `ui-visual-audit` | `.cursor/skills/ui-visual-audit/SKILL.md` |
 | 中文字体自包/子集化/防系统回退（woff2，禁 CDN） | `chinese-font-selfhost` | `.cursor/skills/chinese-font-selfhost/SKILL.md` |
+| 战斗过程呈现（战报/着色/闲笔/人兽分流/节奏） | `yjh-combat-presentation` | `.cursor/skills/yjh-combat-presentation/SKILL.md` |
 
 ## 强制规则
 
 - 涉及玩家文案：**第一步必须 read `yjh-wuxia-copywriting`**；每次触发重新加载，禁止用「已在上下文中」替代。
+- 改战斗过程呈现（战报/着色/闲笔/人兽/节奏）：**第一步 read `yjh-combat-presentation`**，并同步 `yjh-wuxia-copywriting`。
 - 内容任务启动前，按 `yjh-project-conventions` 的「任务启动必读」表确认要加载的 skill。
 - 内容进仓库前登记 pkuxkx 权利状态，见 `docs/pkuxkx-content-catalog.md`。
 - 提交前门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；改 API/事件同步 `docs/protocol.md`（`pnpm test:docs`）。

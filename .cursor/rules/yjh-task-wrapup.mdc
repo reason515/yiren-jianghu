@@ -12,6 +12,7 @@ alwaysApply: true
 有可复用资产才更新（无则写「无新增沉淀」）：
 
 - 新模式/坑点 → 对应 `.cursor/skills/*/SKILL.md` 或 `docs/design-system.md`
+- 战斗呈现新原则/反模式/节奏基线 → `yjh-combat-presentation`
 - 外部借鉴 → `docs/sibling-borrowings.md`
 - 计划内任务 → `docs/design-and-development-plan.md` 执行记录
 - 改过 `.cursor/` / `.pi/` markdown → `pnpm format`，保证 `pnpm test:docs-design` 不破

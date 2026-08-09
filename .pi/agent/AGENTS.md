@@ -14,10 +14,12 @@
 | 设计或实现移动端界面/交互/信息架构（E 阶段 H5 前端、组件、数值展示）                                    | `yjh-mobile-ui`           | `.cursor/skills/yjh-mobile-ui/SKILL.md`           |
 | 界面粗糙/太丑/像管理后台/UI 升级/视觉打磨（先取证分级再动手）                                           | `ui-visual-audit`         | `.cursor/skills/ui-visual-audit/SKILL.md`         |
 | 中文字体自包/子集化/防系统字体回退（woff2 随包，禁 CDN）                                                | `chinese-font-selfhost`   | `.cursor/skills/chinese-font-selfhost/SKILL.md`   |
+| 战斗过程呈现（战报叙事、关键字着色、击间闲笔、人兽鸟/境界分流、战报节奏排版）                           | `yjh-combat-presentation` | `.cursor/skills/yjh-combat-presentation/SKILL.md` |
 
 **强制规则**：
 
 - 涉及玩家文案的任务，**第一步必须 read `yjh-wuxia-copywriting`**（不得凭记忆/凭印象直接编故事）；每次触发重新加载，禁止用"已在上下文中"替代。
+- 改战斗过程呈现（战报/着色/闲笔/人兽/节奏），**第一步必须 read `yjh-combat-presentation`**，并同步 `yjh-wuxia-copywriting`。
 - 内容任务（房间/NPC/物品/任务/剧情）启动前，先按 `yjh-project-conventions` 的"任务启动必读"表确认要加载哪些 skill。
 - 内容进入仓库前，必须登记 pkuxkx 权利状态（机制借鉴/需改写/需授权），见 `docs/pkuxkx-content-catalog.md`。
 - 提交前质量门禁必须全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；新增/修改 API 或事件时同步 `docs/protocol.md`（`pnpm test:docs`）。
@@ -33,6 +35,7 @@
 | 检查点                            | 有则更新到                                                                   |
 | --------------------------------- | ---------------------------------------------------------------------------- |
 | 新组件/原语/设计模式/技法         | `docs/design-system.md` 与对应 UI skill（`yjh-mobile-ui` 等）                |
+| 战斗呈现新原则/反模式/节奏基线    | `yjh-combat-presentation`                                                    |
 | 踩了新坑（渲染/布局/编码/工具链） | 对应 skill 的常见坑/经验清单（`ui-visual-audit`、`yjh-project-conventions`） |
 | 借鉴了外部项目手法                | `docs/sibling-borrowings.md`                                                 |
 | 完成计划内任务                    | `docs/design-and-development-plan.md` 执行记录                               |

@@ -114,7 +114,9 @@ export function App(): JSX.Element {
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [combatOpen, setCombatOpen] = useState(false);
   const [combatBusy, setCombatBusy] = useState(false);
+  const [combatPacing, setCombatPacing] = useState(false);
   const combatBusyRef = useRef(false);
+  const combatPacingRef = useRef(false);
   const combatActionRef = useRef<(intent: CombatIntent) => void>(() => undefined);
   const [questData, setQuestData] = useState<QuestPanelData | null>(null);
   const [questOpen, setQuestOpen] = useState(false);
@@ -949,14 +951,15 @@ export function App(): JSX.Element {
     })();
   };
   combatActionRef.current = onCombatAction;
+  combatPacingRef.current = combatPacing;
 
-  // 自动普攻节拍（DC-037）：面板收起后仍推进，重开只看战报。
+  // 自动普攻节拍（DC-037）：战报逐行显现期间暂停，避免读不过来。
   useEffect(() => {
     if (!combat?.inCombat) return;
     const handle = window.setInterval(() => {
-      if (combatBusyRef.current) return;
+      if (combatBusyRef.current || combatPacingRef.current) return;
       combatActionRef.current({ action: "attack" });
-    }, 1250);
+    }, 2800);
     return () => window.clearInterval(handle);
   }, [combat?.inCombat]);
 
@@ -1323,6 +1326,7 @@ export function App(): JSX.Element {
             onAction={onCombatAction}
             onDismiss={closeCombat}
             busy={combatBusy}
+            onPacingChange={setCombatPacing}
           />
         </Sheet>
       )}

@@ -5,63 +5,168 @@
   padding-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-height: 0;
 }
 .combat-sides {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .combat-foes {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
-.combat-side {
+.combat-foe {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.combat-side.foe .combat-name {
-  color: var(--cinnabar);
-}
-.combat-side.foe.down {
+.combat-foe.down {
   opacity: 0.45;
 }
-.combat-side.foe.down .combat-name {
-  color: var(--paper-faint);
+.combat-foe-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
-.combat-side.self .combat-name {
+.combat-foe-nums {
+  font-family: var(--font-digit);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--paper-dim);
+  font-variant-numeric: tabular-nums;
+}
+.combat-foe.down .combat-name,
+.combat-foe.down .combat-foe-nums {
+  color: var(--paper-faint);
 }
 .combat-name {
   font-family: var(--font-display);
   font-size: 15px;
   letter-spacing: 1px;
+  color: var(--cinnabar);
 }
+.combat-name.self-title {
+  color: var(--paper-dim);
+  margin-bottom: 2px;
+}
+.combat-self {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+.combat-vital {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.combat-vital-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.combat-vital-label {
+  font-size: 12px;
+  color: var(--paper-faint);
+  letter-spacing: 0.5px;
+  min-width: 2.5em;
+}
+.combat-vital-nums {
+  font-family: var(--font-digit);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.combat-vital.low .combat-vital-nums {
+  color: var(--cinnabar);
+}
+.combat-vital-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-soft);
+  overflow: hidden;
+}
+.combat-vital-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--paper-dim);
+  transition: width 0.35s ease;
+}
+.combat-vital.qi .combat-vital-fill,
+.foe-track .combat-vital-fill {
+  background: var(--stat-qi);
+}
+.combat-vital.jing .combat-vital-fill {
+  background: var(--stat-jing);
+}
+.combat-vital.neili .combat-vital-fill {
+  background: var(--stat-neili);
+}
+.combat-vital.low .combat-vital-fill {
+  background: var(--cinnabar);
+}
+.combat-foe.down .foe-track .combat-vital-fill {
+  background: var(--paper-faint);
+}
+
 .combat-log {
   max-height: 42vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 0;
+  gap: 8px;
+  padding: 12px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 .combat-line {
   margin: 0;
   color: var(--paper-dim);
-  line-height: 1.85;
+  line-height: 1.9;
   font-size: 15px;
 }
-.combat-line.hl {
+/* 语义着色：类而非项 —— 开战 / 击中 / 受伤 / 绝招 / 回避 / 回气 / 倒地 / 胜负 */
+.combat-line.start {
+  color: var(--gold);
+  font-family: var(--font-display);
+  letter-spacing: 0.5px;
+}
+.combat-line.hit {
   color: var(--jade-bright);
+}
+.combat-line.hurt {
+  color: var(--cinnabar);
+}
+.combat-line.dodge,
+.combat-line.parry {
+  color: var(--paper-faint);
+}
+.combat-line.hl {
+  color: var(--gold);
+  font-weight: 600;
+}
+.combat-line.recover {
+  color: var(--stat-neili);
 }
 .combat-line.dg {
   color: var(--cinnabar);
 }
+.combat-line.down-line {
+  color: var(--gold-muted);
+}
+.combat-line.victory {
+  color: var(--gold);
+  font-family: var(--font-display);
+  letter-spacing: 1px;
+}
+
 .combat-result-block {
   display: flex;
   flex-direction: column;

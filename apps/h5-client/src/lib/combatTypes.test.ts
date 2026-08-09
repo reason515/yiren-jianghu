@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { toCombatState, type CombatStatusResponse } from "./combatTypes.js";
+import {
+  battleEventLine,
+  combatLineClassName,
+  toCombatState,
+  type CombatStatusResponse,
+} from "./combatTypes.js";
 
 const RESPONSE: CombatStatusResponse = {
   status: "ongoing",
@@ -27,6 +32,7 @@ describe("toCombatState", () => {
       performs: [{ id: "swift_slash", ready: true }],
     });
     expect(state.log.map((line) => line.text).join("\n")).toContain("疾风斩");
+    expect(state.log.some((line) => line.text.includes("你"))).toBe(true);
   });
 
   it("多敌状态列出全部敌人", () => {
@@ -52,6 +58,7 @@ describe("toCombatState", () => {
     expect(state.enemies).toHaveLength(2);
     expect(state.enemies[1]).toMatchObject({ name: "瘦狗", down: true });
     expect(state.log[0]?.text).toContain("野狗");
+    expect(state.log[0]?.kind).toBe("start");
   });
 
   it("结束战局收束结果与服务端奖励", () => {
@@ -74,5 +81,40 @@ describe("toCombatState", () => {
       result: "win",
       reward: { exp: 6, potential: 2, silver: 3 },
     });
+  });
+});
+
+describe("battleEventLine 武侠叙事与着色", () => {
+  it("我方击中为 damage，敌方击中为 hurt", () => {
+    const hit = battleEventLine(
+      { seq: 3, type: "damage", actor: "a", data: { targetId: "b0" } },
+      "沈青崖",
+      "野狗",
+      (actor) => (actor === "a" ? "沈青崖" : "野狗"),
+    );
+    expect(hit?.kind).toBe("damage");
+    expect(hit?.text).toContain("你");
+    expect(combatLineClassName(hit?.kind)).toContain("hit");
+
+    const hurt = battleEventLine(
+      { seq: 4, type: "damage", actor: "b0", data: { targetId: "a" } },
+      "沈青崖",
+      "野狗",
+      (actor) => (actor === "a" ? "沈青崖" : "野狗"),
+    );
+    expect(hurt?.kind).toBe("hurt");
+    expect(hurt?.text).toMatch(/疼|痛|紧|铁锈/);
+    expect(combatLineClassName(hurt?.kind)).toContain("hurt");
+  });
+
+  it("绝招行带 perform 着色类", () => {
+    const line = battleEventLine(
+      { seq: 5, type: "perform", actor: "a", data: { performId: "疾风斩", targetId: "b0" } },
+      "沈青崖",
+      "野狗",
+    );
+    expect(line?.kind).toBe("perform");
+    expect(line?.text).toContain("疾风斩");
+    expect(combatLineClassName("perform")).toBe(" hl");
   });
 });

@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
-import { battleEventLine } from "../lib/combatTypes.js";
+import { battleEventLine, combatLineClassName } from "../lib/combatTypes.js";
 import type { PvpMatchDetail } from "../lib/pvpTypes.js";
 import { pvpResultView } from "../lib/pvpTypes.js";
 
@@ -42,10 +42,7 @@ export function PvpReplayView({ open, match, onClose }: PvpReplayViewProps): JSX
                 const line = battleEventLine(event, match.challengerName, match.defenderName);
                 if (!line) return null;
                 return (
-                  <p
-                    key={line.id}
-                    className={`combat-line${line.kind === "perform" ? " hl" : ""}${line.kind === "danger" ? " dg" : ""}`}
-                  >
+                  <p key={line.id} className={`combat-line${combatLineClassName(line.kind)}`}>
                     {line.text}
                   </p>
                 );

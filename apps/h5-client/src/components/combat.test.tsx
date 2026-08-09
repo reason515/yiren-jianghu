@@ -45,7 +45,8 @@ describe("CombatView（自动战 + 抓时机）", () => {
     const commands: Array<{ action: string; performId?: string }> = [];
     const { host } = render(<CombatView state={STATE} onAction={(c) => commands.push(c)} />);
     expect(host.textContent).toContain("劫道匪徒");
-    expect(host.textContent).toContain("气 180/200");
+    expect(host.textContent).toContain("气");
+    expect(host.textContent).toContain("180/200");
     expect(host.textContent).toContain("交手自行推进");
     expect(host.querySelector("[data-testid=combat-log]")?.textContent).toContain("追风破");
     expect([...host.querySelectorAll(".chip")].some((c) => c.textContent === "普攻")).toBe(false);

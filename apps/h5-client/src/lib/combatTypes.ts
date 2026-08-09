@@ -1,12 +1,54 @@
 /**
  * PVE 战斗传输适配：服务端的 state/events 是唯一事实，客户端只转换为展示状态和受控意图。
  * 支持同场多敌（DC-038）与自动普攻意图（DC-037）。
+ * 战报文案遵循 yjh-wuxia-copywriting（金庸画面 / 古龙节奏 / 黄易气机）。
  */
 
 export interface CombatLine {
   id: number;
   text: string;
-  kind?: "normal" | "perform" | "danger";
+  kind?: CombatLineKind;
+}
+
+/** 语义着色：颜色只区分「类」（击中/受伤/绝招/回避…），不裸露数值。 */
+export type CombatLineKind =
+  | "normal"
+  | "start"
+  | "damage"
+  | "hurt"
+  | "dodge"
+  | "parry"
+  | "perform"
+  | "recover"
+  | "danger"
+  | "down"
+  | "victory";
+
+export function combatLineClassName(kind?: CombatLineKind): string {
+  switch (kind) {
+    case "start":
+      return " start";
+    case "damage":
+      return " hit";
+    case "hurt":
+      return " hurt";
+    case "dodge":
+      return " dodge";
+    case "parry":
+      return " parry";
+    case "perform":
+      return " hl";
+    case "recover":
+      return " recover";
+    case "danger":
+      return " dg";
+    case "down":
+      return " down-line";
+    case "victory":
+      return " victory";
+    default:
+      return "";
+  }
 }
 
 export interface PerformButton {
@@ -63,6 +105,8 @@ export interface CombatViewProps {
   onDismiss?: () => void;
   /** 请求进行中时禁用动作，避免叠拍 */
   busy?: boolean;
+  /** 战报逐行显现中为 true，供上层暂停自动普攻 */
+  onPacingChange?: (pacing: boolean) => void;
 }
 
 interface ServerCombatant {
@@ -120,6 +164,8 @@ function nameOf(
   return response.state.combatants[actor]?.name ?? "对手";
 }
 
+/** 玩家侧用第二人称「你」，更像在读武侠小说。 */
+
 /** 事件 → 叙事行（PVE 战斗与 PVP 回放共用，避免文案漂移）。 */
 export function battleEventLine(
   event: ServerCombatEvent,
@@ -127,12 +173,14 @@ export function battleEventLine(
   enemyName: string,
   names?: (actor: string | undefined) => string,
 ): CombatLine | null {
-  const who = names ?? ((actor) => (actor === "a" || !actor ? playerName : enemyName));
+  const resolve = names ?? ((actor) => (actor === "a" || !actor ? playerName : enemyName));
   const data = asRecord(event.data);
-  const actorName = who(event.actor);
+  const fromPlayer = !event.actor || event.actor === "a";
+  const actorName = fromPlayer ? "你" : resolve(event.actor);
   const targetId = typeof data.targetId === "string" ? data.targetId : undefined;
-  const targetName = targetId ? who(targetId) : event.actor === "a" ? enemyName : playerName;
-  const performId = typeof data.performId === "string" ? data.performId : undefined;
+  const hitTarget =
+    targetId === "a" ? "你" : targetId ? resolve(targetId) : fromPlayer ? enemyName : "你";
+  const performName = typeof data.performId === "string" ? data.performId : undefined;
   const foeNames = Array.isArray(data.foeNames)
     ? data.foeNames.filter((n): n is string => typeof n === "string")
     : [];
@@ -146,100 +194,143 @@ export function battleEventLine(
         const list = foeNames.length > 0 ? foeNames.join("、") : "数人";
         return {
           id: event.seq,
+          kind: "start",
           text: pick([
-            `四下风停。${list}挡在眼前，这一场注定不是一对一。`,
-            `${list}已围上来——你一人，却须应付多方。`,
+            `风忽然静了。${list}已将退路堵死——这一场，注定要一个人应付多方。`,
+            `${list}围上来。杀意像潮水，一寸寸漫过脚面。`,
           ]),
         };
       }
       return {
         id: event.seq,
+        kind: "start",
         text: pick([
-          `${enemyName}横在眼前，四下的风也静了。`,
-          `与${enemyName}对峙。刀未出鞘，杀机先至。`,
+          `${enemyName}横在眼前。四下无声，只余彼此的呼吸。`,
+          `与${enemyName}对上了。刀未出鞘，杀机先至。`,
         ]),
       };
     case "damage":
       return {
         id: event.seq,
-        text: pick([
-          `${actorName}招势落定，${targetName}已然吃痛。`,
-          `${actorName}一击得手，${targetName}身形一晃。`,
-          `${targetName}被${actorName}迫得退了半步，气息乱了。`,
-        ]),
+        kind: fromPlayer ? "damage" : "hurt",
+        text: fromPlayer
+          ? pick([
+              `力由脊发。你这一击落在${hitTarget}身上——他闷哼一声，脚步乱了。`,
+              `没有花哨。你只递出一记干脆的着子，${hitTarget}肩头已吃了实打。`,
+              `招势过处，衣角翻飞。${hitTarget}胸前一沉，气息散了半寸。`,
+            ])
+          : pick([
+              `${actorName}扑近，爪牙已至。你肋下一疼，真气乱了片刻。`,
+              `${actorName}这一下又狠又快——你退得半步，口中却已泛起铁锈味。`,
+              `避无可避。${actorName}的力道撞上肩背，你牙关一紧。`,
+            ]),
       };
     case "parry":
       return {
         id: event.seq,
+        kind: "parry",
         text: pick([
-          `${targetName}横开架势，硬将这一击挡下。`,
-          `${targetName}架住了，虎口发麻，却未退开。`,
+          `${hitTarget}横开架势，硬生生把这一击挡下。虎口发麻，人却没退。`,
+          `金石相交，一串短响。${hitTarget}架住了，腕骨隐隐发酸。`,
         ]),
       };
     case "miss":
     case "dodge":
       return {
         id: event.seq,
+        kind: "dodge",
         text: pick([
-          `${targetName}侧身避过，招式只掠过衣角。`,
-          `${actorName}这一招落空，只带起一阵风。`,
+          `${hitTarget}侧身半寸。招式擦过衣角，只带起一阵空风。`,
+          `差一点。${actorName}这一招落空，尘土在脚边打了个旋。`,
+          `没有人看清那一瞬——${hitTarget}已让开，招式扑了个空。`,
         ]),
       };
     case "recover":
       return {
         id: event.seq,
-        text: pick([`${actorName}沉息回气，稳住了阵脚。`, `${actorName}真气归元，肩背松了半分。`]),
+        kind: "recover",
+        text: pick([
+          `${actorName}沉息归元。浊气下沉，清气上升，肩背松了半分。`,
+          `丹田一点暖意散开。${actorName}稳住了阵脚，呼吸渐沉。`,
+        ]),
       };
     case "perform":
       return {
         id: event.seq,
-        text: performId
+        kind: "perform",
+        text: performName
           ? pick([
-              `${actorName}气机一转，使出「${performId}」——${targetName}眼前一花。`,
-              `${actorName}使出「${performId}」，${targetName}避无可避。`,
+              `气机一转。你使出「${performName}」——${hitTarget}眼前一花，竟来不及完整看清那一式。`,
+              `「${performName}」！你起手便是杀机。等风声落定，${hitTarget}才觉出身上已中了一记。`,
+              `你指尖微颤，真气随招走。「${performName}」递出，${hitTarget}退无可退。`,
             ])
           : pick([
-              `${actorName}气机一转，绝招已出。`,
-              `${actorName}这一式来得又急又准，${targetName}措手不及。`,
+              `气机一转，绝招已出。短促，凌厉，不留余地。`,
+              `这一式来得又急又准——对手心神最松的一瞬，你已递到了。`,
             ]),
-        kind: "perform",
       };
     case "perform_failed":
       return {
         id: event.seq,
-        text: `${actorName}气息未继，这一式终究未能使全。`,
         kind: "danger",
+        text: pick([
+          `${actorName}气息未继，这一式终究散在半途。`,
+          `真气一滞。${actorName}想发的那一招，只余半截余势。`,
+        ]),
       };
     case "flee":
       return {
         id: event.seq,
+        kind: "danger",
         text:
           data.success === true
-            ? `${actorName}虚晃一步，抽身而去。`
-            : `${actorName}欲退，却被对手缠住了脚步。`,
-        kind: "danger",
+            ? pick([
+                `${actorName}虚晃一步，身形已没入烟尘。`,
+                `退路虽窄，${actorName}还是从杀机缝里钻了出去。`,
+              ])
+            : pick([
+                `${actorName}想退，对手却缠上来，退路被堵死了。`,
+                `抽身不及。${actorName}刚挪半步，便被杀气压了回去。`,
+              ]),
       };
-    case "foe_down":
+    case "foe_down": {
+      const fallen = typeof data.name === "string" ? data.name : actorName;
       return {
         id: event.seq,
+        kind: "down",
         text: pick([
-          `${typeof data.name === "string" ? data.name : actorName}力竭倒地，一时起不来了。`,
-          `尘土扬起——${typeof data.name === "string" ? data.name : actorName}已伏。`,
+          `${fallen}膝下一软，栽进尘土——一时起不来了。`,
+          `风过处，${fallen}已伏。余劲还在，人却静了。`,
         ]),
-        kind: "perform",
       };
+    }
     case "victory":
       return {
         id: event.seq,
-        text: pick(["胜负已分，余劲仍在风里。", "尘埃落定。这一场，总算有了了结。"]),
-        kind: "perform",
+        kind: "victory",
+        text: pick([
+          `胜负已分。余劲散在风里，像一场未写完的句号。`,
+          `尘埃落定。四下忽然静得能听见自己的心跳。`,
+        ]),
       };
     case "reward":
-      return { id: event.seq, text: "这一程所得，已收入行囊。", kind: "perform" };
+      return {
+        id: event.seq,
+        kind: "victory",
+        text: pick(["这一程所得，已收入行囊。", "战利入囊。江湖路远，先带走眼前这点。"]),
+      };
     case "quest_progress":
-      return { id: event.seq, text: "手头的请托，也向前走了一步。", kind: "perform" };
+      return {
+        id: event.seq,
+        kind: "normal",
+        text: pick(["手头的请托，也向前走了一步。", "这一战之后，肩上的差事轻了半分。"]),
+      };
     case "draw":
-      return { id: event.seq, text: "两下分开，谁也没有再追。", kind: "danger" };
+      return {
+        id: event.seq,
+        kind: "danger",
+        text: pick(["两下分开，谁也没有再追。", "未分胜负。风里只余各自的喘息。"]),
+      };
     case "turn_start":
       return null;
     default:

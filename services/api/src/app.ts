@@ -325,7 +325,9 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
             err.code === "item_not_here" ||
             err.code === "item_not_found"
               ? 404
-              : err.code === "item_already_taken" || err.code === "insufficient_silver"
+              : err.code === "item_already_taken" ||
+                  err.code === "insufficient_silver" ||
+                  err.code === "afk_busy"
                 ? 409
                 : 400;
           return envelope(reply, status, err.code, err.message);

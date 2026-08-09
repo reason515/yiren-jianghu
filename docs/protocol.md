@@ -168,7 +168,7 @@ pvp.report
 - `POST /afk/stop`：先 settle 未结时长，再终态（到期 `completed` / 手动 `cancelled`），战报含真实 `gains`。
 - `GET /afk/grind-jobs`：返回当前角色仍可接的生计杂役（已按 `maxExp` 过滤），含每小时收益与耗精；有路线时另含 `hubRoomId`/`roundGain`/`jingPerRound`。
 - 在线收益倍率 `onlineRewardMult`（默认 1.8）、短轮回 `onlineTickSec`（默认 60s）；离线生计仍用 `grindJobs.hourlyGain` 按时长累计（不改房间）。
-- **场景移动锁**：在线挂机 `running` 时 `POST /scene/move` 拒绝（`afk_busy`，「行止未歇，不便擅离」）。
+- **场景移动锁**：在线挂机 `running` 时 `POST /scene/action { type: "move" }` 拒绝（`afk_busy`，409，「行止未歇，不便擅离」）。
 - Worker 继续扫描到期/到时作业；与 status/stop 共用 `settleJobNow`。
 
 ---

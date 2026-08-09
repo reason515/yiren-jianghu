@@ -1,34 +1,57 @@
 import { useState, type JSX } from "react";
 
 /**
- * 挂机状态条（mobile-ui：例行状态与停止原因不弹 toast，统一走场景区挂机条）。
- * - 运行中：显示状态消息 + 停止按钮；
- * - 停止后：显示停止原因 + 「知道了」关闭。
+ * 挂机状态条：运行中显示进度与累计收益；暂停显示断线原因。
  */
 export interface GrindBannerProps {
   active: boolean;
   message: string;
   reason?: string | null;
+  progress?: number;
+  gains?: { exp: number; potential: number; silver: number };
+  paused?: boolean;
   onStop?: () => void;
+  onResume?: () => void;
 }
 
 export function GrindBanner({
   active,
   message,
   reason,
+  progress = 0,
+  gains = { exp: 0, potential: 0, silver: 0 },
+  paused = false,
   onStop,
+  onResume,
 }: GrindBannerProps): JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
 
   if (active) {
+    const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
     return (
-      <div className="grind-banner active" data-testid="grind-banner">
-        <span className="grind-message">{message}</span>
-        {onStop && (
-          <button type="button" className="grind-stop" aria-label="停止挂机" onClick={onStop}>
-            停止
-          </button>
-        )}
+      <div className={`grind-banner active${paused ? " paused" : ""}`} data-testid="grind-banner">
+        <div className="grind-banner-main">
+          <span className="grind-message">{message}</span>
+          <div className="grind-progress-track" aria-hidden>
+            <div className="grind-progress-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="grind-gains">
+            历练 {Math.floor(gains.exp)} · 潜能 {Math.floor(gains.potential)} · 银{" "}
+            {Math.floor(gains.silver)}
+          </span>
+        </div>
+        <div className="grind-banner-actions">
+          {paused && onResume ? (
+            <button type="button" className="grind-resume" onClick={onResume}>
+              继续
+            </button>
+          ) : null}
+          {onStop ? (
+            <button type="button" className="grind-stop" aria-label="停止挂机" onClick={onStop}>
+              停止
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }

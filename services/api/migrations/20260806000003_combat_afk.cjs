@@ -59,6 +59,9 @@ exports.up = async (pgm) => {
     config: { type: "jsonb", notNull: true, default: pgm.func("'{}'::jsonb") },
     day: { type: "text", notNull: true, default: "" },
     hours_today: { type: "numeric", notNull: true, default: 0 },
+    presence: { type: "text", notNull: true, default: "offline" },
+    last_heartbeat_at: { type: "timestamptz" },
+    journal_seq: { type: "integer", notNull: true, default: 0 },
     started_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
     scheduled_end_at: { type: "timestamptz" },
     last_tick_at: { type: "timestamptz" },
@@ -69,6 +72,9 @@ exports.up = async (pgm) => {
   });
   pgm.addConstraint("afk_jobs", "ck_afk_kind", {
     check: "kind IN ('quest','study','grind','fishing','peiyao')",
+  });
+  pgm.addConstraint("afk_jobs", "ck_afk_presence", {
+    check: "presence IN ('online','offline')",
   });
   pgm.addConstraint("afk_jobs", "ck_afk_status", {
     check: "status IN ('running','paused','completed','failed','cancelled')",

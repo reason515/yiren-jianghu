@@ -62,6 +62,7 @@ PUT /templates/:id (auth)
 DELETE /templates/:id (auth)
 POST /afk/start (auth)
 POST /afk/stop (auth)
+POST /afk/resume (auth)
 GET /afk/status (auth)
 GET /afk/reports (auth)
 GET /afk/grind-jobs (auth)
@@ -152,14 +153,21 @@ pvp.report
 - `POST /skills/learn-perform { performId, npcId }`（DC-041）：学会绝招须同房师父/教头当面传授，且该 NPC `teaches` 含此绝招所属武功；须满足 `learnMinLevel` + `learnRequires`（前置技能等级门槛）；写入 `character_performs`，此后战斗中 `POST /combat/action { action: "perform", performId }` 方可使用。已学绝招不可重复学。
 - `GET /skills/mastery`：人物簿「武学」页一站式视图——`skills`（含 `kind`/`enableSlots`）、`skillEnable`、各槎 `effective` 有效等级、已学 `moves`、已学 `performs`。无角色返回 404。
 
-# 9. 挂机约定（DC-026 / DC-042）
+# 9. 挂机约定（DC-026 / DC-042 / DC-043）
 
-- `POST /afk/start`：`kind` ∈ `study` | `quest` | `grind`。
-  - `study`：`config.skillId`；
-  - `quest`：已接击杀相位差事 + `templateId`（DC-026）；
+- `POST /afk/start`：`kind` ∈ `study` | `quest` | `grind`；可选 `presence` ∈ `online` | `offline`（缺省 `offline`）。
+  - `study`：仅 `offline`；`config.skillId`；
+  - `quest`：已接击杀相位差事 + `templateId`（DC-026）；在线/离线均可；
   - `grind`：`config.jobId` 指向内容包 `grindJobs`；历练达 `maxExp` 时拒绝（`grind_unavailable`）。无战斗、不需战术模板。
+  - 在线时长建议 15/30/60 分钟；离线仍按 1–8 时辰（受 `maxDurationHours` 约束）。
+- `GET /afk/status`：无作业返回 `{ active: false }`；有作业返回视图，含 `presence`、`progress`（0–1）、`elapsedMs`/`totalMs`、`gains`（累计）、`journalLines`（自上次游标的新增见闻）。
+  - **心跳**：客户端约 15–20s 轮询本接口；在线作业刷新 `last_heartbeat_at`。超时（`params.afk.onlineHeartbeatTimeoutSec`，默认 45s）→ `status=paused`，文案「气息中断，行止暂歇」，**不**降级为离线收益。
+  - 读时 settle：离线/在线均按未结时长推进并写回角色资源，便于进度条与累计收益实时可见。
+- `POST /afk/resume`：仅 `paused` 作业可续；恢复 `running` 并刷新心跳。
+- `POST /afk/stop`：先 settle 未结时长，再终态（到期 `completed` / 手动 `cancelled`），战报含真实 `gains`。
 - `GET /afk/grind-jobs`：返回当前角色仍可接的生计杂役（已按 `maxExp` 过滤），含每小时收益与耗精。
-- Worker 按时长结算三件套（经验/潜能/银两）并耗精；精尽停工写失败战报；每日递减同修炼挂机。
+- 在线收益倍率 `onlineRewardMult`（默认 1.8）、短轮回 `onlineTickSec`（默认 60s）；离线生计仍用 `grindJobs.hourlyGain` 按时长累计。
+- Worker 继续扫描到期/到时作业；与 status/stop 共用 `settleJobNow`。
 
 ---
 

@@ -3,6 +3,7 @@ import { Sheet } from "./base/Sheet.js";
 import { ChoiceRow } from "./base/ChoiceRow.js";
 import type {
   AfkGrindOption,
+  AfkPresence,
   AfkQuestOption,
   AfkSkillOption,
   AfkStartConfig,
@@ -10,8 +11,8 @@ import type {
 } from "../lib/afkTypes.js";
 
 /**
- * 挂机启动面板：修炼 / 行侠 / 生计（DC-042）。
- * 互斥选择用分段控件/chips（禁原生 select）；客户端只提交受控意图。
+ * 挂机启动面板（DC-043）：先选在线/离线，再选法门。
+ * 在线仅生计/行侠；离线含修炼。运行中展示进度与累计收益。
  */
 export interface AfkSheetProps {
   open: boolean;
@@ -20,14 +21,19 @@ export interface AfkSheetProps {
   templates: AfkTemplateOption[];
   grindJobs: AfkGrindOption[];
   active: boolean;
+  paused?: boolean;
   statusMessage: string;
+  progress?: number;
+  gains?: { exp: number; potential: number; silver: number };
   pending?: boolean;
   onStart: (config: AfkStartConfig) => void;
   onStop: () => void;
+  onResume?: () => void;
   onClose: () => void;
 }
 
-const DURATIONS = [60, 120, 240, 480]; // 分钟（服务端上限 8h 内）
+const ONLINE_DURATIONS = [15, 30, 60];
+const OFFLINE_DURATIONS = [60, 120, 240, 480];
 
 export function AfkSheet({
   open,
@@ -36,18 +42,32 @@ export function AfkSheet({
   templates,
   grindJobs,
   active,
+  paused = false,
   statusMessage,
+  progress = 0,
+  gains = { exp: 0, potential: 0, silver: 0 },
   pending = false,
   onStart,
   onStop,
+  onResume,
   onClose,
 }: AfkSheetProps): JSX.Element | null {
+  const [presence, setPresence] = useState<AfkPresence>("offline");
   const [mode, setMode] = useState<"study" | "quest" | "grind">("grind");
   const [skillId, setSkillId] = useState(skills[0]?.id ?? "");
   const [questId, setQuestId] = useState(quests[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [grindJobId, setGrindJobId] = useState(grindJobs[0]?.id ?? "");
-  const [duration, setDuration] = useState(DURATIONS[0]!);
+  const durations = presence === "online" ? ONLINE_DURATIONS : OFFLINE_DURATIONS;
+  const [duration, setDuration] = useState(durations[0]!);
+
+  useEffect(() => {
+    if (presence === "online" && mode === "study") setMode("grind");
+  }, [presence, mode]);
+
+  useEffect(() => {
+    if (!durations.includes(duration)) setDuration(durations[0]!);
+  }, [presence, duration, durations]);
 
   useEffect(() => {
     if (!skills.some((skill) => skill.id === skillId)) setSkillId(skills[0]?.id ?? "");
@@ -76,27 +96,38 @@ export function AfkSheet({
 
   const start = (): void => {
     if (mode === "study") {
-      onStart({ kind: "study", durationMinutes: duration, config: { skillId } });
+      onStart({
+        kind: "study",
+        presence: "offline",
+        durationMinutes: duration,
+        config: { skillId },
+      });
     } else if (mode === "quest" && questId && templateId) {
       onStart({
         kind: "quest",
+        presence,
         templateId,
         durationMinutes: duration,
         config: { questId },
       });
     } else if (mode === "grind" && grindJobId) {
-      onStart({ kind: "grind", durationMinutes: duration, config: { jobId: grindJobId } });
+      onStart({
+        kind: "grind",
+        presence,
+        durationMinutes: duration,
+        config: { jobId: grindJobId },
+      });
     }
   };
 
   const lead =
-    mode === "study"
-      ? "收束心神，择一门功夫细细参悟。离线时光虽静，寸进仍由服务端记下。"
-      : mode === "quest"
-        ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
-        : "不需动武，只换些碎银与历练。村中杂役、溪边垂钓，皆是入江湖的第一笔盘缠。";
-
-  const startLabel = mode === "study" ? "开始参悟" : mode === "quest" ? "启程行侠" : "开始生计";
+    presence === "online"
+      ? "在线行止轮回更密、所得更丰；须时时守着，断线即暂歇。"
+      : mode === "study"
+        ? "收束心神，择一门功夫细细参悟。离线时光虽静，寸进仍由服务端记下。"
+        : mode === "quest"
+          ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
+          : "不需动武，只换些碎银与历练。挂多久结多久，中途停下亦立刻清算。";
 
   return (
     <Sheet open={open} title="行止" onClose={onClose}>
@@ -105,19 +136,53 @@ export function AfkSheet({
       {active ? (
         <div className="afk-running">
           <p className="afk-status">{statusMessage}</p>
-          <button type="button" className="btn danger" disabled={pending} onClick={onStop}>
-            停止行止
-          </button>
+          <div className="afk-progress" aria-label="挂机进度">
+            <div className="afk-progress-track">
+              <div
+                className="afk-progress-fill"
+                style={{ width: `${Math.round(Math.min(1, Math.max(0, progress)) * 100)}%` }}
+              />
+            </div>
+            <p className="afk-progress-gains">
+              已获 · 历练 {Math.floor(gains.exp)} · 潜能 {Math.floor(gains.potential)} · 银两{" "}
+              {Math.floor(gains.silver)}
+            </p>
+          </div>
+          <div className="afk-running-actions">
+            {paused && onResume ? (
+              <button type="button" className="btn primary" disabled={pending} onClick={onResume}>
+                继续行止
+              </button>
+            ) : null}
+            <button type="button" className="btn danger" disabled={pending} onClick={onStop}>
+              停止并结算
+            </button>
+          </div>
         </div>
       ) : (
         <div className="afk-form">
+          <div className="field">
+            <span className="field-label">方式</span>
+            <ChoiceRow
+              label="在线或离线"
+              options={[
+                { value: "offline", label: "离线", disabled: pending },
+                { value: "online", label: "在线", disabled: pending },
+              ]}
+              value={presence}
+              onChange={setPresence}
+            />
+          </div>
+
           <div className="field">
             <span className="field-label">行止</span>
             <ChoiceRow
               label="行止法门"
               options={[
                 { value: "grind", label: "生计", disabled: pending },
-                { value: "study", label: "修炼", disabled: pending },
+                ...(presence === "offline"
+                  ? [{ value: "study" as const, label: "修炼", disabled: pending }]
+                  : []),
                 { value: "quest", label: "行侠", disabled: pending },
               ]}
               value={mode}
@@ -216,7 +281,8 @@ export function AfkSheet({
                     const job = grindJobs.find((entry) => entry.id === grindJobId);
                     if (!job) return null;
                     const g = job.hourlyGain;
-                    return ` · 每时约历练 ${g.exp}、潜能 ${g.potential}、银 ${g.silver}`;
+                    const mult = presence === "online" ? "（在线更高）" : "";
+                    return ` · 每时约历练 ${g.exp}、潜能 ${g.potential}、银 ${g.silver}${mult}`;
                   })()}
                 </p>
               ) : null}
@@ -226,7 +292,7 @@ export function AfkSheet({
           <div className="field">
             <span className="field-label">时长</span>
             <div className="chips" role="group" aria-label="时长">
-              {DURATIONS.map((minutes) => (
+              {durations.map((minutes) => (
                 <button
                   key={minutes}
                   type="button"
@@ -245,7 +311,13 @@ export function AfkSheet({
             disabled={!canStart || pending}
             onClick={start}
           >
-            {pending ? "安排行止中…" : startLabel}
+            {pending
+              ? "安排行止中…"
+              : mode === "study"
+                ? "开始参悟"
+                : mode === "quest"
+                  ? "启程行侠"
+                  : "开始生计"}
           </button>
         </div>
       )}

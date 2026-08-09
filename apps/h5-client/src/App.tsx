@@ -130,7 +130,14 @@ export function App(): JSX.Element {
   const combatActionRef = useRef<(intent: CombatIntent) => void>(() => undefined);
   const [questData, setQuestData] = useState<QuestPanelData | null>(null);
   const [questOpen, setQuestOpen] = useState(false);
-  const [afkStatus, setAfkStatus] = useState<AfkStatusView>({ active: false, message: "" });
+  const [afkStatus, setAfkStatus] = useState<AfkStatusView>({
+    active: false,
+    paused: false,
+    message: "",
+    progress: 0,
+    gains: { exp: 0, potential: 0, silver: 0 },
+    journalLines: [],
+  });
   const [afkSkills, setAfkSkills] = useState<AfkSkillOption[]>([]);
   const [afkQuests, setAfkQuests] = useState<AfkQuestOption[]>([]);
   const [afkTemplates, setAfkTemplates] = useState<AfkTemplateOption[]>([]);
@@ -267,7 +274,12 @@ export function App(): JSX.Element {
           api.getQuests(),
           api.getAfkGrindJobs(),
         ]);
-        setAfkStatus(toAfkStatusView(status));
+        const view = toAfkStatusView(status);
+        setAfkStatus(view);
+        for (const line of view.journalLines) addJournal(line);
+        if (view.journalLines.length > 0) {
+          void refreshCharacter().catch(() => undefined);
+        }
         setAfkSkills(toAfkSkillOptions(skills));
         setAfkTemplates(templates.map((template) => ({ id: template.id, name: template.name })));
         setAfkQuests(toAfkQuestOptions(toQuestPanelData(quests).quests));
@@ -283,6 +295,15 @@ export function App(): JSX.Element {
     },
     [api],
   );
+
+  // 在线挂机心跳 + 离线进度刷新（约 18s）
+  useEffect(() => {
+    if (!afkStatus.active || afkStatus.paused) return;
+    const timer = window.setInterval(() => {
+      void refreshAfk();
+    }, 18_000);
+    return () => window.clearInterval(timer);
+  }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
   // 恢复点：resume + 刷新全量状态；成功 true，失败抛错（网络 TypeError 或 ApiError 由调用方裁决）。
   const restoreSession = useCallback(async (): Promise<boolean> => {
@@ -705,11 +726,33 @@ export function App(): JSX.Element {
     void api
       .stopAfk()
       .then((report) => {
-        setAfkStatus({ active: false, message: "", reason: report.reason ?? "行止已收" });
+        setAfkStatus({
+          active: false,
+          paused: false,
+          message: "",
+          reason: report.reason ?? "行止已收",
+          progress: 0,
+          gains: { exp: 0, potential: 0, silver: 0 },
+          journalLines: [],
+        });
         setAfkReport(report);
         setAfkReportOpen(true);
         setPanel("none");
         addJournal(report.reason ?? "行止已收。");
+        void refreshCharacter();
+      })
+      .catch(notify)
+      .finally(() => setAfkPending(false));
+  };
+
+  const onAfkResume = (): void => {
+    setAfkPending(true);
+    void api
+      .resumeAfk()
+      .then((job) => {
+        setAfkStatus(toAfkStatusView(job));
+        showToast("气息再续，行止继续。");
+        addJournal("气息再续，行止继续。");
       })
       .catch(notify)
       .finally(() => setAfkPending(false));
@@ -905,7 +948,7 @@ export function App(): JSX.Element {
       .reportQuest(questId)
       .then((result) => {
         const rewards = (result as { rewards: QuestRewardView }).rewards;
-        const text = `交差已毕：经验 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
+        const text = `交差已毕：历练 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
         showToast(text);
         addJournal(text);
         return refreshQuests();
@@ -1083,7 +1126,14 @@ export function App(): JSX.Element {
     setCombatOpen(false);
     setQuestData(null);
     setQuestOpen(false);
-    setAfkStatus({ active: false, message: "" });
+    setAfkStatus({
+      active: false,
+      paused: false,
+      message: "",
+      progress: 0,
+      gains: { exp: 0, potential: 0, silver: 0 },
+      journalLines: [],
+    });
     setAfkSkills([]);
     setAfkQuests([]);
     setAfkTemplates([]);
@@ -1177,7 +1227,11 @@ export function App(): JSX.Element {
             active={afkStatus.active}
             message={afkStatus.message}
             reason={afkStatus.reason}
+            progress={afkStatus.progress}
+            gains={afkStatus.gains}
+            paused={afkStatus.paused}
             onStop={afkStatus.active ? onAfkStop : undefined}
+            onResume={afkStatus.paused ? onAfkResume : undefined}
           />
           <nav className="app-nav" aria-label="主功能">
             {combat && (
@@ -1258,10 +1312,14 @@ export function App(): JSX.Element {
           templates={afkTemplates}
           grindJobs={afkGrindJobs}
           active={afkStatus.active}
+          paused={afkStatus.paused}
           statusMessage={afkStatus.message}
+          progress={afkStatus.progress}
+          gains={afkStatus.gains}
           pending={afkPending}
           onStart={onAfkStart}
           onStop={onAfkStop}
+          onResume={onAfkResume}
           onClose={() => setPanel("none")}
         />
       )}

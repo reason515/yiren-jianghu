@@ -90,7 +90,7 @@ describe("CharacterSheet（角色面板）", () => {
     const { host } = render(
       <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
     );
-    expect(host.textContent).toContain("经验");
+    expect(host.textContent).toContain("历练");
     expect(host.textContent).toContain("1200");
     expect(host.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("状态");
     expect(host.querySelector('[data-testid="char-tab-panel"]')).not.toBeNull();

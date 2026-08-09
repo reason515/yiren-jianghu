@@ -72,6 +72,7 @@ export const API_MANIFEST: ApiRoute[] = [
   // 挂机
   { method: "POST", path: "/afk/start", auth: true, domain: "afk" },
   { method: "POST", path: "/afk/stop", auth: true, domain: "afk" },
+  { method: "POST", path: "/afk/resume", auth: true, domain: "afk" },
   { method: "GET", path: "/afk/status", auth: true, domain: "afk" },
   { method: "GET", path: "/afk/reports", auth: true, domain: "afk" },
   { method: "GET", path: "/afk/grind-jobs", auth: true, domain: "afk" },

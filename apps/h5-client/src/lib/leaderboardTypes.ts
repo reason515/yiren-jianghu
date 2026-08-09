@@ -6,7 +6,7 @@ export interface LeaderboardEntry {
   rank: number;
   characterId: string;
   name: string;
-  /** 成长榜=经验；赛季榜=积分。 */
+  /** 成长榜=历练；赛季榜=积分。 */
   value: number;
   isMe: boolean;
 }

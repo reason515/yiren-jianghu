@@ -150,7 +150,7 @@ export function CharacterSheet({
       <div className="char-summary" aria-label="历练">
         <span className="res exp">
           <i className="dot" aria-hidden="true" />
-          经验 <b className="char-num">{character.exp}</b>
+          历练 <b className="char-num">{character.exp}</b>
         </span>
         <span className="res pot">
           <i className="dot" aria-hidden="true" />

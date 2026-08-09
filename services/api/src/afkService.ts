@@ -1,13 +1,22 @@
 import { randomUUID } from "node:crypto";
-import {
-  buildReport,
-  cancelJob,
-  createJob,
-  type AfkJobKind,
-  type AfkJobState,
-} from "@yjh/game-core";
+import { createJob, type AfkJobKind } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
+import {
+  JOB_COLS,
+  gains as zeroGains,
+  narrativeFor,
+  progressOf,
+  settleJobNow,
+  stopJobNow,
+  type AfkPresence,
+  type JobRow,
+} from "@yjh/worker";
 import type { Db } from "./db.js";
+
+async function withTx<T>(db: Db, work: (tx: Db) => Promise<T>): Promise<T> {
+  if (db.transaction) return db.transaction(work);
+  return work(db);
+}
 
 /** 挂机域错误（code 进入错误信封）。 */
 export class AfkError extends Error {
@@ -29,12 +38,17 @@ export interface AfkGainsView {
 export interface AfkJobView {
   id: string;
   kind: AfkJobKind;
+  presence: AfkPresence;
   status: string;
   phase: string;
   startedAt: string;
   scheduledEndAt: string;
   stopReason?: string;
   gains: AfkGainsView;
+  progress: number;
+  elapsedMs: number;
+  totalMs: number;
+  journalLines: string[];
   config: Record<string, unknown>;
 }
 
@@ -49,23 +63,12 @@ export interface AfkReportView {
 }
 
 export interface AfkStartInput {
-  /** 挂机法门（服务端校验 study/quest/grind；路由层只透传）。 */
   kind: string;
-  /** 战术模板 id（quest 模式必填；study/grind 无需）。 */
+  /** online | offline；缺省 offline。在线仅 grind/quest。 */
+  presence?: string;
   templateId?: string;
-  /** 分钟；缺省取参数表上限。 */
   durationMinutes?: number;
-  /** 挂机配置：study → { skillId }；quest → { questId }；grind → { jobId }。 */
   config?: Record<string, unknown>;
-}
-
-export interface AfkService {
-  start(accountId: string, input: AfkStartInput): Promise<AfkJobView>;
-  stop(accountId: string): Promise<AfkReportView>;
-  status(accountId: string): Promise<AfkJobView | null>;
-  reports(accountId: string, limit?: number): Promise<AfkReportView[]>;
-  /** 当前角色可接的生计杂役（按 maxExp 过滤）。 */
-  grindJobs(accountId: string): Promise<AfkGrindJobView[]>;
 }
 
 export interface AfkGrindJobView {
@@ -77,20 +80,16 @@ export interface AfkGrindJobView {
   jingPerHour: number;
 }
 
-type AfkJobRow = {
-  id: string;
-  character_id: string;
-  kind: AfkJobKind;
-  status: string;
-  phase: string;
-  template_snapshot: Record<string, unknown>;
-  config: Record<string, unknown>;
-  day: string;
-  hours_today: number;
-  started_at: string;
-  scheduled_end_at: string | null;
-  last_tick_at: string | null;
-  stop_reason: string | null;
+export interface AfkService {
+  start(accountId: string, input: AfkStartInput): Promise<AfkJobView>;
+  stop(accountId: string): Promise<AfkReportView>;
+  status(accountId: string): Promise<AfkJobView | null>;
+  resume(accountId: string): Promise<AfkJobView>;
+  reports(accountId: string, limit?: number): Promise<AfkReportView[]>;
+  grindJobs(accountId: string): Promise<AfkGrindJobView[]>;
+}
+
+type AfkJobDbRow = JobRow & {
   report: string | null;
 };
 
@@ -102,17 +101,8 @@ function gainsView(g: Partial<Record<(typeof GAIN_KEYS)[number], number>>): AfkG
   return out;
 }
 
-/** 战报叙事（wuxia 短句；可变数值只进 UI 不进文案）。 */
-function narrativeFor(kind: AfkJobKind, status: string): string {
-  if (status === "cancelled") return "你收住架势，江湖路长，改日再练。";
-  if (status === "failed") {
-    if (kind === "quest") return "这一程走得勉强，事未了结，只得折返。";
-    if (kind === "grind") return "力不从心，杂役只好暂且放下。";
-    return "气机不继，此行无功而返。";
-  }
-  if (kind === "quest") return "事已了结，一路风尘，尽数落袋。";
-  if (kind === "grind") return "日头偏西，杂役已毕，银钱与历练一并入囊。";
-  return "收功睁眼，只觉筋骨松活，神完气足。";
+function parseConfig(value: unknown): Record<string, unknown> {
+  return (typeof value === "string" ? JSON.parse(value) : value) as Record<string, unknown>;
 }
 
 export function createAfkService(db: Db, content: ContentPack): AfkService {
@@ -132,54 +122,60 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
     return rows.rows[0] ?? null;
   };
 
-  const activeJobRow = async (characterId: string): Promise<AfkJobRow | null> => {
-    const rows = await db.query<AfkJobRow>(
-      "SELECT id, character_id, kind, status, phase, template_snapshot, config, day, hours_today, started_at, scheduled_end_at, last_tick_at, stop_reason, report FROM afk_jobs WHERE character_id = $1 AND status IN ('running','paused') ORDER BY started_at DESC LIMIT 1",
+  const activeJobRow = async (characterId: string): Promise<AfkJobDbRow | null> => {
+    const rows = await db.query<AfkJobDbRow>(
+      `SELECT ${JOB_COLS}, report FROM afk_jobs WHERE character_id = $1 AND status IN ('running','paused') ORDER BY started_at DESC LIMIT 1`,
       [characterId],
     );
     return rows.rows[0] ?? null;
   };
 
-  const rowToJob = (row: AfkJobRow): AfkJobState => ({
-    id: row.id,
-    characterId: row.character_id ?? "",
-    kind: row.kind,
-    status: row.status as AfkJobState["status"],
-    phase: row.phase,
-    startedAt: Date.parse(row.started_at),
-    lastTickAt: row.last_tick_at ? Date.parse(row.last_tick_at) : Date.parse(row.started_at),
-    scheduledEndAt: row.scheduled_end_at
-      ? Date.parse(row.scheduled_end_at)
-      : Date.parse(row.started_at),
-    day: row.day,
-    hoursToday: Number(row.hours_today),
-    tickCount: 0,
-    stopReason: row.stop_reason ?? undefined,
-    gains: gainsView({}),
-  });
-
-  const jobView = (row: AfkJobRow): AfkJobView => ({
-    id: row.id,
-    kind: row.kind,
-    status: row.status,
-    phase: row.phase,
-    startedAt: row.started_at,
-    scheduledEndAt: row.scheduled_end_at ?? row.started_at,
-    stopReason: row.stop_reason ?? undefined,
-    gains: gainsView({}),
-    config: row.config,
-  });
+  const toView = (
+    row: AfkJobDbRow,
+    extra?: { journalLines?: string[]; now?: number },
+  ): AfkJobView => {
+    const config = parseConfig(row.config);
+    const prog = progressOf({
+      started_at: row.started_at,
+      scheduled_end_at: row.scheduled_end_at,
+      now: extra?.now,
+    });
+    return {
+      id: row.id,
+      kind: row.kind as AfkJobKind,
+      presence: row.presence,
+      status: row.status,
+      phase: row.phase,
+      startedAt: row.started_at,
+      scheduledEndAt: row.scheduled_end_at ?? row.started_at,
+      stopReason: row.stop_reason ?? undefined,
+      gains: gainsView(zeroGains(config.gains as ReturnType<typeof zeroGains>)),
+      progress: prog.progress,
+      elapsedMs: prog.elapsedMs,
+      totalMs: prog.totalMs,
+      journalLines: extra?.journalLines ?? [],
+      config,
+    };
+  };
 
   return {
     async start(accountId, input) {
       const ch = await activeCharacter(accountId);
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
+
+      const presence: AfkPresence = input.presence === "online" ? "online" : "offline";
       if (input.kind !== "study" && input.kind !== "quest" && input.kind !== "grind") {
         throw new AfkError("invalid_kind", "不识得的挂机法门");
       }
-      const minutes = input.durationMinutes ?? maxMinutes;
-      if (!Number.isInteger(minutes) || minutes < 1 || minutes > maxMinutes) {
-        throw new AfkError("invalid_duration", `挂机时长须在 1–${maxMinutes} 分钟之间`);
+      if (presence === "online" && input.kind === "study") {
+        throw new AfkError("invalid_kind", "修炼暂只支持离线行止");
+      }
+
+      const minutes = input.durationMinutes ?? (presence === "online" ? 30 : maxMinutes);
+      const maxOnline = 60;
+      const maxAllowed = presence === "online" ? maxOnline : maxMinutes;
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > maxAllowed) {
+        throw new AfkError("invalid_duration", `挂机时长须在 1–${maxAllowed} 分钟之间`);
       }
 
       const config = input.config ?? {};
@@ -199,7 +195,6 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         }
       }
 
-      // 战术模板：quest 模式必填，快照固化
       let templateId: string | null = null;
       let templateSnapshot: Record<string, unknown> = {};
       if (input.templateId) {
@@ -252,30 +247,42 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         params: content.params,
       });
       job.scheduledEndAt = now + minutes * 60_000;
+      const startedIso = new Date(job.startedAt).toISOString();
+      const endIso = new Date(job.scheduledEndAt).toISOString();
 
       await db.query(
-        "INSERT INTO afk_jobs (id, character_id, kind, status, phase, template_id, template_snapshot, config, day, hours_today, started_at, scheduled_end_at, last_tick_at) VALUES ($1, $2, $3, 'running', 'init', $4, $5, $6, $7, 0, $8, $9, $8)",
+        `INSERT INTO afk_jobs (
+          id, character_id, kind, presence, status, phase, template_id, template_snapshot, config,
+          day, hours_today, started_at, scheduled_end_at, last_tick_at, last_heartbeat_at, journal_seq
+        ) VALUES ($1,$2,$3,$4,'running','init',$5,$6,$7,$8,0,$9,$10,$9,$9,0)`,
         [
           job.id,
           ch.id,
           job.kind,
+          presence,
           templateId,
           JSON.stringify(templateSnapshot),
-          JSON.stringify(config),
+          JSON.stringify({ ...config, gains: zeroGains(), journal: [] }),
           job.day,
-          new Date(job.startedAt).toISOString(),
-          new Date(job.scheduledEndAt).toISOString(),
+          startedIso,
+          endIso,
         ],
       );
+
       return {
         id: job.id,
         kind: job.kind,
-        status: job.status,
-        phase: job.phase,
-        startedAt: new Date(job.startedAt).toISOString(),
-        scheduledEndAt: new Date(job.scheduledEndAt).toISOString(),
+        presence,
+        status: "running",
+        phase: "init",
+        startedAt: startedIso,
+        scheduledEndAt: endIso,
         gains: gainsView({}),
-        config,
+        progress: 0,
+        elapsedMs: 0,
+        totalMs: minutes * 60_000,
+        journalLines: [],
+        config: { ...config, gains: zeroGains(), journal: [] },
       };
     },
 
@@ -286,22 +293,31 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       if (!row) throw new AfkError("not_running", "眼下并无挂机中的行程");
 
       const now = Date.now();
-      const job = cancelJob(rowToJob(row), now, "手动停止");
-      const report = buildReport(job, now);
-      const narrative = narrativeFor(job.kind, job.status);
-      await db.query(
-        "UPDATE afk_jobs SET status = $1, stop_reason = $2, report = $3, updated_at = now() WHERE id = $4",
-        [job.status, job.stopReason ?? null, JSON.stringify({ ...report, narrative }), job.id],
-      );
-      return {
-        jobId: report.jobId,
-        kind: report.kind,
-        status: report.status,
-        reason: report.reason,
-        durationMinutes: Math.max(1, Math.round(report.durationMs / 60_000)),
-        gains: gainsView(report.gains),
-        narrative,
-      };
+      return withTx(db, async (tx) => {
+        const locked = await tx.query<JobRow>(
+          `SELECT ${JOB_COLS} FROM afk_jobs WHERE id = $1 AND status IN ('running','paused') FOR UPDATE`,
+          [row.id],
+        );
+        const current = locked.rows[0];
+        if (!current) throw new AfkError("not_running", "眼下并无挂机中的行程");
+        if (current.presence === "online" && current.status === "running") {
+          await tx.query("UPDATE afk_jobs SET last_heartbeat_at = $1 WHERE id = $2", [
+            new Date(now).toISOString(),
+            current.id,
+          ]);
+          current.last_heartbeat_at = new Date(now).toISOString();
+        }
+        const { report, gains } = await stopJobNow(tx, current, content, now);
+        return {
+          jobId: report.jobId,
+          kind: report.kind,
+          status: report.status,
+          reason: report.reason,
+          durationMinutes: Math.max(1, Math.round(report.durationMs / 60_000)),
+          gains: gainsView(gains),
+          narrative: report.narrative,
+        };
+      });
     },
 
     async status(accountId) {
@@ -309,15 +325,68 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
       const row = await activeJobRow(ch.id);
       if (!row) return null;
-      return jobView(row);
+
+      const now = Date.now();
+      return withTx(db, async (tx) => {
+        const locked = await tx.query<JobRow>(
+          `SELECT ${JOB_COLS} FROM afk_jobs WHERE id = $1 AND status IN ('running','paused') FOR UPDATE`,
+          [row.id],
+        );
+        let current = locked.rows[0];
+        if (!current) return null;
+
+        let journalLines: string[] = [];
+        if (current.status === "running") {
+          if (current.presence === "online") {
+            await tx.query("UPDATE afk_jobs SET last_heartbeat_at = $1 WHERE id = $2", [
+              new Date(now).toISOString(),
+              current.id,
+            ]);
+            current = { ...current, last_heartbeat_at: new Date(now).toISOString() };
+          }
+          const settled = await settleJobNow(tx, current, content, now, "status");
+          journalLines = settled.journalLines;
+          const refreshed = await tx.query<AfkJobDbRow>(
+            `SELECT ${JOB_COLS}, report FROM afk_jobs WHERE id = $1`,
+            [current.id],
+          );
+          current = refreshed.rows[0] ?? settled.job;
+          if (journalLines.length > 0 && current.status === "running") {
+            await tx.query("UPDATE afk_jobs SET journal_seq = journal_seq + $1 WHERE id = $2", [
+              journalLines.length,
+              current.id,
+            ]);
+          }
+        }
+        const viewRow = { ...current, report: null } as AfkJobDbRow;
+        return toView(viewRow, { journalLines, now });
+      });
+    },
+
+    async resume(accountId) {
+      const ch = await activeCharacter(accountId);
+      if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
+      const row = await activeJobRow(ch.id);
+      if (!row) throw new AfkError("not_running", "眼下并无挂机中的行程");
+      if (row.status !== "paused") throw new AfkError("not_paused", "行止并未中断");
+
+      const now = Date.now();
+      const iso = new Date(now).toISOString();
+      await db.query(
+        "UPDATE afk_jobs SET status = 'running', stop_reason = NULL, last_tick_at = $1, last_heartbeat_at = $1, updated_at = now() WHERE id = $2",
+        [iso, row.id],
+      );
+      const refreshed = await activeJobRow(ch.id);
+      if (!refreshed) throw new AfkError("not_running", "眼下并无挂机中的行程");
+      return toView(refreshed, { now });
     },
 
     async reports(accountId, limit = 10) {
       const ch = await activeCharacter(accountId);
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
       const n = Math.min(Math.max(1, limit), 20);
-      const rows = await db.query<AfkJobRow>(
-        "SELECT id, character_id, kind, status, phase, template_snapshot, config, day, hours_today, started_at, scheduled_end_at, last_tick_at, stop_reason, report FROM afk_jobs WHERE character_id = $1 AND status IN ('completed','failed','cancelled') ORDER BY updated_at DESC LIMIT $2",
+      const rows = await db.query<AfkJobDbRow>(
+        `SELECT ${JOB_COLS}, report FROM afk_jobs WHERE character_id = $1 AND status IN ('completed','failed','cancelled') ORDER BY updated_at DESC LIMIT $2`,
         [ch.id, n],
       );
       const out: AfkReportView[] = [];
@@ -333,7 +402,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         };
         out.push({
           jobId: r.jobId ?? row.id,
-          kind: row.kind,
+          kind: row.kind as AfkJobKind,
           status: r.status,
           reason: r.reason,
           durationMinutes: Math.max(1, Math.round((r.durationMs ?? 0) / 60_000)),

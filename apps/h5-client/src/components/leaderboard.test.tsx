@@ -42,7 +42,7 @@ describe("LeaderboardView（排行榜）", () => {
       <LeaderboardView open growth={GROWTH} season={SEASON} onClose={() => undefined} />,
     );
     expect(host.textContent).toContain("张三丰");
-    expect(host.textContent).toContain("经验 50000");
+    expect(host.textContent).toContain("历练 50000");
     const me = [...host.querySelectorAll<HTMLLIElement>(".lb-row")].find((r) =>
       r.textContent?.includes("陆小风"),
     )!;

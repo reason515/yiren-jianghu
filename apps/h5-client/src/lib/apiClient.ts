@@ -91,6 +91,7 @@ export interface ApiClient {
   getAfkStatus(): Promise<AfkStatusResponse>;
   startAfk(config: AfkStartConfig): Promise<AfkJobData>;
   stopAfk(): Promise<AfkReportData>;
+  resumeAfk(): Promise<AfkJobData>;
   getAfkReports(): Promise<AfkReportData[]>;
   getAfkGrindJobs(): Promise<
     Array<{
@@ -190,6 +191,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     getAfkStatus: () => get("/afk/status"),
     startAfk: (config) => post("/afk/start", config),
     stopAfk: () => post("/afk/stop", {}),
+    resumeAfk: () => post("/afk/resume", {}),
     getAfkReports: () => get("/afk/reports"),
     getAfkGrindJobs: () => get("/afk/grind-jobs"),
     getTemplates: () => get("/templates"),

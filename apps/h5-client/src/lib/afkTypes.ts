@@ -1,10 +1,10 @@
+/**
+ * 挂机 UI 数据：服务端权威；客户端只组装意图与展示进度/见闻。
+ * DC-043：presence=online|offline；status 带回 progress/gains/journalLines。
+ */
+
 import type { SkillRowView } from "./characterTypes.js";
 import type { QuestView } from "./questTypes.js";
-
-/**
- * 挂机 UI 数据：服务端是作业、结算和战报的唯一事实来源；客户端只组装受控意图。
- * 修炼（study）、行侠（quest）、生计（grind，DC-042）均由 Worker 实际结算。
- */
 
 export interface AfkSkillOption {
   id: string;
@@ -12,21 +12,17 @@ export interface AfkSkillOption {
   level: number;
 }
 
-/** 行侠挂机可选差事：已接且当前相位为击杀。 */
 export interface AfkQuestOption {
   id: string;
   name: string;
-  /** 当前要会一会的对象（击杀目标名）。 */
   targetName: string;
 }
 
-/** 行侠挂机可选战术模板。 */
 export interface AfkTemplateOption {
   id: string;
   name: string;
 }
 
-/** 生计挂机可选杂役（服务端按历练上限过滤）。 */
 export interface AfkGrindOption {
   id: string;
   name: string;
@@ -36,25 +32,49 @@ export interface AfkGrindOption {
   jingPerHour: number;
 }
 
+export type AfkPresence = "online" | "offline";
+
 export type AfkStartConfig =
-  | { kind: "study"; durationMinutes: number; config: { skillId: string } }
+  | {
+      kind: "study";
+      presence: "offline";
+      durationMinutes: number;
+      config: { skillId: string };
+    }
   | {
       kind: "quest";
+      presence: AfkPresence;
       templateId: string;
       durationMinutes: number;
       config: { questId: string };
     }
-  | { kind: "grind"; durationMinutes: number; config: { jobId: string } };
+  | {
+      kind: "grind";
+      presence: AfkPresence;
+      durationMinutes: number;
+      config: { jobId: string };
+    };
+
+export interface AfkGains {
+  exp: number;
+  potential: number;
+  silver: number;
+}
 
 export interface AfkJobData {
   id: string;
   kind: "study" | "quest" | "grind";
+  presence: AfkPresence;
   status: string;
   phase: string;
   startedAt: string;
   scheduledEndAt: string;
   stopReason?: string;
   gains: AfkGains;
+  progress: number;
+  elapsedMs: number;
+  totalMs: number;
+  journalLines: string[];
   config: Record<string, unknown>;
 }
 
@@ -62,14 +82,13 @@ export type AfkStatusResponse = AfkJobData | { active: false };
 
 export interface AfkStatusView {
   active: boolean;
+  paused: boolean;
   message: string;
   reason?: string;
-}
-
-export interface AfkGains {
-  exp: number;
-  potential: number;
-  silver: number;
+  presence?: AfkPresence;
+  progress: number;
+  gains: AfkGains;
+  journalLines: string[];
 }
 
 export interface AfkReportData {
@@ -79,7 +98,6 @@ export interface AfkReportData {
   reason?: string;
   durationMinutes: number;
   gains: AfkGains;
-  /** 叙事化战报（wuxia 文案，服务端生成）。 */
   narrative: string;
 }
 
@@ -87,7 +105,6 @@ export function toAfkSkillOptions(skills: SkillRowView[]): AfkSkillOption[] {
   return skills.map(({ id, name, level }) => ({ id, name, level }));
 }
 
-/** 从已接任务中筛出行侠可自动了结的差事（当前相位为击杀）。 */
 export function toAfkQuestOptions(quests: QuestView[]): AfkQuestOption[] {
   return quests.flatMap((quest) => {
     if (quest.state !== "accepted") return [];
@@ -97,20 +114,37 @@ export function toAfkQuestOptions(quests: QuestView[]): AfkQuestOption[] {
   });
 }
 
-/** 将服务端作业快照化为不泄漏内部 phase 的场景状态条。 */
 export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
-  if ("active" in status) return { active: false, message: "" };
+  if ("active" in status) {
+    return {
+      active: false,
+      paused: false,
+      message: "",
+      progress: 0,
+      gains: { exp: 0, potential: 0, silver: 0 },
+      journalLines: [],
+    };
+  }
 
   const end = Date.parse(status.scheduledEndAt);
   const hours = Number.isFinite(end)
     ? Math.max(0, Math.round(((end - Date.now()) / 3_600_000) * 10) / 10)
     : null;
   const suffix = hours === null ? "" : hours > 0 ? ` · 约余 ${hours} 时辰` : " · 正待结算";
-  const label =
+  const kindLabel =
     status.kind === "study" ? "静心参悟" : status.kind === "quest" ? "行侠途中" : "生计途中";
+  const presenceLabel = status.presence === "online" ? "在线" : "离线";
+  const paused = status.status === "paused";
   return {
-    active: status.status === "running" || status.status === "paused",
-    message: `${label}${suffix}`,
+    active: status.status === "running" || paused,
+    paused,
+    message: paused
+      ? (status.stopReason ?? "气息中断，行止暂歇")
+      : `${presenceLabel}${kindLabel}${suffix}`,
     ...(status.stopReason ? { reason: status.stopReason } : {}),
+    presence: status.presence,
+    progress: status.progress ?? 0,
+    gains: status.gains ?? { exp: 0, potential: 0, silver: 0 },
+    journalLines: status.journalLines ?? [],
   };
 }

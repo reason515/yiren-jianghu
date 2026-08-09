@@ -25,19 +25,62 @@ describe("挂机数据适配", () => {
     const view = toAfkStatusView({
       id: "job_1",
       kind: "study",
+      presence: "offline",
       status: "running",
       phase: "init",
       startedAt: "2026-08-07T00:00:00.000Z",
       scheduledEndAt: "2026-08-07T02:00:00.000Z",
       gains: { exp: 0, potential: 0, silver: 0 },
+      progress: 0,
+      elapsedMs: 0,
+      totalMs: 7_200_000,
+      journalLines: [],
       config: { skillId: "basic_sword" },
     });
-    expect(view).toEqual({ active: true, message: "静心参悟 · 约余 2 时辰" });
+    expect(view).toMatchObject({
+      active: true,
+      paused: false,
+      message: "离线静心参悟 · 约余 2 时辰",
+      progress: 0,
+    });
     vi.useRealTimers();
   });
 
+  it("暂停态展示断线原因", () => {
+    const view = toAfkStatusView({
+      id: "job_1",
+      kind: "grind",
+      presence: "online",
+      status: "paused",
+      phase: "work",
+      startedAt: "2026-08-07T00:00:00.000Z",
+      scheduledEndAt: "2026-08-07T01:00:00.000Z",
+      stopReason: "气息中断，行止暂歇",
+      gains: { exp: 10, potential: 5, silver: 2 },
+      progress: 0.3,
+      elapsedMs: 1_000_000,
+      totalMs: 3_600_000,
+      journalLines: [],
+      config: { jobId: "village_chore" },
+    });
+    expect(view).toMatchObject({
+      active: true,
+      paused: true,
+      message: "气息中断，行止暂歇",
+      progress: 0.3,
+      gains: { exp: 10, potential: 5, silver: 2 },
+    });
+  });
+
   it("无作业是正常空态", () => {
-    expect(toAfkStatusView({ active: false })).toEqual({ active: false, message: "" });
+    expect(toAfkStatusView({ active: false })).toEqual({
+      active: false,
+      paused: false,
+      message: "",
+      progress: 0,
+      gains: { exp: 0, potential: 0, silver: 0 },
+      journalLines: [],
+    });
   });
 
   it("行侠选项只含已接且当前为击杀相位的差事", () => {

@@ -41,14 +41,38 @@ const GRINDS = [
 ];
 
 describe("GrindBanner（挂机状态条）", () => {
-  it("运行中显示状态消息与停止按钮", () => {
+  it("运行中显示状态消息、进度收益与停止按钮", () => {
     let stopped = 0;
     const { host } = render(
-      <GrindBanner active message="任务挂机 · 前往衙门" onStop={() => (stopped += 1)} />,
+      <GrindBanner
+        active
+        message="任务挂机 · 前往衙门"
+        progress={0.4}
+        gains={{ exp: 12, potential: 6, silver: 3 }}
+        onStop={() => (stopped += 1)}
+      />,
     );
-    expect(host.querySelector("[data-testid=grind-banner]")?.textContent).toContain("前往衙门");
+    const text = host.querySelector("[data-testid=grind-banner]")?.textContent ?? "";
+    expect(text).toContain("前往衙门");
+    expect(text).toContain("历练 12");
+    expect(text).toContain("潜能 6");
     act(() => host.querySelector<HTMLButtonElement>(".grind-stop")!.click());
     expect(stopped).toBe(1);
+  });
+
+  it("暂停态可继续", () => {
+    let resumed = 0;
+    const { host } = render(
+      <GrindBanner
+        active
+        paused
+        message="气息中断，行止暂歇"
+        onResume={() => (resumed += 1)}
+        onStop={() => undefined}
+      />,
+    );
+    act(() => host.querySelector<HTMLButtonElement>(".grind-resume")!.click());
+    expect(resumed).toBe(1);
   });
 
   it("停止原因显示 + 「知道了」关闭", () => {
@@ -97,6 +121,7 @@ describe("AfkSheet（挂机启动）", () => {
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "study",
+      presence: "offline",
       durationMinutes: 120,
       config: { skillId: "dodge" },
     });
@@ -136,6 +161,7 @@ describe("AfkSheet（挂机启动）", () => {
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "quest",
+      presence: "offline",
       templateId: "tpl_1",
       durationMinutes: 120,
       config: { questId: "q_hunt" },
@@ -191,7 +217,7 @@ describe("AfkSheet（挂机启动）", () => {
     expect(host.querySelector<HTMLButtonElement>(".btn.primary")?.disabled).toBe(true);
   });
 
-  it("生计：默认页可选杂役并提交 grind 意图", () => {
+  it("生计：默认页可选杂役并提交 grind 意图（含 presence）", () => {
     let config: unknown = null;
     const { host } = render(
       <AfkSheet
@@ -211,9 +237,36 @@ describe("AfkSheet（挂机启动）", () => {
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "grind",
+      presence: "offline",
       durationMinutes: 60,
       config: { jobId: "village_chore" },
     });
+  });
+
+  it("在线方式隐藏修炼，时长偏短", () => {
+    const { host } = render(
+      <AfkSheet
+        open
+        skills={SKILLS}
+        quests={QUESTS}
+        templates={TEMPLATES}
+        grindJobs={GRINDS}
+        active={false}
+        statusMessage=""
+        onStart={() => undefined}
+        onStop={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+        .find((b) => b.textContent === "在线")!
+        .click(),
+    );
+    expect([...host.querySelectorAll(".seg-btn")].some((b) => b.textContent === "修炼")).toBe(
+      false,
+    );
+    expect(host.textContent).toContain("15 分");
   });
 });
 
@@ -231,7 +284,7 @@ describe("AfkReportView（战报）", () => {
   it("渲染叙事回响与收益摘要；失败显示原因", () => {
     const { host } = render(<AfkReportView open report={REPORT} onClose={() => undefined} />);
     expect(host.textContent).toContain("衣摆沾了露水");
-    expect(host.textContent).toContain("经验 +120");
+    expect(host.textContent).toContain("历练 +120");
     expect(host.textContent).toContain("行止已竟");
   });
 

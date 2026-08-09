@@ -564,7 +564,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       });
       if (!result.ok) {
         const reasonMessage: Record<string, string> = {
-          exp_gate: "火候未到，尚需更多江湖历练（经验不足）",
+          exp_gate: "火候未到，尚需更多江湖历练",
           potential: "悟性所限，潜能不足",
           jing: "精神不济，无法凝神听讲",
           silver: "囊中羞涩，学费不足",

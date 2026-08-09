@@ -34,6 +34,12 @@ export const paramsSchema = z.object({
     dailyDiminishRate: z.number().min(0).max(1),
     /** 修炼挂机每小时的参悟/演练次数（F2 worker 结算频率）。 */
     studyAttemptsPerHour: z.number().int().min(1).max(60).default(12),
+    /** 在线挂机短轮回秒数（DC-043）。 */
+    onlineTickSec: z.number().int().min(15).max(600).default(60),
+    /** 在线心跳超时秒数；超时 pause（断线）。 */
+    onlineHeartbeatTimeoutSec: z.number().int().min(20).max(300).default(45),
+    /** 在线相对离线收益倍率。 */
+    onlineRewardMult: z.number().min(1).max(5).default(1.8),
   }),
   /** 自然恢复（V2.12，参照 pkuxkx heart_beat 时间恢复）：
    * 每分钟按上限比例恢复（qiPerMin=0.02 → maxQi 的 2%/min）；
@@ -393,6 +399,8 @@ export const grindJobSchema = z.object({
   }),
   /** 每小时耗精；精尽则挂机失败停止。 */
   jingPerHour: z.number().nonnegative().default(10),
+  /** 在线生计见闻短句轮换（DC-043）；缺省用通用句。 */
+  onlineLines: z.array(z.string().min(1)).default([]),
 });
 
 // ---------- manifest ----------

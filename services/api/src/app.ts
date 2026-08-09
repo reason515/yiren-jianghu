@@ -786,6 +786,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       const accountId = authContexts.get(req)?.accountId ?? "";
       const body = (req.body ?? {}) as {
         kind?: unknown;
+        presence?: unknown;
         templateId?: unknown;
         durationMinutes?: unknown;
         config?: unknown;
@@ -796,6 +797,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
             body.kind === "study" || body.kind === "quest" || body.kind === "grind"
               ? body.kind
               : "",
+          presence: typeof body.presence === "string" ? body.presence : undefined,
           templateId: typeof body.templateId === "string" ? body.templateId : undefined,
           durationMinutes:
             typeof body.durationMinutes === "number" ? body.durationMinutes : undefined,
@@ -822,6 +824,24 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       } catch (err) {
         if (err instanceof AfkError) {
           const status = err.code === "no_character" ? 404 : err.code === "not_running" ? 409 : 400;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
+    app.post("/afk/resume", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      try {
+        return await afk.resume(accountId);
+      } catch (err) {
+        if (err instanceof AfkError) {
+          const status =
+            err.code === "no_character"
+              ? 404
+              : err.code === "not_running" || err.code === "not_paused"
+                ? 409
+                : 400;
           return envelope(reply, status, err.code, err.message);
         }
         throw err;

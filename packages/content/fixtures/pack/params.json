@@ -23,7 +23,10 @@
   "afk": {
     "maxDurationHours": 8,
     "dailyDiminishRate": 0.5,
-    "studyAttemptsPerHour": 12
+    "studyAttemptsPerHour": 12,
+    "onlineTickSec": 60,
+    "onlineHeartbeatTimeoutSec": 45,
+    "onlineRewardMult": 1.8
   },
   "vitals": {
     "qiBase": 100,

@@ -10,7 +10,14 @@ const PACK = {
     expCurve: { base: 100, growth: 1.1 },
     potential: { learnCostFactor: 1 },
     combat: { baseHitRate: 0.7, baseDodgeRate: 0.1, baseParryRate: 0.15 },
-    afk: { maxDurationHours: 8, dailyDiminishRate: 0.5 },
+    afk: {
+      maxDurationHours: 8,
+      dailyDiminishRate: 0.5,
+      studyAttemptsPerHour: 12,
+      onlineTickSec: 60,
+      onlineHeartbeatTimeoutSec: 45,
+      onlineRewardMult: 1.8,
+    },
     growth: {
       learnJingCostBase: 150,
       potentialCostPerLevel: 1,
@@ -100,6 +107,7 @@ interface JobState {
   kind: string;
   status: string;
   phase: string;
+  presence: string;
   template_id: string | null;
   template_snapshot: string;
   config: string;
@@ -108,12 +116,36 @@ interface JobState {
   started_at: string;
   scheduled_end_at: string;
   last_tick_at: string | null;
+  last_heartbeat_at: string | null;
+  journal_seq: number;
   stop_reason: string | null;
   report: string | null;
   updated_at: string;
 }
 
 const T0 = "2026-08-07T00:00:00.000Z";
+
+function mapJobRow(j: JobState) {
+  return {
+    id: j.id,
+    character_id: j.character_id,
+    kind: j.kind,
+    status: j.status,
+    phase: j.phase,
+    presence: j.presence,
+    template_snapshot: JSON.parse(j.template_snapshot),
+    config: JSON.parse(j.config),
+    day: j.day,
+    hours_today: j.hours_today,
+    started_at: j.started_at,
+    scheduled_end_at: j.scheduled_end_at,
+    last_tick_at: j.last_tick_at,
+    last_heartbeat_at: j.last_heartbeat_at,
+    journal_seq: j.journal_seq,
+    stop_reason: j.stop_reason,
+    report: j.report,
+  };
+}
 
 function mockDb() {
   const state = {
@@ -177,6 +209,16 @@ function mockDb() {
             .map((t) => ({ id: t.id, config: t.config })) as unknown as T[],
         };
       }
+      if (text.includes("FROM afk_jobs WHERE id = $1") && text.includes("FOR UPDATE")) {
+        const job = state.jobs.find(
+          (j) => j.id === params[0] && (j.status === "running" || j.status === "paused"),
+        );
+        return { rows: (job ? [mapJobRow(job)] : []) as unknown as T[] };
+      }
+      if (text.includes("FROM afk_jobs WHERE id = $1") && !text.includes("character_id")) {
+        const job = state.jobs.find((j) => j.id === params[0]);
+        return { rows: (job ? [mapJobRow(job)] : []) as unknown as T[] };
+      }
       if (
         text.includes("FROM afk_jobs WHERE character_id") &&
         text.includes("'running','paused'")
@@ -189,22 +231,7 @@ function mockDb() {
             )
             .sort((a, b) => b.started_at.localeCompare(a.started_at))
             .slice(0, 1)
-            .map((j) => ({
-              id: j.id,
-              character_id: j.character_id,
-              kind: j.kind,
-              status: j.status,
-              phase: j.phase,
-              template_snapshot: JSON.parse(j.template_snapshot),
-              config: JSON.parse(j.config),
-              day: j.day,
-              hours_today: j.hours_today,
-              started_at: j.started_at,
-              scheduled_end_at: j.scheduled_end_at,
-              last_tick_at: j.last_tick_at,
-              stop_reason: j.stop_reason,
-              report: j.report,
-            })) as unknown as T[],
+            .map((j) => mapJobRow(j)) as unknown as T[],
         };
       }
       if (text.includes("FROM afk_jobs WHERE character_id") && text.includes("LIMIT $2")) {
@@ -214,52 +241,134 @@ function mockDb() {
             .filter((j) => j.character_id === params[0])
             .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
             .slice(0, n)
-            .map((j) => ({
-              id: j.id,
-              character_id: j.character_id,
-              kind: j.kind,
-              status: j.status,
-              phase: j.phase,
-              template_snapshot: JSON.parse(j.template_snapshot),
-              config: JSON.parse(j.config),
-              day: j.day,
-              hours_today: j.hours_today,
-              started_at: j.started_at,
-              scheduled_end_at: j.scheduled_end_at,
-              last_tick_at: j.last_tick_at,
-              stop_reason: j.stop_reason,
-              report: j.report,
-            })) as unknown as T[],
+            .map((j) => mapJobRow(j)) as unknown as T[],
         };
+      }
+      if (text.includes("SELECT jing FROM characters")) {
+        return { rows: [{ jing: 100 }] as unknown as T[] };
+      }
+      if (text.includes("FROM character_skills WHERE character_id")) {
+        return {
+          rows: [{ skill_id: "basic_sword", level: 1, practice_points: 0 }] as unknown as T[],
+        };
+      }
+      if (text.includes("UPDATE characters SET jing")) {
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("INSERT INTO character_skills") || text.includes("ON CONFLICT")) {
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET last_heartbeat_at")) {
+        const job = state.jobs.find((j) => j.id === params[1]);
+        if (job) job.last_heartbeat_at = String(params[0]);
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET journal_seq")) {
+        const job = state.jobs.find((j) => j.id === params[1]);
+        if (job) job.journal_seq += Number(params[0]);
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET status = 'cancelled'")) {
+        const job = state.jobs.find((j) => j.id === params[5]);
+        if (job) {
+          job.status = "cancelled";
+          job.phase = String(params[0]);
+          job.config = String(params[1]);
+          job.last_tick_at = String(params[2]);
+          job.report = String(params[3]);
+          job.stop_reason = String(params[4]);
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET phase = 'work'")) {
+        const job = state.jobs.find((j) => j.id === params[4]);
+        if (job) {
+          job.phase = "work";
+          job.day = String(params[0]);
+          job.hours_today = Number(params[1]);
+          job.config = String(params[2]);
+          job.last_tick_at = String(params[3]);
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET phase = 'fight'")) {
+        const job = state.jobs.find((j) => j.id === params[2]);
+        if (job) {
+          job.phase = "fight";
+          job.config = String(params[0]);
+          job.last_tick_at = String(params[1]);
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET status = $1") && text.includes("hours_today = $4")) {
+        const job = state.jobs.find((j) => j.id === params[7]);
+        if (job) {
+          job.status = String(params[0]);
+          job.phase = String(params[1]);
+          job.day = String(params[2]);
+          job.hours_today = Number(params[3]);
+          job.last_tick_at = String(params[4]);
+          job.report = params[5] ? String(params[5]) : null;
+          job.stop_reason = params[6] ? String(params[6]) : null;
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET status = $1") && text.includes("config = $3")) {
+        const job = state.jobs.find((j) => j.id === params[6]);
+        if (job) {
+          job.status = String(params[0]);
+          job.phase = String(params[1]);
+          job.config = String(params[2]);
+          job.last_tick_at = String(params[3]);
+          job.report = params[4] ? String(params[4]) : null;
+          job.stop_reason = params[5] ? String(params[5]) : null;
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (text.includes("UPDATE afk_jobs SET status = 'paused'")) {
+        const job = state.jobs.find((j) => j.id === params[2]);
+        if (job) {
+          job.status = "paused";
+          job.stop_reason = String(params[0]);
+          job.last_tick_at = String(params[1]);
+        }
+        return { rows: [] as unknown as T[] };
+      }
+      if (
+        text.includes("UPDATE afk_jobs SET status = 'running'") &&
+        text.includes("stop_reason = NULL")
+      ) {
+        const job = state.jobs.find((j) => j.id === params[1]);
+        if (job) {
+          job.status = "running";
+          job.stop_reason = null;
+          job.last_tick_at = String(params[0]);
+          job.last_heartbeat_at = String(params[0]);
+        }
+        return { rows: [] as unknown as T[] };
       }
       if (text.includes("INSERT INTO afk_jobs")) {
         state.jobs.push({
           id: String(params[0]),
           character_id: String(params[1]),
           kind: String(params[2]),
+          presence: String(params[3]),
           status: "running",
           phase: "init",
-          template_id: params[3] ? String(params[3]) : null,
-          template_snapshot: String(params[4]),
-          config: String(params[5]),
-          day: String(params[6]),
+          template_id: params[4] ? String(params[4]) : null,
+          template_snapshot: String(params[5]),
+          config: String(params[6]),
+          day: String(params[7]),
           hours_today: 0,
-          started_at: String(params[7]),
-          scheduled_end_at: String(params[8]),
-          last_tick_at: String(params[7]),
+          started_at: String(params[8]),
+          scheduled_end_at: String(params[9]),
+          last_tick_at: String(params[8]),
+          last_heartbeat_at: String(params[8]),
+          journal_seq: 0,
           stop_reason: null,
           report: null,
           updated_at: T0,
         });
-        return { rows: [] as unknown as T[] };
-      }
-      if (text.includes("UPDATE afk_jobs SET status")) {
-        const job = state.jobs.find((j) => j.id === params[3]);
-        if (job) {
-          job.status = String(params[0]);
-          job.stop_reason = params[1] ? String(params[1]) : null;
-          job.report = params[2] ? String(params[2]) : null;
-        }
         return { rows: [] as unknown as T[] };
       }
       return { rows: [] as unknown as T[] };
@@ -290,7 +399,7 @@ describe("afkService.start", () => {
       kind: "study",
       status: "running",
     });
-    expect(JSON.parse(state.jobs[0]!.config)).toEqual({ skillId: "basic_sword" });
+    expect(JSON.parse(state.jobs[0]!.config)).toMatchObject({ skillId: "basic_sword" });
     expect(view.scheduledEndAt).not.toBe(view.startedAt);
   });
 
@@ -328,7 +437,7 @@ describe("afkService.start", () => {
       config: { jobId: "village_chore" },
     });
     expect(view.kind).toBe("grind");
-    expect(JSON.parse(state.jobs[0]!.config)).toEqual({ jobId: "village_chore" });
+    expect(JSON.parse(state.jobs[0]!.config)).toMatchObject({ jobId: "village_chore" });
 
     state.jobs = [];
     state.characters[0]!.exp = 2000;
@@ -381,6 +490,7 @@ describe("afkService.start", () => {
       id: "job_1",
       character_id: "char_1",
       kind: "study",
+      presence: "offline",
       status: "running",
       phase: "init",
       template_id: null,
@@ -391,6 +501,8 @@ describe("afkService.start", () => {
       started_at: T0,
       scheduled_end_at: "2026-08-07T08:00:00.000Z",
       last_tick_at: T0,
+      last_heartbeat_at: T0,
+      journal_seq: 0,
       stop_reason: null,
       report: null,
       updated_at: T0,
@@ -432,23 +544,27 @@ describe("afkService.status / reports", () => {
     await expect(afk.status("acc_x")).rejects.toMatchObject({ code: "no_character" });
     expect(await afk.status("acc_1")).toBeNull();
 
+    const nowIso = new Date().toISOString();
     state.jobs.push({
       id: "job_1",
       character_id: "char_1",
       kind: "quest",
+      presence: "offline",
       status: "running",
       phase: "init",
       template_id: null,
       template_snapshot: "{}",
-      config: JSON.stringify({ questId: "q_hunt" }),
+      config: JSON.stringify({ questId: "q_hunt", gains: { exp: 0, potential: 0, silver: 0 } }),
       day: "2026-08-07",
       hours_today: 0,
-      started_at: T0,
-      scheduled_end_at: "2026-08-07T02:00:00.000Z",
-      last_tick_at: T0,
+      started_at: nowIso,
+      scheduled_end_at: new Date(Date.now() + 3_600_000).toISOString(),
+      last_tick_at: nowIso,
+      last_heartbeat_at: nowIso,
+      journal_seq: 0,
       stop_reason: null,
       report: null,
-      updated_at: T0,
+      updated_at: nowIso,
     });
     const view = await afk.status("acc_1");
     expect(view).toMatchObject({ id: "job_1", kind: "quest", status: "running" });
@@ -461,6 +577,7 @@ describe("afkService.status / reports", () => {
         id: "job_1",
         character_id: "char_1",
         kind: "quest",
+        presence: "offline",
         status: "completed",
         phase: "done",
         template_id: null,
@@ -471,21 +588,24 @@ describe("afkService.status / reports", () => {
         started_at: T0,
         scheduled_end_at: "2026-08-07T01:00:00.000Z",
         last_tick_at: T0,
-        stop_reason: "时长上限",
+        last_heartbeat_at: T0,
+        journal_seq: 0,
+        stop_reason: null,
         report: JSON.stringify({
           jobId: "job_1",
+          kind: "quest",
           status: "completed",
-          reason: "时长上限",
-          durationMs: 3600000,
-          gains: { exp: 100, potential: 20, silver: 10 },
-          narrative: "事已了结，一路风尘，尽数落袋。",
+          ticks: 1,
+          durationMs: 3_600_000,
+          gains: { exp: 10, potential: 2, silver: 1 },
         }),
-        updated_at: "2026-08-07T01:00:00.000Z",
+        updated_at: T0,
       },
       {
         id: "job_2",
         character_id: "char_1",
         kind: "study",
+        presence: "offline",
         status: "cancelled",
         phase: "init",
         template_id: null,
@@ -494,24 +614,63 @@ describe("afkService.status / reports", () => {
         day: "2026-08-07",
         hours_today: 0,
         started_at: T0,
-        scheduled_end_at: "2026-08-07T00:30:00.000Z",
+        scheduled_end_at: "2026-08-07T01:00:00.000Z",
         last_tick_at: T0,
+        last_heartbeat_at: T0,
+        journal_seq: 0,
         stop_reason: "手动停止",
         report: JSON.stringify({
           jobId: "job_2",
+          kind: "study",
           status: "cancelled",
-          durationMs: 600000,
-          gains: {},
+          ticks: 0,
+          durationMs: 60_000,
+          gains: { exp: 0, potential: 0, silver: 0 },
+          reason: "手动停止",
         }),
-        updated_at: "2026-08-07T00:30:00.000Z",
+        updated_at: T0,
       },
     );
     const list = await afk.reports("acc_1");
     expect(list).toHaveLength(2);
-    expect(list[0]).toMatchObject({ jobId: "job_1", status: "completed", gains: { exp: 100 } });
-    expect(list[0]?.narrative).toBe("事已了结，一路风尘，尽数落袋。");
+    expect(list[0]).toMatchObject({ jobId: "job_1", status: "completed", gains: { exp: 10 } });
+    expect(list[0]?.narrative).toBe("尘埃落定，所托之事已有交代。");
     // 无叙事字段 → 按 kind/status 回退生成
     expect(list[1]?.narrative).toBe("你收住架势，江湖路长，改日再练。");
+  });
+});
+
+describe("afkService.resume（心跳恢复）", () => {
+  it("paused → running，并刷新心跳", async () => {
+    const { afk, state } = boot();
+    state.jobs.push({
+      id: "job_1",
+      character_id: "char_1",
+      kind: "grind",
+      presence: "online",
+      status: "paused",
+      phase: "work",
+      template_id: null,
+      template_snapshot: "{}",
+      config: JSON.stringify({
+        jobId: "village_chore",
+        gains: { exp: 1, potential: 0, silver: 0 },
+      }),
+      day: "2026-08-07",
+      hours_today: 0,
+      started_at: T0,
+      scheduled_end_at: "2026-08-07T01:00:00.000Z",
+      last_tick_at: T0,
+      last_heartbeat_at: T0,
+      journal_seq: 0,
+      stop_reason: "气息中断，行止暂歇",
+      report: null,
+      updated_at: T0,
+    });
+    const view = await afk.resume("acc_1");
+    expect(view).toMatchObject({ id: "job_1", status: "running", presence: "online" });
+    expect(state.jobs[0]?.status).toBe("running");
+    expect(state.jobs[0]?.stop_reason).toBeNull();
   });
 });
 

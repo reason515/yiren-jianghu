@@ -31,7 +31,14 @@ export const DEFAULT_PARAMS: GameParams = {
     recoverNeiliPerTurn: 20,
     fleeBaseChance: 0.7,
   },
-  afk: { maxDurationHours: 8, dailyDiminishRate: 0.5, studyAttemptsPerHour: 12 },
+  afk: {
+    maxDurationHours: 8,
+    dailyDiminishRate: 0.5,
+    studyAttemptsPerHour: 12,
+    onlineTickSec: 60,
+    onlineHeartbeatTimeoutSec: 45,
+    onlineRewardMult: 1.8,
+  },
   regen: {
     qiPerMin: 0.02,
     jingPerMin: 0.015,

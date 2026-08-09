@@ -61,6 +61,7 @@
 | DC-040 | 2026-08 | 门派拜师辈分阶梯（拜谁学谁） | 门派请教仅向当前师父（`master_npc_id`）；NPC/角色有 `generation`（越小越尊，弟子=师父+1）。入门须拜 `recruit.acceptOutsiders` 的师兄（大师兄）；同门可改拜更高辈师父，门槛为 `recruit.minSkills`（首版用武功等级，门派贡献可后续加）。跨门派仍禁止 | 对齐 xkx `is_apprentice_of` + generation；先入门后升师 | protocol.md §8、database-schema、content schema、skillsService、EntitySheet | ✅ |
 | DC-041 | 2026-08 | xkx 式武学全套（激发/招式/绝招学会/skill_power） | ①基本功+特殊功；人物簿 GUI 激发（有效等级=基本/2+特殊）；②招式挂特殊功达级解锁，普攻自动抽；③绝招须学会后手动（挂机模板仅已学）；④命中改 skill_power 分段 A/(A+B)；⑤可查看师父武功。无 prepare/完整 exert。升级可清空库 | 对齐 xkx enable/action/perform/combatd；GUI 无命令行 | numeric-baseline §2.3、protocol.md、database-schema、content schema、game-core、skillsService、CombatView/CharacterSheet | ✅ |
 | DC-042 | 2026-08 | 新手生计挂机（无战斗换银/历练/潜能） | 新增 `afk.kind=grind`：内容包 `grindJobs`（村中杂役/溪边垂钓）；按时长发三件套+耗精；`maxExp` 限新手；不需战术。AfkSheet 默认「生计」。顺带野狗去群战降为 1v1 | DC-041 后新手打不过野狗、无起步资源；对标 pkuxkx 配药/钓鱼「时间换成长」语义，不做小游戏 | protocol.md §9、numeric-baseline §2.4、content grind_jobs、afkService/worker、AfkSheet、catalog | ✅ |
+| DC-043 | 2026-08 | 在线/离线挂机双轨 + 历练用词统一 | `afk_jobs.presence`（online/offline）+ 心跳超时 pause；在线生计/行侠短 tick 高倍率见闻；离线实时累计；`settleJobNow` 供 status/stop/worker 共用；玩家可见「经验」统一为「历练」；可 wipe 库不兼容旧档 | 在线需心跳与见闻反馈、离线须可中途结算；用词混用影响认知 | protocol.md §9、numeric-baseline §2.4、database-schema §3.7、afkService/jobSettle、AfkSheet/App | ✅ |
 
 # 3. 被替代决策（变更历史）
 

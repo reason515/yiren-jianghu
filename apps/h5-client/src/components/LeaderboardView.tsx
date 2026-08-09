@@ -51,7 +51,7 @@ export function LeaderboardView({
                 {e.isMe && <span className="lb-me">（我）</span>}
               </span>
               <span className="lb-value">
-                {kind === "growth" ? "经验" : "积分"} {e.value}
+                {kind === "growth" ? "历练" : "积分"} {e.value}
               </span>
             </li>
           ))}

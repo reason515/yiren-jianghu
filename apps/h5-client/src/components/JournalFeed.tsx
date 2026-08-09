@@ -34,7 +34,7 @@ const TYPE_INTERVAL_MS = 32;
 
 /** 人名前缀：行首「XXX：」玉色（说话者/角色）。 */
 const NAME_RE = /^([\u4e00-\u9fff·A-Za-z]{1,12}?[：:])/;
-/** 数字：金色（数值语义，金银/经验/潜能等）。 */
+/** 数字：金色（数值语义，金银/历练/潜能等）。 */
 const NUM_RE = /(\d+(?:\.\d+)?)/g;
 
 interface Segment {

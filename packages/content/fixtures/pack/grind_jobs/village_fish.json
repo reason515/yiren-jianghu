@@ -4,5 +4,10 @@
   "description": "村外浅溪抛竿。钓上几尾可换银两，亦能静心长些历练。",
   "maxExp": 5000,
   "hourlyGain": { "exp": 28, "potential": 14, "silver": 10 },
-  "jingPerHour": 10
+  "jingPerHour": 10,
+  "onlineLines": [
+    "浮子微颤，你提竿，钓上一尾银亮的小鱼。",
+    "溪风过耳，竿影不动，又过了一小会儿。",
+    "再抛一竿，水花轻响，篓里多了些分量。"
+  ]
 }

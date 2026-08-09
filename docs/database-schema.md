@@ -135,13 +135,16 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 |---|---|---|
 | id / character_id | uuid | FK CASCADE |
 | kind | text | quest/study/grind（fishing/peiyao 预留，首版用 grind 统一生计） |
+| presence | text | online/offline（DC-043；缺省 offline） |
 | status | text | running/paused/completed/failed/cancelled |
 | phase | text | 状态机相位（init/hunt/fight/rest…） |
 | template_id / template_snapshot | uuid / jsonb | 绑定的战术模板（含快照） |
-| config | jsonb | 任务目标等配置 |
+| config | jsonb | 任务目标、累计 `gains`、在线 `journal[]` 等 |
 | day / hours_today | text / numeric | 每日递减计时（YYYY-MM-DD） |
 | scheduled_end_at | timestamptz | 时长上限（Worker 到期结算） |
-| last_tick_at | timestamptz | 心跳 |
+| last_tick_at | timestamptz | 上次结算游标 |
+| last_heartbeat_at | timestamptz | 在线心跳（DC-043；超时 pause） |
+| journal_seq | int | 已推送见闻游标（DC-043） |
 | report / stop_reason | jsonb / text | 战报与停止原因 |
 | read_at | timestamptz | NULL，重连恢复点未读标记（resume 返回后置已读） |
 

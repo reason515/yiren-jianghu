@@ -79,7 +79,7 @@ describe("QuestPanel（任务与主线）", () => {
     );
     expect(host.textContent).toContain("村外的野狗成了祸患");
     expect(host.textContent).toContain("击杀 野狗（0/1）");
-    expect(host.textContent).toContain("经验 30 · 潜能 8 · 银两 5");
+    expect(host.textContent).toContain("历练 30 · 潜能 8 · 银两 5");
   });
 
   it("可前往 / 接受 / 交差 回调", () => {

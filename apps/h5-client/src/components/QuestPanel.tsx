@@ -82,7 +82,7 @@ function QuestCard({
         ))}
       </ul>
       <p className="quest-reward">
-        经验 {quest.rewards.exp} · 潜能 {quest.rewards.potential} · 银两 {quest.rewards.silver}
+        历练 {quest.rewards.exp} · 潜能 {quest.rewards.potential} · 银两 {quest.rewards.silver}
       </p>
       <div className="chips">
         {quest.state === "available" && (

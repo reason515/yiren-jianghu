@@ -4,5 +4,10 @@
   "description": "帮村民劈柴挑水、扫庭院。不需动武，只换些碎银与历练。",
   "maxExp": 2000,
   "hourlyGain": { "exp": 36, "potential": 18, "silver": 8 },
-  "jingPerHour": 12
+  "jingPerHour": 12,
+  "onlineLines": [
+    "你又劈开一捆柴火，衣袖沾了些木屑。",
+    "井绳一紧一松，水桶满了，肩膀也沉了。",
+    "庭院扫过一遍，尘土落定，手头又多了几文碎银。"
+  ]
 }

@@ -29,7 +29,7 @@ afterEach(() => {
 describe("JournalFeed（见闻动态流）", () => {
   const entries: JournalEntry[] = [
     { id: 1, text: "村长：村里的日子，就靠一亩三分地撑着。" },
-    { id: 2, text: "交差已毕：经验 120 · 潜能 30 · 银两 5" },
+    { id: 2, text: "交差已毕：历练 120 · 潜能 30 · 银两 5" },
     { id: 3, text: "尘埃落定——你赢了这一场。", kind: "combat" },
   ];
 
@@ -50,7 +50,7 @@ describe("JournalFeed（见闻动态流）", () => {
   it("点击折叠卡展开历史，全部条目可见", () => {
     const { host } = render(<JournalFeed entries={entries} />);
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="journal-feed"]')!.click());
-    expect(host.querySelector(".journal-panel")?.textContent).toContain("经验");
+    expect(host.querySelector(".journal-panel")?.textContent).toContain("历练");
     expect(host.querySelector(".journal-panel")?.textContent).toContain("你赢了这一场");
   });
 

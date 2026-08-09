@@ -24,7 +24,7 @@ export function AfkReportView({ open, report, onClose }: AfkReportViewProps): JS
           {report.reason && <p className="afk-report-reason">{report.reason}</p>}
           <p className="afk-report-narrative">{report.narrative}</p>
           <div className="afk-report-gains">
-            经验 +{report.gains.exp} · 潜能 +{report.gains.potential} · 银两 +{report.gains.silver}
+            历练 +{report.gains.exp} · 潜能 +{report.gains.potential} · 银两 +{report.gains.silver}
           </div>
           <p className="afk-report-duration">
             历时 {Math.round((report.durationMinutes / 60) * 10) / 10} 时辰。

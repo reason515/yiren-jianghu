@@ -59,15 +59,12 @@ function actionsFor(
         observe,
         { command: `talk ${npc.id}`, label: "交谈", variant: "action" },
       ];
-      // 只向当前师父请教
       if (opts.masterNpcId && opts.masterNpcId === npc.id) {
         actions.push({ command: `teach ${npc.id}`, label: "请教", variant: "action" });
       }
-      // 门外：仅入门师兄（acceptOutsiders）可拜
       if (!opts.sectId && npc.acceptOutsiders) {
         actions.push({ command: `apprentice ${npc.id}`, label: "拜师", variant: "action" });
       }
-      // 同门改拜：目标辈分更尊（数字更小）
       if (
         opts.sectId &&
         npc.sectId === opts.sectId &&
@@ -103,8 +100,25 @@ export function EntitySheet({
   onAction,
   onClose,
 }: EntitySheetProps): JSX.Element | null {
+  const isItem = ITEM_KINDS.has(entity.kind);
+  const npc = isItem ? null : (entity as SceneNpc);
+  const skills = npc?.skills ?? [];
+
   return (
     <Sheet open={open} title={entity.name} onClose={onClose}>
+      {skills.length > 0 ? (
+        <section className="entity-skills" aria-label="武功">
+          <h4 className="entity-skills-title">武功</h4>
+          <ul className="entity-skills-list">
+            {skills.map((skill) => (
+              <li key={skill.id}>
+                <span>{skill.name}</span>
+                <em>Lv {skill.level}</em>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <div className="chips" data-testid="entity-actions">
         {actionsFor(entity, { sectId, masterNpcId, masterGeneration }).map((a) => (
           <Chip

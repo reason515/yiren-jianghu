@@ -35,7 +35,12 @@ import { LeaderboardView } from "./components/LeaderboardView.js";
 import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
 import { GuideTip } from "./components/GuideTip.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
-import { toCharacterView, type CharacterView, type VitalKey } from "./lib/characterTypes.js";
+import {
+  toCharacterView,
+  type CharacterView,
+  type EnableSlot,
+  type VitalKey,
+} from "./lib/characterTypes.js";
 import {
   toAfkQuestOptions,
   toAfkSkillOptions,
@@ -742,6 +747,23 @@ export function App(): JSX.Element {
       .finally(() => setCharacterPending(null));
   };
 
+  const onEnableSkill = (slot: EnableSlot, skillId: string | null): void => {
+    const key = `enable:${slot}`;
+    setCharacterPending(key);
+    void api
+      .enableSkill(slot, skillId)
+      .then(async (result) => {
+        setCharacterView((prev) => (prev ? { ...prev, skillEnable: result.skillEnable } : prev));
+        await refreshCharacter();
+        const name = skillId
+          ? (characterView?.skills.find((s) => s.id === skillId)?.name ?? "特殊功")
+          : "基本功";
+        showToast(skillId ? `已激发${name}。` : `已收回${slot}激发。`);
+      })
+      .catch(notify)
+      .finally(() => setCharacterPending(null));
+  };
+
   const openTeach = (npcId: string): void => {
     void api
       .getTeachOffer(npcId)
@@ -766,6 +788,23 @@ export function App(): JSX.Element {
           `潜能 ${result.spent.potential}`,
         ].filter(Boolean);
         const line = `${result.teacher.name}点头示意。耗${parts.join("、")}，${result.skill.name}进至 ${result.skill.level} 级。`;
+        showToast(line);
+        addJournal(line);
+        const next = await api.getTeachOffer(teach.npc.id);
+        setTeach(next);
+      })
+      .catch(notify)
+      .finally(() => setTeachPending(false));
+  };
+
+  const onTeachLearnPerform = (performId: string): void => {
+    if (!teach) return;
+    setTeachPending(true);
+    void api
+      .learnPerform(performId, teach.npc.id)
+      .then(async (result) => {
+        await refreshCharacter();
+        const line = `${result.teacher.name}点拨一二。你已学会「${result.performName}」。`;
         showToast(line);
         addJournal(line);
         const next = await api.getTeachOffer(teach.npc.id);
@@ -1330,6 +1369,7 @@ export function App(): JSX.Element {
           pendingAction={characterPending}
           onClose={() => setPanel("none")}
           onSkillAction={onSkillAction}
+          onEnableSkill={onEnableSkill}
           onInventoryAction={onInventoryAction}
           onRename={onRename}
           onDiscard={() => setDiscardOpen(true)}
@@ -1370,7 +1410,12 @@ export function App(): JSX.Element {
 
       {teach && (
         <Sheet open title={`${teach.npc.name}·请教`} onClose={() => setTeach(null)}>
-          <TeachSheet data={teach} pending={teachPending} onLearn={onTeachLearn} />
+          <TeachSheet
+            data={teach}
+            pending={teachPending}
+            onLearn={onTeachLearn}
+            onLearnPerform={onTeachLearnPerform}
+          />
         </Sheet>
       )}
 

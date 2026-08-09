@@ -16,6 +16,8 @@ export interface SceneNpc {
   generation?: number;
   /** 是否收门外之人（入门点）。 */
   acceptOutsiders?: boolean;
+  /** DC-041：武功列表（名+级），供详情展示。 */
+  skills?: Array<{ id: string; name: string; level: number }>;
 }
 
 export interface SceneItem {

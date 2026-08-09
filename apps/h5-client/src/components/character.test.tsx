@@ -142,7 +142,7 @@ describe("CharacterSheet（角色面板）", () => {
     };
     const { host } = render(<CharacterSheet open character={empty} onClose={() => undefined} />);
     clickTab(host, "武学");
-    expect(host.textContent).toContain("你尚未学会任何武功");
+    expect(host.textContent).toContain("尚未学会基本功");
     expect(host.textContent).toContain("当面请教");
   });
 

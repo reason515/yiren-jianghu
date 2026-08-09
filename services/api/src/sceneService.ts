@@ -31,6 +31,11 @@ export interface SceneNpcView {
   id: string;
   name: string;
   kind: string;
+  sectId?: string;
+  generation?: number;
+  acceptOutsiders?: boolean;
+  /** DC-041：观察/详情用武功列表。 */
+  skills?: Array<{ id: string; name: string; level: number }>;
 }
 
 export interface SceneItemView {
@@ -303,6 +308,10 @@ export function createSceneService(
           ...(n.sectId ? { sectId: n.sectId } : {}),
           ...(n.generation != null ? { generation: n.generation } : {}),
           ...(n.recruit?.acceptOutsiders ? { acceptOutsiders: true } : {}),
+          skills: n.skills.flatMap((ref) => {
+            const def = content.skills.get(ref.skillId);
+            return def ? [{ id: ref.skillId, name: def.name, level: ref.level }] : [];
+          }),
         })),
       items: room.itemIds
         .filter((id) => !taken.has(id))

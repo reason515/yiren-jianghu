@@ -102,9 +102,22 @@ export interface TeachOfferView {
   blockedReason?: string;
 }
 
+/** DC-041：当面可学绝招报价。 */
+export interface TeachPerformOfferView {
+  performId: string;
+  performName: string;
+  skillId: string;
+  skillName: string;
+  learnMinLevel: number;
+  alreadyLearned: boolean;
+  canLearn: boolean;
+  blockedReason?: string;
+}
+
 export interface TeachOfferResult {
   npc: { id: string; name: string; kind: string; sectId?: string };
   offers: TeachOfferView[];
+  performOffers: TeachPerformOfferView[];
 }
 
 export interface ApprenticeResult {
@@ -439,6 +452,57 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
     return offers;
   };
 
+  const buildPerformOffers = async (
+    ch: CharacterRow,
+    npc: Npc,
+    skills: SkillMap,
+  ): Promise<TeachPerformOfferView[]> => {
+    const taughtSkillIds = new Set((npc.teaches ?? []).map((t) => t.skillId));
+    const learnedRows = await db.query<{ perform_id: string }>(
+      "SELECT perform_id FROM character_performs WHERE character_id = $1",
+      [ch.id],
+    );
+    const learned = new Set(learnedRows.rows.map((r) => r.perform_id));
+    const out: TeachPerformOfferView[] = [];
+    for (const perform of content.performs) {
+      if (!taughtSkillIds.has(perform.skillId)) continue;
+      const skillDef = skillsById.get(perform.skillId);
+      if (!skillDef) continue;
+      const skillLevel = getSkill(skills, perform.skillId).level;
+      const alreadyLearned = learned.has(perform.id);
+      let canLearn = !alreadyLearned;
+      let blockedReason: string | undefined;
+      if (alreadyLearned) {
+        blockedReason = "已学会";
+        canLearn = false;
+      } else if (skillLevel < perform.learnMinLevel) {
+        canLearn = false;
+        blockedReason = `${skillDef.name}未达 ${perform.learnMinLevel} 级`;
+      } else {
+        for (const req of perform.learnRequires) {
+          const reqLevel = getSkill(skills, req.skillId).level;
+          if (reqLevel < req.level) {
+            canLearn = false;
+            const reqName = skillsById.get(req.skillId)?.name ?? req.skillId;
+            blockedReason = `${reqName}未达 ${req.level} 级`;
+            break;
+          }
+        }
+      }
+      out.push({
+        performId: perform.id,
+        performName: perform.name,
+        skillId: perform.skillId,
+        skillName: skillDef.name,
+        learnMinLevel: perform.learnMinLevel,
+        alreadyLearned,
+        canLearn,
+        blockedReason,
+      });
+    }
+    return out;
+  };
+
   return {
     async getSkills(accountId) {
       const ch = await activeCharacter(accountId);
@@ -464,6 +528,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
           sectId: npc.sectId,
         },
         offers: buildOffers(ch, npc, skills),
+        performOffers: await buildPerformOffers(ch, npc, skills),
       };
     },
 

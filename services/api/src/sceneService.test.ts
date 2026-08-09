@@ -414,7 +414,9 @@ describe("sceneService.getScene", () => {
     const { scene } = await boot();
     await scene.move("acc_1", "east");
     const view = await scene.getScene("acc_1");
-    expect(view?.npcs).toEqual([{ id: "village_guard", name: "村口守卫", kind: "npc" }]);
+    expect(view?.npcs).toEqual([
+      { id: "village_guard", name: "村口守卫", kind: "npc", skills: [] },
+    ]);
     expect(view?.items).toEqual([{ id: "iron_sword", name: "铁剑", kind: "weapon" }]);
     expect(view?.actions).toEqual([{ command: "q_newbie_trail", label: "请托" }]);
   });

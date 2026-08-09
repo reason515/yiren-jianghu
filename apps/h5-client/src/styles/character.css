@@ -450,6 +450,46 @@
   margin: 0;
 }
 
+.char-enable-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.char-enable-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--paper-dim);
+}
+.char-enable-head em {
+  font-style: normal;
+  color: var(--jade);
+  font-weight: 600;
+}
+.char-move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.char-move-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--paper);
+}
+.char-move-list em {
+  font-style: normal;
+  color: var(--paper-faint);
+  font-size: 12px;
+}
+
 /* 档案 */
 .char-profile-line {
   display: flex;

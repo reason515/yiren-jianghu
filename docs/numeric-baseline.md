@@ -55,8 +55,9 @@
 |---|---|---|---|
 | 时长上限 | 无（桌面端客户端挂机） | `maxDurationHours=8` | 移动端单次上限，防绑架（DC-008） |
 | 每日递减 | 无 | `dailyDiminishRate=0.5`（每满 8h 收益减半） | 防无限挂机最优解；封测调斜率 |
-| 生计杂役 | 配药/钓鱼等打工 | `village_chore`：36/18/8 每时；`village_fish`：28/14/10；`village_herb`：32/16/9；耗精 10–12；`maxExp` 2k–5k | DC-042/043 新手无战斗起步；在线见闻轮换 |
-| 在线短轮回 | 无 | `onlineTickSec=60` | DC-043 在线见闻/结算节拍 |
+| 生计杂役 | 配药/钓鱼等打工 | `village_chore`：36/18/8 每时；`village_fish`：28/14/10；`village_herb`：32/16/9；耗精 10–12；`maxExp` 2k–5k | DC-042/043 新手无战斗起步 |
+| 在线生计合圈 | 无（钓鱼/配药位移感） | `roundGain`：杂役 4/2/1、垂钓 3/2/1、采药 3/2/1；`jingPerRound` 1–2；合圈 ×`onlineRewardMult` | DC-045 整圈一轮；约 5–6 tick/圈 ≈ 离线时薪折算 |
+| 在线短轮回 | 无 | `onlineTickSec=60` | DC-043/045 在线一步一节拍 |
 | 心跳超时 | 无 | `onlineHeartbeatTimeoutSec=45` | 断线 pause，不降级离线收益 |
 | 在线倍率 | 无 | `onlineRewardMult=1.8` | 在线高于离线，鼓励守着玩 |
 
@@ -87,3 +88,4 @@
 | 2026-08-09 | 学习首学精耗 ×2；学费 `learnTuitionBase=2`；建角赠银 10 | DC-039 双轨学艺 | 对齐 xkx learn 首学加倍 + 武馆教头交银语义（按次 GUI） |
 | 2026-08-09 | 生计挂机 hourlyGain + jingPerHour + maxExp | DC-042 | 新手无战斗也能攒银/历练/潜能；见 grind_jobs |
 | 2026-08-09 | onlineTickSec/onlineHeartbeatTimeoutSec/onlineRewardMult | DC-043 | 在线短轮回高收益 + 心跳断线 pause |
+| 2026-08-09 | grindJobs.roundGain/jingPerRound + 溪边/药坡房 | DC-045 | 在线合圈发奖；离线仍 hourlyGain |

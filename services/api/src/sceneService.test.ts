@@ -188,6 +188,12 @@ function mockDb() {
       room_id: string;
       item_def_id: string;
     }>,
+    afk_jobs: [] as Array<{
+      id: string;
+      character_id: string;
+      status: string;
+      presence: string;
+    }>,
     shop_cashflows: new Map<string, number>(),
   };
   const db: Db = {
@@ -271,6 +277,20 @@ function mockDb() {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
             .map((c) => ({ id: c.id, room_path: c.room_path })) as unknown as T[],
+        };
+      }
+      if (
+        text.includes("FROM afk_jobs") &&
+        text.includes("status = 'running'") &&
+        text.includes("presence = 'online'")
+      ) {
+        return {
+          rows: state.afk_jobs
+            .filter(
+              (j) =>
+                j.character_id === params[0] && j.status === "running" && j.presence === "online",
+            )
+            .map((j) => ({ id: j.id })) as unknown as T[],
         };
       }
       if (text.includes("SELECT item_def_id FROM character_room_items")) {
@@ -473,6 +493,18 @@ describe("sceneService.move", () => {
     expect(state.characters[0]?.room_path).toBe("village_square");
     await expect(scene.move("acc_1", "south")).rejects.toMatchObject({ code: "invalid_direction" });
     expect(state.characters[0]?.room_path).toBe("village_square");
+  });
+
+  it("在线挂机 running 时拒绝移动（afk_busy）", async () => {
+    const { scene, state } = await boot();
+    state.afk_jobs.push({
+      id: "job_1",
+      character_id: "char_1",
+      status: "running",
+      presence: "online",
+    });
+    await expect(scene.move("acc_1", "east")).rejects.toMatchObject({ code: "afk_busy" });
+    expect(state.characters[0]?.room_path).toBe("village_start");
   });
 
   it("抵达房间时由服务端推进 goto 相位", async () => {

@@ -63,6 +63,7 @@
 | DC-042 | 2026-08 | 新手生计挂机（无战斗换银/历练/潜能） | 新增 `afk.kind=grind`：内容包 `grindJobs`（村中杂役/溪边垂钓）；按时长发三件套+耗精；`maxExp` 限新手；不需战术。AfkSheet 默认「生计」。顺带野狗去群战降为 1v1 | DC-041 后新手打不过野狗、无起步资源；对标 pkuxkx 配药/钓鱼「时间换成长」语义，不做小游戏 | protocol.md §9、numeric-baseline §2.4、content grind_jobs、afkService/worker、AfkSheet、catalog | ✅ |
 | DC-043 | 2026-08 | 在线/离线挂机双轨 + 历练用词统一 | `afk_jobs.presence`（online/offline）+ 心跳超时 pause；在线生计/行侠短 tick 高倍率见闻；离线实时累计；`settleJobNow` 供 status/stop/worker 共用；玩家可见「经验」统一为「历练」；可 wipe 库不兼容旧档 | 在线需心跳与见闻反馈、离线须可中途结算；用词混用影响认知 | protocol.md §9、numeric-baseline §2.4、database-schema §3.7、afkService/jobSettle、AfkSheet/App | ✅ |
 | DC-044 | 2026-08 | 生存结算闭环：恢复入口补齐 + 食水消耗 | ①`settleCharacterVitals` 统一入口：场景交互 + `GET /characters/me` + `resume` 均按 `last_heal_at` 结算；新建角色写 `last_heal_at=now()`，空值仅初始化时钟不永久跳过；②`applyRegen` 同步按 `foodPerMin`/`waterPerMin` 消耗饱腹/饮水（绝对值，窗口封顶）；③客户端约 60s 轮询 + 移动后刷新顶栏 | 实测气精不回、食水不降：新建角色 `last_heal_at` 空导致结算早退；顶栏只在 resume/开人物簿刷新；DC-032 暂缓的食水消耗补齐 | protocol.md §7、vitals.ts、vitalsSettle、迁移 0016、h5 App | ✅ |
+| DC-045 | 2026-08 | 在线生计真实跑图（合圈发奖） | 在线 `grind`：内容包 `hubRoomId`/`route`/`workRooms`/`roundGain`；先白名单导航到枢纽，再沿回路逐步改 `room_path`，合圈才发奖；挂机 running 禁手动 move；任意处可开活。离线仍 `hourlyGain` 按时长、不跑图 | 对齐 xkx 钓鱼/配药「人在地图干活、干完一轮拿一轮」；见闻轮换不够真 | protocol.md §9、numeric-baseline §2.4、content grind_jobs/rooms、game-core grindCircuit、jobSettle/afkService/sceneService、H5 | ✅ |
 
 # 3. 被替代决策（变更历史）
 

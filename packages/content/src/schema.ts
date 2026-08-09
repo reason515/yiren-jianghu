@@ -387,8 +387,8 @@ export const storySchema = z.object({
 });
 
 /**
- * 生计挂机（DC-042，对标 pkuxkx 配药/钓鱼新手打工）：
- * 无战斗，按时长发银两/经验/潜能；maxExp 限制仅新手可用。
+ * 生计挂机（DC-042/045，对标 pkuxkx 配药/钓鱼新手打工）：
+ * 离线按时长发银两/经验/潜能；在线沿 route 跑图，合圈发 roundGain。
  */
 export const grindJobSchema = z.object({
   id,
@@ -401,10 +401,30 @@ export const grindJobSchema = z.object({
     potential: z.number().nonnegative(),
     silver: z.number().nonnegative(),
   }),
-  /** 每小时耗精；精尽则挂机失败停止。 */
+  /** 每小时耗精；精尽则挂机失败停止（离线）。 */
   jingPerHour: z.number().nonnegative().default(10),
-  /** 在线生计见闻短句轮换（DC-043）；缺省用通用句。 */
+  /** 在线见闻短句轮换（DC-043 兼容；DC-045 优先 move/work/harvest）。 */
   onlineLines: z.array(z.string().min(1)).default([]),
+  /** 在线回路枢纽（DC-045）；缺省则仅离线语义。 */
+  hubRoomId: id.optional(),
+  /** 有序房间环：首末均为 hub。 */
+  route: z.array(id).default([]),
+  /** 到达后多停留 1 tick 干活的房间。 */
+  workRooms: z.array(id).default([]),
+  /** 自动导航白名单（不含主动怪房）。 */
+  navWhitelist: z.array(id).default([]),
+  /** 合圈基础奖励（再乘 onlineRewardMult）。 */
+  roundGain: z
+    .object({
+      exp: z.number().nonnegative(),
+      potential: z.number().nonnegative(),
+      silver: z.number().nonnegative(),
+    })
+    .optional(),
+  jingPerRound: z.number().nonnegative().default(0),
+  moveLines: z.array(z.string().min(1)).default([]),
+  workLines: z.array(z.string().min(1)).default([]),
+  harvestLine: z.string().min(1).optional(),
 });
 
 // ---------- manifest ----------

@@ -405,6 +405,103 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
     }
   }
 
+  // 生计回路（DC-045）
+  const aggressiveRooms = new Set<string>();
+  for (const room of pack.rooms) {
+    for (const npcId of room.npcIds) {
+      const npc = pack.npcs.find((n) => n.id === npcId);
+      if (npc?.aggressive) aggressiveRooms.add(room.id);
+    }
+  }
+  const exitAdj = (a: string, b: string): boolean => {
+    const room = roomsById.get(a);
+    return room?.exits.some((e) => e.roomId === b) ?? false;
+  };
+  for (const job of pack.grindJobs ?? []) {
+    const hasOnlineRoute = Boolean(job.hubRoomId) || job.route.length > 0;
+    if (!hasOnlineRoute) continue;
+    if (!job.hubRoomId || job.route.length < 2) {
+      issues.push({
+        code: "grind_route_incomplete",
+        severity: "error",
+        message: `生计 ${job.id} 配置了在线路口须同时提供 hubRoomId 与至少 2 步 route`,
+      });
+      continue;
+    }
+    if (!job.roundGain) {
+      issues.push({
+        code: "grind_round_gain_missing",
+        severity: "error",
+        message: `生计 ${job.id} 在线路口须配置 roundGain`,
+      });
+    }
+    if (!roomIds.has(job.hubRoomId)) {
+      issues.push({
+        code: "grind_unknown_hub",
+        severity: "error",
+        message: `生计 ${job.id} hubRoomId 不存在：${job.hubRoomId}`,
+      });
+    }
+    if (job.route[0] !== job.hubRoomId || job.route[job.route.length - 1] !== job.hubRoomId) {
+      issues.push({
+        code: "grind_route_hub_ends",
+        severity: "error",
+        message: `生计 ${job.id} route 首末须为 hubRoomId`,
+      });
+    }
+    for (let i = 0; i < job.route.length; i++) {
+      const roomId = job.route[i]!;
+      if (!roomIds.has(roomId)) {
+        issues.push({
+          code: "grind_unknown_route_room",
+          severity: "error",
+          message: `生计 ${job.id} route 含未知房间 ${roomId}`,
+        });
+        continue;
+      }
+      if (i > 0) {
+        const prev = job.route[i - 1]!;
+        if (!exitAdj(prev, roomId)) {
+          issues.push({
+            code: "grind_route_not_adjacent",
+            severity: "error",
+            message: `生计 ${job.id} route 不相邻：${prev} → ${roomId}`,
+          });
+        }
+      }
+    }
+    for (const workId of job.workRooms) {
+      if (!roomIds.has(workId)) {
+        issues.push({
+          code: "grind_unknown_work_room",
+          severity: "error",
+          message: `生计 ${job.id} workRooms 含未知房间 ${workId}`,
+        });
+      } else if (!job.route.includes(workId)) {
+        issues.push({
+          code: "grind_work_not_on_route",
+          severity: "error",
+          message: `生计 ${job.id} 工作点 ${workId} 不在 route 上`,
+        });
+      }
+    }
+    for (const wid of job.navWhitelist) {
+      if (!roomIds.has(wid)) {
+        issues.push({
+          code: "grind_unknown_whitelist",
+          severity: "error",
+          message: `生计 ${job.id} navWhitelist 含未知房间 ${wid}`,
+        });
+      } else if (aggressiveRooms.has(wid)) {
+        issues.push({
+          code: "grind_whitelist_aggressive",
+          severity: "error",
+          message: `生计 ${job.id} 白名单含主动怪房间 ${wid}`,
+        });
+      }
+    }
+  }
+
   // 参数边界
   const { afk } = pack.params;
   if (afk.maxDurationHours < 1 || afk.maxDurationHours > 12) {

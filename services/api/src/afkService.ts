@@ -50,6 +50,12 @@ export interface AfkJobView {
   totalMs: number;
   journalLines: string[];
   config: Record<string, unknown>;
+  /** DC-045：当前房间（在线生计）。 */
+  roomId?: string;
+  /** DC-045：goto_hub | circuit。 */
+  grindPhase?: string;
+  /** DC-045：已合圈轮数。 */
+  rounds?: number;
 }
 
 export interface AfkReportView {
@@ -78,6 +84,9 @@ export interface AfkGrindJobView {
   maxExp: number;
   hourlyGain: AfkGainsView;
   jingPerHour: number;
+  hubRoomId?: string;
+  roundGain?: AfkGainsView;
+  jingPerRound?: number;
 }
 
 export interface AfkService {
@@ -114,9 +123,9 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
 
   const activeCharacter = async (
     accountId: string,
-  ): Promise<{ id: string; exp: number } | null> => {
-    const rows = await db.query<{ id: string; exp: number }>(
-      "SELECT id, exp FROM characters WHERE account_id = $1 AND status = 'active'",
+  ): Promise<{ id: string; exp: number; room_path: string } | null> => {
+    const rows = await db.query<{ id: string; exp: number; room_path: string }>(
+      "SELECT id, exp, room_path FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     return rows.rows[0] ?? null;
@@ -132,7 +141,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
 
   const toView = (
     row: AfkJobDbRow,
-    extra?: { journalLines?: string[]; now?: number },
+    extra?: { journalLines?: string[]; now?: number; roomId?: string },
   ): AfkJobView => {
     const config = parseConfig(row.config);
     const prog = progressOf({
@@ -140,6 +149,12 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       scheduled_end_at: row.scheduled_end_at,
       now: extra?.now,
     });
+    const grindPhase =
+      typeof config.phase === "string" &&
+      (config.phase === "goto_hub" || config.phase === "circuit")
+        ? config.phase
+        : undefined;
+    const rounds = typeof config.rounds === "number" ? config.rounds : undefined;
     return {
       id: row.id,
       kind: row.kind as AfkJobKind,
@@ -155,6 +170,9 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       totalMs: prog.totalMs,
       journalLines: extra?.journalLines ?? [],
       config,
+      ...(extra?.roomId ? { roomId: extra.roomId } : {}),
+      ...(grindPhase ? { grindPhase } : {}),
+      ...(rounds !== undefined ? { rounds } : {}),
     };
   };
 
@@ -250,6 +268,28 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       const startedIso = new Date(job.startedAt).toISOString();
       const endIso = new Date(job.scheduledEndAt).toISOString();
 
+      let startConfig: Record<string, unknown> = {
+        ...config,
+        gains: zeroGains(),
+        journal: [],
+        carry: {},
+      };
+      if (input.kind === "grind" && presence === "online") {
+        const jobId = typeof config.jobId === "string" ? config.jobId : "";
+        const grind = grindById.get(jobId);
+        if (grind?.hubRoomId && grind.route.length >= 2) {
+          const atHub = ch.room_path === grind.hubRoomId;
+          startConfig = {
+            ...startConfig,
+            phase: atHub ? "circuit" : "goto_hub",
+            routeIndex: 0,
+            pendingWork: 0,
+            rounds: 0,
+            lineSeq: 0,
+          };
+        }
+      }
+
       await db.query(
         `INSERT INTO afk_jobs (
           id, character_id, kind, presence, status, phase, template_id, template_snapshot, config,
@@ -262,7 +302,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           presence,
           templateId,
           JSON.stringify(templateSnapshot),
-          JSON.stringify({ ...config, gains: zeroGains(), journal: [], carry: {} }),
+          JSON.stringify(startConfig),
           job.day,
           startedIso,
           endIso,
@@ -274,7 +314,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         kind: job.kind,
         presence,
         status: "running",
-        phase: "init",
+        phase: typeof startConfig.phase === "string" ? startConfig.phase : "init",
         startedAt: startedIso,
         scheduledEndAt: endIso,
         gains: gainsView({}),
@@ -282,7 +322,11 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         elapsedMs: 0,
         totalMs: minutes * 60_000,
         journalLines: [],
-        config: { ...config, gains: zeroGains(), journal: [] },
+        config: startConfig,
+        roomId: ch.room_path,
+        ...(typeof startConfig.phase === "string"
+          ? { grindPhase: String(startConfig.phase), rounds: 0 }
+          : {}),
       };
     },
 
@@ -359,7 +403,15 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           }
         }
         const viewRow = { ...current, report: null } as AfkJobDbRow;
-        return toView(viewRow, { journalLines, now });
+        const loc = await tx.query<{ room_path: string }>(
+          "SELECT room_path FROM characters WHERE id = $1",
+          [ch.id],
+        );
+        return toView(viewRow, {
+          journalLines,
+          now,
+          roomId: loc.rows[0]?.room_path ?? ch.room_path,
+        });
       });
     },
 
@@ -425,6 +477,9 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           maxExp: job.maxExp,
           hourlyGain: gainsView(job.hourlyGain),
           jingPerHour: job.jingPerHour,
+          ...(job.hubRoomId ? { hubRoomId: job.hubRoomId } : {}),
+          ...(job.roundGain ? { roundGain: gainsView(job.roundGain) } : {}),
+          ...(job.jingPerRound ? { jingPerRound: job.jingPerRound } : {}),
         }));
     },
   };

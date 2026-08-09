@@ -140,7 +140,7 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 | status | text | running/paused/completed/failed/cancelled |
 | phase | text | 状态机相位（init/hunt/fight/rest…） |
 | template_id / template_snapshot | uuid / jsonb | 绑定的战术模板（含快照） |
-| config | jsonb | 任务目标、累计 `gains`、在线 `journal[]` 等 |
+| config | jsonb | 任务目标、累计 `gains`、在线 `journal[]`；在线生计另含 `phase`/`routeIndex`/`pendingWork`/`rounds`（DC-045，无新列） |
 | day / hours_today | text / numeric | 每日递减计时（YYYY-MM-DD） |
 | scheduled_end_at | timestamptz | 时长上限（Worker 到期结算） |
 | last_tick_at | timestamptz | 上次结算游标 |

@@ -1,0 +1,9 @@
+{
+  "id": "village_herb_slope",
+  "area": "newbie",
+  "name": "武馆后坡",
+  "shortDesc": "乱石缝里长着带露的药苗。",
+  "longDesc": "武馆北墙外一脉缓坡，石缝与枯叶间偶见可入药的草芽。山风清冽，药香混着土腥，脚边是采药人踩出的浅痕。",
+  "grid": [1, -2],
+  "exits": [{ "dir": "south", "roomId": "village_dojo" }]
+}

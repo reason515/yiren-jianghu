@@ -5,6 +5,32 @@
   "maxExp": 2000,
   "hourlyGain": { "exp": 36, "potential": 18, "silver": 8 },
   "jingPerHour": 12,
+  "hubRoomId": "village_square",
+  "route": ["village_square", "village_inn", "village_square", "village_general", "village_square"],
+  "workRooms": ["village_inn", "village_general"],
+  "navWhitelist": [
+    "village_start",
+    "village_square",
+    "village_inn",
+    "village_dojo",
+    "village_general",
+    "village_creek",
+    "village_herb_slope"
+  ],
+  "roundGain": { "exp": 4, "potential": 2, "silver": 1 },
+  "jingPerRound": 2,
+  "moveLines": [
+    "你挑起扁担，脚步沉稳，往下一处走去。",
+    "村巷不长，你很快到了该去的地方。",
+    "你擦了擦额角的汗，又循着活计挪了一步。"
+  ],
+  "workLines": [
+    "你抡起斧头，又劈开一捆湿柴，木屑溅上袖口。",
+    "井绳一紧一松，满桶清泉压在肩上，脚步沉了半分。",
+    "庭院扫过一遍，尘土落定，村头阿嫂塞给你几文碎银。",
+    "扁担压肩，你把两桶水送到东头，换得一声道谢。"
+  ],
+  "harvestLine": "这一趟杂役忙完，碎银与历练入了囊中。",
   "onlineLines": [
     "你抡起斧头，又劈开一捆湿柴，木屑溅上袖口。",
     "井绳一紧一松，满桶清泉压在肩上，脚步沉了半分。",

@@ -7,7 +7,8 @@
   "grid": [2, 0],
   "exits": [
     { "dir": "west", "roomId": "village_square" },
-    { "dir": "east", "roomId": "village_trail" }
+    { "dir": "east", "roomId": "village_trail" },
+    { "dir": "south", "roomId": "village_creek" }
   ],
   "npcIds": ["general_shop"],
   "itemIds": ["dry_food"]

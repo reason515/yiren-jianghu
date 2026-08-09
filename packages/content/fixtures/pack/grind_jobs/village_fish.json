@@ -5,6 +5,38 @@
   "maxExp": 5000,
   "hourlyGain": { "exp": 28, "potential": 14, "silver": 10 },
   "jingPerHour": 10,
+  "hubRoomId": "village_square",
+  "route": [
+    "village_square",
+    "village_general",
+    "village_creek",
+    "village_general",
+    "village_square"
+  ],
+  "workRooms": ["village_creek"],
+  "navWhitelist": [
+    "village_start",
+    "village_square",
+    "village_inn",
+    "village_dojo",
+    "village_general",
+    "village_creek",
+    "village_herb_slope"
+  ],
+  "roundGain": { "exp": 3, "potential": 2, "silver": 1 },
+  "jingPerRound": 1,
+  "moveLines": [
+    "你提着竹篓，循土路往溪湾走去。",
+    "杂货铺檐下晃过，你已闻到溪水的凉意。",
+    "你收了收竿线，脚步折回村口方向。"
+  ],
+  "workLines": [
+    "浮子微颤，你提竿，钓上一尾银亮的小鱼，装进竹篓。",
+    "你重新挂饵抛竿，溪风过耳，水面只余一圈涟漪。",
+    "又是一尾，篓里扑腾几下，便安静下来。",
+    "竿影不动许久，你换了个钓点，脚边青苔湿滑。"
+  ],
+  "harvestLine": "回村数了数渔获，这一趟的银钱与历练都有了着落。",
   "onlineLines": [
     "浮子微颤，你提竿，钓上一尾银亮的小鱼，装进竹篓。",
     "你重新挂饵抛竿，溪风过耳，水面只余一圈涟漪。",

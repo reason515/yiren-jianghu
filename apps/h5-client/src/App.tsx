@@ -137,6 +137,7 @@ export function App(): JSX.Element {
     progress: 0,
     gains: { exp: 0, potential: 0, silver: 0 },
     journalLines: [],
+    lockExits: false,
   });
   const [afkSkills, setAfkSkills] = useState<AfkSkillOption[]>([]);
   const [afkQuests, setAfkQuests] = useState<AfkQuestOption[]>([]);
@@ -275,6 +276,8 @@ export function App(): JSX.Element {
     }
   }, [api]);
 
+  const afkRoomRef = useRef<string | undefined>(undefined);
+
   const refreshAfk = useCallback(
     async (pendingReportIds: string[] = []): Promise<void> => {
       try {
@@ -287,7 +290,16 @@ export function App(): JSX.Element {
           api.getAfkGrindJobs(),
         ]);
         const view = toAfkStatusView(status);
+        const prevRoom = afkRoomRef.current;
+        afkRoomRef.current = view.roomId;
         setAfkStatus(view);
+        if (
+          view.active &&
+          view.presence === "online" &&
+          (view.journalLines.length > 0 || (view.roomId && view.roomId !== prevRoom))
+        ) {
+          void refreshScene().catch(() => undefined);
+        }
         for (const line of view.journalLines) addJournal(line);
         if (view.journalLines.length > 0) {
           void refreshCharacter().catch(() => undefined);
@@ -305,7 +317,7 @@ export function App(): JSX.Element {
         notify(e);
       }
     },
-    [api],
+    [api, refreshScene, refreshCharacter],
   );
 
   // 在线挂机心跳 + 离线进度刷新（约 18s）
@@ -756,6 +768,7 @@ export function App(): JSX.Element {
           progress: 0,
           gains: { exp: 0, potential: 0, silver: 0 },
           journalLines: [],
+          lockExits: false,
         });
         setAfkReport(report);
         setAfkReportOpen(true);
@@ -1155,6 +1168,7 @@ export function App(): JSX.Element {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      lockExits: false,
     });
     setAfkSkills([]);
     setAfkQuests([]);
@@ -1244,6 +1258,7 @@ export function App(): JSX.Element {
             }}
             onAction={() => openQuests()}
             onOpenMap={openMap}
+            exitsLocked={afkStatus.lockExits}
           />
           <GrindBanner
             active={afkStatus.active}

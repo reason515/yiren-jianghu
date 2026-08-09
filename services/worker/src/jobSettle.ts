@@ -1,10 +1,15 @@
 import type { Pool } from "pg";
 import {
+  advanceOnlineGrind,
+  buildGraph,
   buildReport,
   cancelJob,
+  initialGrindCircuitState,
   processTick,
   type AfkJobState,
   type AfkReport,
+  type GrindCircuitDef,
+  type GrindCircuitState,
   type SkillMap,
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
@@ -461,6 +466,201 @@ async function settleQuestBattleOnce(
   return "settled";
 }
 
+function grindCircuitDefOf(def: {
+  hubRoomId?: string;
+  route: string[];
+  workRooms: string[];
+  navWhitelist: string[];
+  moveLines?: string[];
+  workLines?: string[];
+  harvestLine?: string;
+  onlineLines?: string[];
+}): GrindCircuitDef | null {
+  if (!def.hubRoomId || def.route.length < 2) return null;
+  return {
+    hubRoomId: def.hubRoomId,
+    route: def.route,
+    workRooms: def.workRooms,
+    navWhitelist: def.navWhitelist,
+    moveLines: def.moveLines,
+    workLines: def.workLines,
+    harvestLine: def.harvestLine,
+    onlineLines: def.onlineLines,
+  };
+}
+
+function readCircuitState(
+  config: Record<string, unknown>,
+  roomId: string,
+  circuit: GrindCircuitDef,
+): GrindCircuitState {
+  const phase = config.phase === "circuit" || config.phase === "goto_hub" ? config.phase : null;
+  if (!phase) return initialGrindCircuitState(roomId, circuit);
+  return {
+    phase,
+    roomId,
+    routeIndex: typeof config.routeIndex === "number" ? config.routeIndex : 0,
+    pendingWork: typeof config.pendingWork === "number" ? config.pendingWork : 0,
+    rounds: typeof config.rounds === "number" ? config.rounds : 0,
+    lineSeq: typeof config.lineSeq === "number" ? config.lineSeq : 0,
+  };
+}
+
+function writeCircuitConfig(
+  config: Record<string, unknown>,
+  state: GrindCircuitState,
+): Record<string, unknown> {
+  return {
+    ...config,
+    phase: state.phase,
+    routeIndex: state.routeIndex,
+    pendingWork: state.pendingWork,
+    rounds: state.rounds,
+    lineSeq: state.lineSeq,
+  };
+}
+
+async function settleGrindOnlineOnce(
+  client: SqlClient,
+  job: JobRow,
+  content: ContentPack,
+  now: number,
+  rewardMult: number,
+  journalLines: string[],
+  def: NonNullable<ContentPack["grindJobs"]>[number],
+  circuit: GrindCircuitDef,
+  config: Record<string, unknown>,
+  priorGains: ReturnType<typeof gains>,
+): Promise<"settled" | "completed"> {
+  if (job.scheduled_end_at && now >= Date.parse(job.scheduled_end_at)) {
+    return finishTerminalJob(client, job, now, {
+      status: "completed",
+      phase: "done",
+      reason: "日头偏西，杂役已毕",
+      config,
+      gains: priorGains,
+    });
+  }
+
+  const charRows = await client.query<{ jing: number; exp: number; room_path: string }>(
+    "SELECT jing, exp, room_path FROM characters WHERE id = $1",
+    [job.character_id],
+  );
+  const character = charRows.rows[0];
+  if (!character) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "行止之人已不在此地",
+      config,
+      gains: priorGains,
+    });
+  }
+
+  if (def.maxExp > 0 && character.exp >= def.maxExp) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "历练已够，此等杂役再做无益",
+      config,
+      gains: priorGains,
+    });
+  }
+
+  const graph = buildGraph(
+    content.rooms.map((room) => ({
+      id: room.id,
+      exits: Object.fromEntries(room.exits.map((e) => [e.dir, e.roomId])),
+    })),
+  );
+  const before = readCircuitState(config, character.room_path, circuit);
+  const step = advanceOnlineGrind(graph, circuit, before);
+
+  if (step.action === "stuck") {
+    journalLines.push(step.journalLine);
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: step.journalLine,
+      config: appendJournal(writeCircuitConfig(config, step.state), [step.journalLine]),
+      gains: priorGains,
+    });
+  }
+
+  if (step.roomId !== character.room_path) {
+    await client.query("UPDATE characters SET room_path = $1 WHERE id = $2", [
+      step.roomId,
+      job.character_id,
+    ]);
+  }
+
+  let totalGains = priorGains;
+  let jingSpent = 0;
+  let exhausted = false;
+
+  if (step.harvested && def.roundGain) {
+    const jingNeed = def.jingPerRound;
+    if (jingNeed > 0 && character.jing <= 0) {
+      exhausted = true;
+    } else {
+      jingSpent = Math.min(character.jing, jingNeed);
+      const raw = {
+        exp: def.roundGain.exp * rewardMult,
+        potential: def.roundGain.potential * rewardMult,
+        silver: def.roundGain.silver * rewardMult,
+      };
+      const { applied, nextCarry } = splitApplied(parseCarry(config.carry), {
+        exp: raw.exp,
+        potential: raw.potential,
+        silver: raw.silver,
+        jing: jingSpent,
+      });
+      totalGains = gains({
+        exp: priorGains.exp + raw.exp,
+        potential: priorGains.potential + raw.potential,
+        silver: priorGains.silver + raw.silver,
+      });
+      config = { ...config, carry: nextCarry };
+      if (applied.exp || applied.potential || applied.silver || applied.jing) {
+        await client.query(
+          "UPDATE characters SET jing = jing - $1, exp = exp + $2, potential = potential + $3, silver = silver + $4 WHERE id = $5",
+          [applied.jing, applied.exp, applied.potential, applied.silver, job.character_id],
+        );
+      }
+      if (jingNeed > 0 && character.jing - jingSpent <= 0) exhausted = true;
+    }
+  }
+
+  journalLines.push(step.journalLine);
+  let nextConfig = appendJournal(writeCircuitConfig(config, step.state), [step.journalLine]);
+  nextConfig = { ...nextConfig, gains: totalGains };
+
+  if (exhausted) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "精疲力尽，此事只好暂且放下",
+      config: nextConfig,
+      gains: totalGains,
+    });
+  }
+
+  const phaseLabel =
+    step.state.phase === "goto_hub"
+      ? "goto_hub"
+      : step.action === "work"
+        ? "work"
+        : step.harvested
+          ? "harvest"
+          : "circuit";
+
+  await client.query(
+    "UPDATE afk_jobs SET phase = $1, config = $2, last_tick_at = $3, updated_at = now() WHERE id = $4",
+    [phaseLabel, JSON.stringify(nextConfig), new Date(now).toISOString(), job.id],
+  );
+  return "settled";
+}
+
 async function settleGrindOnce(
   client: SqlClient,
   job: JobRow,
@@ -484,6 +684,22 @@ async function settleGrindOnce(
       config,
       gains: priorGains,
     });
+  }
+
+  const circuit = grindCircuitDefOf(def);
+  if (job.presence === "online" && circuit) {
+    return settleGrindOnlineOnce(
+      client,
+      job,
+      content,
+      now,
+      rewardMult,
+      journalLines,
+      def,
+      circuit,
+      config,
+      priorGains,
+    );
   }
 
   const charRows = await client.query<{ jing: number; exp: number }>(

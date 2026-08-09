@@ -428,6 +428,15 @@ export function createSceneService(
       await regenCharacter(db, accountId);
       const character = await activeCharacter(db, accountId);
       if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
+      const busy = await db.query<{ id: string }>(
+        `SELECT id FROM afk_jobs
+         WHERE character_id = $1 AND status = 'running' AND presence = 'online'
+         LIMIT 1`,
+        [character.id],
+      );
+      if (busy.rows[0]) {
+        throw new SceneError("afk_busy", "行止未歇，不便擅离");
+      }
       const room = roomFor(character.room_path);
       const exit = room.exits.find((candidate) => candidate.dir === dir);
       if (!exit) throw new SceneError("invalid_direction", "此路不通");

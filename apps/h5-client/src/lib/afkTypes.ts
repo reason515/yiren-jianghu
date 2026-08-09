@@ -76,6 +76,9 @@ export interface AfkJobData {
   totalMs: number;
   journalLines: string[];
   config: Record<string, unknown>;
+  roomId?: string;
+  grindPhase?: string;
+  rounds?: number;
 }
 
 export type AfkStatusResponse = AfkJobData | { active: false };
@@ -89,6 +92,11 @@ export interface AfkStatusView {
   progress: number;
   gains: AfkGains;
   journalLines: string[];
+  roomId?: string;
+  grindPhase?: string;
+  rounds?: number;
+  /** 在线挂机 running（含生计跑图）时锁出口。 */
+  lockExits: boolean;
 }
 
 export interface AfkReportData {
@@ -123,6 +131,7 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      lockExits: false,
     };
   }
 
@@ -135,16 +144,31 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
     status.kind === "study" ? "静心参悟" : status.kind === "quest" ? "行侠途中" : "生计途中";
   const presenceLabel = status.presence === "online" ? "在线" : "离线";
   const paused = status.status === "paused";
+  const grindPhase = status.grindPhase;
+  const rounds = status.rounds ?? 0;
+  let phaseHint = "";
+  if (status.kind === "grind" && status.presence === "online" && !paused) {
+    if (grindPhase === "goto_hub") phaseHint = " · 赶往村口";
+    else if (status.phase === "work") phaseHint = " · 干活中";
+    else if (status.phase === "harvest") phaseHint = ` · 已入账 ${rounds} 轮`;
+    else if (grindPhase === "circuit")
+      phaseHint = rounds > 0 ? ` · 第 ${rounds + 1} 圈` : " · 巡回中";
+  }
+  const lockExits = status.presence === "online" && status.status === "running";
   return {
     active: status.status === "running" || paused,
     paused,
     message: paused
       ? (status.stopReason ?? "气息中断，行止暂歇")
-      : `${presenceLabel}${kindLabel}${suffix}`,
+      : `${presenceLabel}${kindLabel}${phaseHint}${suffix}`,
     ...(status.stopReason ? { reason: status.stopReason } : {}),
     presence: status.presence,
     progress: status.progress ?? 0,
     gains: status.gains ?? { exp: 0, potential: 0, silver: 0 },
     journalLines: status.journalLines ?? [],
+    ...(status.roomId ? { roomId: status.roomId } : {}),
+    ...(grindPhase ? { grindPhase } : {}),
+    rounds,
+    lockExits,
   };
 }

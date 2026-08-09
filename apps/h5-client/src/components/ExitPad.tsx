@@ -10,6 +10,9 @@ export interface ExitPadProps {
   exits: SceneExit[];
   roomName: string;
   onGo: (dir: string) => void;
+  /** DC-045：在线生计 running 时锁定出口。 */
+  locked?: boolean;
+  lockedHint?: string;
 }
 
 const PLANAR_ROWS: string[][] = [
@@ -36,7 +39,13 @@ export const DIR_LABEL: Record<string, string> = {
   in: "入",
 };
 
-export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
+export function ExitPad({
+  exits,
+  roomName,
+  onGo,
+  locked = false,
+  lockedHint = "行止未歇，不便擅离",
+}: ExitPadProps): JSX.Element {
   const byDir = new Map(exits.map((e) => [e.dir, e]));
   const vertical = VERTICAL.filter((d) => byDir.has(d));
 
@@ -47,10 +56,14 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
       <button
         key={dir}
         type="button"
-        className="exit-cell has"
+        className={`exit-cell has${locked ? " locked" : ""}`}
         data-dir={dir}
-        aria-label={`向${DIR_LABEL[dir]}往${exit.name ?? exit.roomId}`}
-        onClick={() => onGo(exit.dir)}
+        disabled={locked}
+        title={locked ? lockedHint : undefined}
+        aria-label={locked ? lockedHint : `向${DIR_LABEL[dir]}往${exit.name ?? exit.roomId}`}
+        onClick={() => {
+          if (!locked) onGo(exit.dir);
+        }}
       >
         {DIR_LABEL[dir]}
       </button>
@@ -59,6 +72,11 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
 
   return (
     <div className="exit-pad" data-testid="exit-pad" role="group" aria-label="出口">
+      {locked ? (
+        <p className="exit-locked-hint" data-testid="exit-locked">
+          {lockedHint}
+        </p>
+      ) : null}
       <div className="exit-compass">
         {PLANAR_ROWS.map((row, rowIndex) => (
           <div key={row.join()} className={`exit-row${rowIndex === 1 ? " mid" : ""}`}>
@@ -81,9 +99,15 @@ export function ExitPad({ exits, roomName, onGo }: ExitPadProps): JSX.Element {
               <button
                 key={d}
                 type="button"
-                className="exit-cell vertical"
-                aria-label={`往${DIR_LABEL[d]}（${exit.name ?? exit.roomId}）`}
-                onClick={() => onGo(d)}
+                className={`exit-cell vertical${locked ? " locked" : ""}`}
+                disabled={locked}
+                title={locked ? lockedHint : undefined}
+                aria-label={
+                  locked ? lockedHint : `往${DIR_LABEL[d]}（${exit.name ?? exit.roomId}）`
+                }
+                onClick={() => {
+                  if (!locked) onGo(d);
+                }}
               >
                 {DIR_LABEL[d]}
               </button>

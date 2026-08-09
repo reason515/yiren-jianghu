@@ -93,6 +93,8 @@ interface CharState {
   account_id: string;
   status: string;
   exp?: number;
+  room_path?: string;
+  jing?: number;
 }
 
 interface TplState {
@@ -185,13 +187,24 @@ function mockDb() {
         };
       }
       if (
+        text.includes("SELECT id, exp, room_path FROM characters") ||
         text.includes("SELECT id, exp FROM characters") ||
         text.includes("SELECT id FROM characters")
       ) {
         return {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
-            .map((c) => ({ id: c.id, exp: c.exp ?? 0 })) as unknown as T[],
+            .map((c) => ({
+              id: c.id,
+              exp: c.exp ?? 0,
+              room_path: c.room_path ?? "village_square",
+            })) as unknown as T[],
+        };
+      }
+      if (text.includes("SELECT room_path FROM characters WHERE id")) {
+        const c = state.characters.find((ch) => ch.id === params[0]);
+        return {
+          rows: (c ? [{ room_path: c.room_path ?? "village_square" }] : []) as unknown as T[],
         };
       }
       if (text.includes("FROM character_quests WHERE character_id = $1 AND quest_id = $2")) {
@@ -244,8 +257,44 @@ function mockDb() {
             .map((j) => mapJobRow(j)) as unknown as T[],
         };
       }
-      if (text.includes("SELECT jing FROM characters")) {
-        return { rows: [{ jing: 100 }] as unknown as T[] };
+      if (text.includes("SELECT jing, exp, room_path FROM characters")) {
+        const c = state.characters.find((ch) => ch.id === params[0]);
+        return {
+          rows: [
+            {
+              jing: c?.jing ?? 100,
+              exp: c?.exp ?? 0,
+              room_path: c?.room_path ?? "village_square",
+            },
+          ] as unknown as T[],
+        };
+      }
+      if (
+        text.includes("SELECT jing, exp FROM characters") ||
+        text.includes("SELECT jing FROM characters")
+      ) {
+        const c = state.characters.find((ch) => ch.id === params[0]);
+        return {
+          rows: [{ jing: c?.jing ?? 100, exp: c?.exp ?? 0 }] as unknown as T[],
+        };
+      }
+      if (text.includes("UPDATE characters SET room_path")) {
+        const c = state.characters.find((ch) => ch.id === params[1]);
+        if (c) c.room_path = String(params[0]);
+        return { rows: [] as unknown as T[] };
+      }
+      if (
+        text.includes("UPDATE afk_jobs SET phase = $1") &&
+        text.includes("config = $2") &&
+        text.includes("last_tick_at = $3")
+      ) {
+        const job = state.jobs.find((j) => j.id === params[3]);
+        if (job) {
+          job.phase = String(params[0]);
+          job.config = String(params[1]);
+          job.last_tick_at = String(params[2]);
+        }
+        return { rows: [] as unknown as T[] };
       }
       if (text.includes("FROM character_skills WHERE character_id")) {
         return {

@@ -1,0 +1,9 @@
+{
+  "id": "village_creek",
+  "area": "newbie",
+  "name": "村外溪湾",
+  "shortDesc": "浅溪绕过乱石，水声细碎。",
+  "longDesc": "出杂货铺再往南几步，土路便折入一片浅湾。溪水清亮，浮萍贴岸，偶尔有小鱼掠过石缝。岸边插着几根旧竹竿，像是谁常来此处打发时光。",
+  "grid": [2, 1],
+  "exits": [{ "dir": "north", "roomId": "village_general" }]
+}

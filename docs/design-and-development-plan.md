@@ -621,6 +621,7 @@
 | xkx 式武学全套（DC-041） | ✅ 完成 | — | 基本/特殊 + GUI 激发（有效=基本/2+特殊）；招式达级解锁、普攻 `pickMove`；绝招须学会后手动；命中 `skillPower` A/(A+B)；场景/详情可看师父武功；迁移 0015；H5 CharacterSheet/TeachSheet/EntitySheet；生产可 wipe（`scripts/wipe-prod-db.cjs`） |
 | 新手生计挂机（DC-042） | ✅ 完成 | — | `kind=grind`：村中杂役/溪边垂钓发银+历练+潜能；Worker settleGrind；AfkSheet 默认生计；野狗去群战 1v1 |
 | 在线/离线挂机 + 历练用词（DC-043） | ✅ 完成 | — | presence+心跳 pause；settleJobNow 共用；在线生计/行侠见闻；离线实时累计；玩家向「经验」→「历练」；wipe 库改建表 |
+| 在线生计真实跑图（DC-045） | ✅ 完成 | — | hub/route 合圈发奖；真改 room_path；挂机锁 move；任意处开活先导航 |
 | 生存结算闭环（DC-044） | ✅ 完成 | — | 修复气精不回/食水不降：`settleCharacterVitals` 统一入口（场景+getCharacter+resume）；建角写 `last_heal_at`；空值初始化时钟；`applyRegen` 消耗 food/water；H5 60s 轮询+移动刷新；迁移 0016 |
 
 # 5. 风险与开放问题

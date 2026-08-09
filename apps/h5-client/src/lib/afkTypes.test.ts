@@ -80,7 +80,39 @@ describe("挂机数据适配", () => {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      lockExits: false,
     });
+  });
+
+  it("在线生计 running 锁出口并展示巡回阶段", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-07T00:00:00.000Z"));
+    const view = toAfkStatusView({
+      id: "job_1",
+      kind: "grind",
+      presence: "online",
+      status: "running",
+      phase: "circuit",
+      grindPhase: "circuit",
+      rounds: 1,
+      roomId: "village_general",
+      startedAt: "2026-08-07T00:00:00.000Z",
+      scheduledEndAt: "2026-08-07T00:30:00.000Z",
+      gains: { exp: 4, potential: 2, silver: 1 },
+      progress: 0.2,
+      elapsedMs: 360_000,
+      totalMs: 1_800_000,
+      journalLines: [],
+      config: { jobId: "village_fish", phase: "circuit", rounds: 1 },
+    });
+    expect(view).toMatchObject({
+      active: true,
+      lockExits: true,
+      message: "在线生计途中 · 第 2 圈 · 约余 0.5 时辰",
+      roomId: "village_general",
+      rounds: 1,
+    });
+    vi.useRealTimers();
   });
 
   it("行侠选项只含已接且当前为击杀相位的差事", () => {

@@ -207,6 +207,23 @@
 .exit-cell.vertical {
   min-width: 44px;
 }
+.exit-cell.locked,
+.exit-cell:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+.exit-cell.locked:active,
+.exit-cell:disabled:active {
+  transform: none;
+  filter: grayscale(0.35);
+}
+.exit-locked-hint {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ink-muted, #9a8f7a);
+  letter-spacing: 0.5px;
+}
 
 /* ---- 见闻动态流（V2.10 参照 xkx EventLog：折叠卡片 + 展开全屏滚动历史） ---- */
 .journal-feed {

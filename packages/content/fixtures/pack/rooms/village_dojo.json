@@ -5,6 +5,9 @@
   "shortDesc": "院中一副石锁，两排木桩，晒着太阳。",
   "longDesc": "王师傅正在院中打一趟拳，拳风带得落叶打了个旋。院角立着一副石锁，木桩排成两行，桩身上尽是被掌劈出的旧痕。见你进来，他收势站定，上下打量：「来学拳的？」",
   "grid": [1, -1],
-  "exits": [{ "dir": "south", "roomId": "village_square" }],
+  "exits": [
+    { "dir": "south", "roomId": "village_square" },
+    { "dir": "north", "roomId": "village_herb_slope" }
+  ],
   "npcIds": ["master_wang"]
 }

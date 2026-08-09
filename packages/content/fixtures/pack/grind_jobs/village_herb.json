@@ -5,6 +5,38 @@
   "maxExp": 3500,
   "hourlyGain": { "exp": 32, "potential": 16, "silver": 9 },
   "jingPerHour": 11,
+  "hubRoomId": "village_square",
+  "route": [
+    "village_square",
+    "village_dojo",
+    "village_herb_slope",
+    "village_dojo",
+    "village_square"
+  ],
+  "workRooms": ["village_herb_slope"],
+  "navWhitelist": [
+    "village_start",
+    "village_square",
+    "village_inn",
+    "village_dojo",
+    "village_general",
+    "village_creek",
+    "village_herb_slope"
+  ],
+  "roundGain": { "exp": 3, "potential": 2, "silver": 1 },
+  "jingPerRound": 2,
+  "moveLines": [
+    "你背起药篓，穿过武馆院门往北坡去。",
+    "拳风未散的院落掠过，坡上已见药草影。",
+    "药篓沉了些，你循原路折回村口。"
+  ],
+  "workLines": [
+    "你蹲在石缝边，小心拔起一株带露的药苗，根须未断。",
+    "山风拂过药篓，药香混着青草气，你又辨认起下一丛。",
+    "你拨开枯叶，寻到几片可用的叶芽，收入布袋。",
+    "坡土松软，你掘出一截根茎，泥水沾满指缝。"
+  ],
+  "harvestLine": "这一趟药草交了出去，银两与历练一并入账。",
   "onlineLines": [
     "你蹲在石缝边，小心拔起一株带露的药苗，根须未断。",
     "山风拂过药篓，药香混着青草气，你又辨认起下一丛。",

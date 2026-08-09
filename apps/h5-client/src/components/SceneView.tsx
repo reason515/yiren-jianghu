@@ -22,6 +22,8 @@ export interface SceneViewProps {
   onAction: (command: string) => void;
   /** 打开本域/天下舆图（默认本域）。 */
   onOpenMap?: () => void;
+  /** DC-045：在线生计时锁定出口。 */
+  exitsLocked?: boolean;
 }
 
 export function SceneView({
@@ -33,6 +35,7 @@ export function SceneView({
   onSelectItem,
   onAction,
   onOpenMap,
+  exitsLocked = false,
 }: SceneViewProps): JSX.Element {
   const [tab, setTab] = useState<"npcs" | "items" | "actions">("npcs");
   const hasNpcs = room.npcs.length > 0;
@@ -64,7 +67,7 @@ export function SceneView({
             </button>
           )}
         </div>
-        <ExitPad exits={room.exits} roomName={room.name} onGo={onGo} />
+        <ExitPad exits={room.exits} roomName={room.name} onGo={onGo} locked={exitsLocked} />
       </section>
 
       {(hasNpcs || hasItems || hasActions) && (

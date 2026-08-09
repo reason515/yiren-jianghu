@@ -3,6 +3,10 @@
   "name": "大师兄·凌霄",
   "kind": "apprentice_master",
   "sectId": "xuanmen",
+  "generation": 8,
+  "recruit": {
+    "acceptOutsiders": true
+  },
   "level": 45,
   "skills": [
     {
@@ -34,6 +38,7 @@
   ],
   "equipment": ["cubu_yi", "iron_sword"],
   "dialogue": [
+    "想入玄门？先跟我练几日。掌门那里，等你根基立住了再去拜不迟。",
     "师弟来得正好，我正缺个喂招的。剑法这东西，光看没用，得挨打挨出感觉来。",
     "掌门的话要听，但也别太死板——剑是活的，人是活的。"
   ],

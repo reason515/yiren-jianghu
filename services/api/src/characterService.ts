@@ -47,6 +47,8 @@ export interface CharacterSummary {
   masterNpcId: string | null;
   /** 门派 id。 */
   sectId: string | null;
+  /** 门派辈分（DC-040）；数字越小越尊。 */
+  generation: number | null;
   /** 师父名号（内容包解析；无则 null）。 */
   masterName: string | null;
 }
@@ -148,8 +150,9 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         water: number;
         master_npc_id: string | null;
         sect_id: string | null;
+        generation: number | null;
       }>(
-        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id, generation FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0];
@@ -226,6 +229,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         silver: Number(row.silver),
         masterNpcId: row.master_npc_id,
         sectId: row.sect_id,
+        generation: row.generation == null ? null : Number(row.generation),
         masterName: row.master_npc_id
           ? (content?.npcs.find((n) => n.id === row.master_npc_id)?.name ?? null)
           : null,

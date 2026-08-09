@@ -54,6 +54,7 @@ export interface CharacterProfile {
   vitalsMax: Record<VitalKey, number>;
   masterNpcId?: string | null;
   sectId?: string | null;
+  generation?: number | null;
   masterName?: string | null;
 }
 

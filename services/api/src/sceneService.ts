@@ -297,6 +297,8 @@ export function createSceneService(
           name: n.name,
           kind: n.kind,
           ...(n.sectId ? { sectId: n.sectId } : {}),
+          ...(n.generation != null ? { generation: n.generation } : {}),
+          ...(n.recruit?.acceptOutsiders ? { acceptOutsiders: true } : {}),
         })),
       items: room.itemIds
         .filter((id) => !taken.has(id))

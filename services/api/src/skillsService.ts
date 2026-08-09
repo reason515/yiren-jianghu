@@ -51,6 +51,7 @@ export interface ApprenticeResult {
   masterNpcId: string;
   masterName: string;
   sectId: string;
+  generation: number;
   message: string;
 }
 
@@ -102,6 +103,7 @@ type CharacterRow = {
   room_path: string;
   master_npc_id: string | null;
   sect_id: string | null;
+  generation: number | null;
   attrs: { str: number; int: number; con: number; dex: number };
 };
 
@@ -121,7 +123,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
 
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
-      "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
+      "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, generation, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     const r = rows.rows[0];
@@ -199,9 +201,10 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
     }
     if (npc.kind === "apprentice_master") {
       if (!npc.sectId) throw new SkillsError("cannot_teach", "对方未开山立派，无法传功");
-      if (!ch.sect_id) throw new SkillsError("not_apprentice", "尚未拜入师门，对方不肯传功");
-      if (ch.sect_id !== npc.sectId) {
-        throw new SkillsError("wrong_sect", "你已另有师门，不可再学此处功夫");
+      if (!ch.master_npc_id) throw new SkillsError("not_apprentice", "尚未拜师，对方不肯传功");
+      // DC-040：只向当前师父请教（对齐 xkx is_apprentice_of）
+      if (ch.master_npc_id !== npc.id) {
+        throw new SkillsError("not_your_master", "功夫须向自己的师父请教");
       }
       if ((npc.teaches?.length ?? 0) === 0) {
         throw new SkillsError("cannot_teach", "对方此刻无可授之艺");
@@ -209,6 +212,52 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       return;
     }
     throw new SkillsError("cannot_teach", "对方并非教习之人");
+  };
+
+  const assertRecruitOk = async (ch: CharacterRow, npc: Npc): Promise<number> => {
+    if (npc.kind !== "apprentice_master") {
+      throw new SkillsError("cannot_apprentice", "对方只收学费，不收徒弟");
+    }
+    if (!npc.sectId || npc.generation == null) {
+      throw new SkillsError("cannot_apprentice", "对方未开山立派");
+    }
+    const recruit = npc.recruit ?? { acceptOutsiders: false, minSkills: [] };
+    const nextGen = npc.generation + 1;
+
+    // 门外入门
+    if (!ch.sect_id) {
+      if (!recruit.acceptOutsiders) {
+        throw new SkillsError("need_entry_master", "门外之人，先去寻本门入门师兄拜师");
+      }
+      return nextGen;
+    }
+
+    // 跨门派
+    if (ch.sect_id !== npc.sectId) {
+      throw new SkillsError("already_apprentice", "你已另有师门，首版不可改投");
+    }
+
+    // 已是此人弟子
+    if (ch.master_npc_id === npc.id) {
+      throw new SkillsError("already_apprentice", "你已是对方门下弟子");
+    }
+
+    // 同门改拜：目标辈分须更尊（数字更小）
+    const currentMaster = ch.master_npc_id ? npcsById.get(ch.master_npc_id) : undefined;
+    const currentMasterGen = currentMaster?.generation;
+    if (currentMasterGen == null || !(npc.generation < currentMasterGen)) {
+      throw new SkillsError("master_not_senior", "对方辈分未高过你现任师父，不可改拜");
+    }
+
+    const skills = await skillMapOf(ch.id);
+    for (const req of recruit.minSkills ?? []) {
+      const prog = getSkill(skills, req.skillId);
+      if (prog.level < req.level) {
+        const skillName = skillsById.get(req.skillId)?.name ?? req.skillId;
+        throw new SkillsError("recruit_skill", `${skillName}未达 ${req.level} 级，尚不够格改拜`);
+      }
+    }
+    return nextGen;
   };
 
   const buildOffers = (ch: CharacterRow, npc: Npc, skills: SkillMap): TeachOfferView[] => {
@@ -366,26 +415,21 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       const ch = await activeCharacter(accountId);
       if (!ch) throw new SkillsError("no_character", "尚未立名闯江湖");
       const npc = requireNpcInRoom(ch, npcId);
-      if (npc.kind !== "apprentice_master") {
-        throw new SkillsError("cannot_apprentice", "对方只收学费，不收徒弟");
-      }
-      if (!npc.sectId) throw new SkillsError("cannot_apprentice", "对方未开山立派");
-      if (ch.sect_id) {
-        if (ch.sect_id === npc.sectId) {
-          throw new SkillsError("already_apprentice", "你已是本门弟子");
-        }
-        throw new SkillsError("already_apprentice", "你已另有师门，首版不可改投");
-      }
-      await db.query("UPDATE characters SET master_npc_id = $1, sect_id = $2 WHERE id = $3", [
-        npc.id,
-        npc.sectId,
-        ch.id,
-      ]);
+      const generation = await assertRecruitOk(ch, npc);
+      const wasUpgrade = Boolean(ch.master_npc_id);
+      await db.query(
+        "UPDATE characters SET master_npc_id = $1, sect_id = $2, generation = $3 WHERE id = $4",
+        [npc.id, npc.sectId, generation, ch.id],
+      );
+      const message = wasUpgrade
+        ? `${npc.name}允你改拜。从今日起，你列本门第 ${generation} 代。`
+        : `${npc.name}点头允了。从今日起，你是门下第 ${generation} 代弟子。`;
       return {
         masterNpcId: npc.id,
         masterName: npc.name,
-        sectId: npc.sectId,
-        message: `${npc.name}点头允了。从今日起，你便是门下弟子。`,
+        sectId: npc.sectId!,
+        generation,
+        message,
       };
     },
 

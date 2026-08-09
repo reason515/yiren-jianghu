@@ -48,6 +48,13 @@ const PACK = {
     { id: "village_dojo", area: "newbie", name: "武馆", npcIds: ["master_wang"], exits: [] },
     { id: "village_elsewhere", area: "newbie", name: "别处", npcIds: [], exits: [] },
     {
+      id: "sect_yard",
+      area: "xuanmen",
+      name: "练剑坪",
+      npcIds: ["senior_brother"],
+      exits: [],
+    },
+    {
       id: "sect_hall",
       area: "xuanmen",
       name: "祖师堂",
@@ -64,12 +71,27 @@ const PACK = {
       teaches: [{ skillId: "basic_sword", maxLevel: 40, tuitionSilver: 2 }],
     },
     {
+      id: "senior_brother",
+      name: "大师兄·凌霄",
+      kind: "apprentice_master",
+      sectId: "xuanmen",
+      generation: 8,
+      recruit: { acceptOutsiders: true, minSkills: [] },
+      skills: [{ skillId: "basic_sword", level: 70 }],
+      teaches: [{ skillId: "basic_sword", maxLevel: 50 }],
+    },
+    {
       id: "sect_master",
       name: "玄真道长",
       kind: "apprentice_master",
       sectId: "xuanmen",
+      generation: 7,
+      recruit: {
+        acceptOutsiders: false,
+        minSkills: [{ skillId: "basic_sword", level: 20 }],
+      },
       skills: [{ skillId: "basic_sword", level: 80 }],
-      teaches: [{ skillId: "basic_sword", maxLevel: 50 }],
+      teaches: [{ skillId: "basic_sword", maxLevel: 60 }],
     },
   ],
   items: [],
@@ -107,6 +129,7 @@ interface CharState {
   room_path: string;
   master_npc_id: string | null;
   sect_id: string | null;
+  generation: number | null;
   attrs: { str: number; int: number; con: number; dex: number };
 }
 
@@ -155,7 +178,7 @@ function mockDb() {
       }
       if (
         text.includes(
-          "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, attrs FROM characters",
+          "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, generation, attrs FROM characters",
         )
       ) {
         return {
@@ -172,6 +195,7 @@ function mockDb() {
               room_path: c.room_path,
               master_npc_id: c.master_npc_id,
               sect_id: c.sect_id,
+              generation: c.generation,
               attrs: c.attrs,
             })) as unknown as T[],
         };
@@ -215,10 +239,11 @@ function mockDb() {
         return { rows: [] as unknown as T[] };
       }
       if (text.includes("UPDATE characters SET master_npc_id")) {
-        const c = state.characters.find((ch) => ch.id === params[2]);
+        const c = state.characters.find((ch) => ch.id === params[3]);
         if (c) {
           c.master_npc_id = String(params[0]);
           c.sect_id = String(params[1]);
+          c.generation = Number(params[2]);
         }
         return { rows: [] as unknown as T[] };
       }
@@ -253,6 +278,7 @@ function boot(over: Partial<CharState> = {}) {
     room_path: "village_dojo",
     master_npc_id: null,
     sect_id: null,
+    generation: null,
     attrs: { str: 20, int: 30, con: 20, dex: 10 },
     ...over,
   });
@@ -327,16 +353,44 @@ describe("skillsService.learn（当面请教）", () => {
     });
   });
 
-  it("门派未拜师请教 → not_apprentice；拜师后免学费", async () => {
-    const { skills, state } = boot({ room_path: "sect_hall" });
-    await expect(skills.learn("acc_1", "basic_sword", "sect_master")).rejects.toMatchObject({
+  it("门派未拜师请教 → not_apprentice；拜大师兄后只向师父请教；可改拜掌门", async () => {
+    const { skills, state } = boot({ room_path: "sect_yard" });
+    await expect(skills.learn("acc_1", "basic_sword", "senior_brother")).rejects.toMatchObject({
       code: "not_apprentice",
     });
-    await skills.apprentice("acc_1", "sect_master");
-    expect(state.characters[0]?.sect_id).toBe("xuanmen");
-    const res = await skills.learn("acc_1", "basic_sword", "sect_master");
+    // 掌门不收门外
+    const { skills: hall } = boot({ room_path: "sect_hall" });
+    await expect(hall.apprentice("acc_1", "sect_master")).rejects.toMatchObject({
+      code: "need_entry_master",
+    });
+
+    await skills.apprentice("acc_1", "senior_brother");
+    expect(state.characters[0]?.master_npc_id).toBe("senior_brother");
+    expect(state.characters[0]?.generation).toBe(9);
+
+    const res = await skills.learn("acc_1", "basic_sword", "senior_brother");
     expect(res.spent.silver).toBe(0);
     expect(res.skill.level).toBe(1);
+
+    // 同门但非师父不可请教
+    state.characters[0]!.room_path = "sect_hall";
+    await expect(skills.learn("acc_1", "basic_sword", "sect_master")).rejects.toMatchObject({
+      code: "not_your_master",
+    });
+
+    // 武功不足不可改拜
+    await expect(skills.apprentice("acc_1", "sect_master")).rejects.toMatchObject({
+      code: "recruit_skill",
+    });
+
+    const sword = state.skills.find((s) => s.skill_id === "basic_sword");
+    expect(sword).toBeTruthy();
+    sword!.level = 20;
+    const up = await skills.apprentice("acc_1", "sect_master");
+    expect(up.generation).toBe(8);
+    expect(state.characters[0]?.master_npc_id).toBe("sect_master");
+    const fromMaster = await skills.learn("acc_1", "basic_sword", "sect_master");
+    expect(fromMaster.skill.level).toBe(21);
   });
 
   it("未知武功 → skill_not_found；无角色 → no_character", async () => {
@@ -351,12 +405,13 @@ describe("skillsService.learn（当面请教）", () => {
 });
 
 describe("skillsService.apprentice", () => {
-  it("向掌门拜师成功；教头不可拜师", async () => {
-    const { skills, state } = boot({ room_path: "sect_hall" });
-    const res = await skills.apprentice("acc_1", "sect_master");
+  it("向大师兄拜师成功；教头不可拜师；已拜不可再拜同人", async () => {
+    const { skills, state } = boot({ room_path: "sect_yard" });
+    const res = await skills.apprentice("acc_1", "senior_brother");
     expect(res.sectId).toBe("xuanmen");
-    expect(state.characters[0]?.master_npc_id).toBe("sect_master");
-    await expect(skills.apprentice("acc_1", "sect_master")).rejects.toMatchObject({
+    expect(res.generation).toBe(9);
+    expect(state.characters[0]?.master_npc_id).toBe("senior_brother");
+    await expect(skills.apprentice("acc_1", "senior_brother")).rejects.toMatchObject({
       code: "already_apprentice",
     });
 
@@ -487,6 +542,7 @@ describe("app 集成（skills 路由）", () => {
       room_path: "village_dojo",
       master_npc_id: null,
       sect_id: null,
+      generation: null,
       attrs: { str: 20, int: 30, con: 20, dex: 10 },
     });
     const list = await app.inject({

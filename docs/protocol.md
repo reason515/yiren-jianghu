@@ -138,11 +138,11 @@ pvp.report
 
 客户端不得提交价格、银两余额、物品定义或结算结果；`targetId` / `itemId` 仅作服务端校验所需的内部引用，不在玩家界面展示（DC-025）。
 
-# 8. 武功请教与拜师（DC-039）
+# 8. 武功请教与拜师（DC-039 / DC-040）
 
 - `GET /skills/teach-offer?npcId=`：返回当前房间该 NPC 的可教清单与服务端报价（银/精/潜能、下级等级、是否可学及原因）。客户端不得自算学费。
-- `POST /skills/learn { skillId, npcId }`：当面请教一次升 1 级。须同房；NPC 为 `tuition_teacher`（按次扣银）或已入同门的 `apprentice_master`（学费 0）。另扣精+潜能；0 级首学精耗 ×2。失败码含 `silver` / `not_apprentice` / `teacher_cap` / `not_in_room` 等。
-- `POST /skills/apprentice { npcId }`：向 `apprentice_master` 正式拜师，写入 `master_npc_id` / `sect_id`；已有门派则拒绝（首版无叛师）。不扣银。
+- `POST /skills/learn { skillId, npcId }`：当面请教一次升 1 级。须同房。`tuition_teacher` 按次扣银；`apprentice_master` 须为**当前师父**（`master_npc_id`，DC-040），学费 0。另扣精+潜能；0 级首学精耗 ×2。
+- `POST /skills/apprentice { npcId }`：向 `apprentice_master` 拜师。门外仅 `recruit.acceptOutsiders` 的入门点可收；同门可改拜更高辈（`generation` 更小）且满足 `recruit.minSkills`。写入 `master_npc_id` / `sect_id` / `generation`（= 师父 generation + 1）。跨门派拒绝。
 - 人物簿演练/参悟仍走 `/skills/practice`、`/skills/study`；不可远程万能请教。
 
 ---

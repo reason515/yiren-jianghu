@@ -153,6 +153,17 @@ export const teachOfferSchema = z.object({
   tuitionSilver: z.number().int().nonnegative().optional(),
 });
 
+/**
+ * 收徒规则（DC-040，对齐 xkx recruit）：
+ * - acceptOutsiders：门外可拜（入门点，如大师兄）
+ * - minSkills：同门改拜更高辈分师父时的武功门槛
+ * 辈分数字越小越尊（掌门 < 大师兄）；弟子 generation = 师父 generation + 1。
+ */
+export const recruitSchema = z.object({
+  acceptOutsiders: z.boolean().default(false),
+  minSkills: z.array(z.object({ skillId: id, level: z.number().int().positive() })).default([]),
+});
+
 export const npcSchema = z.object({
   id,
   name: z.string().min(1),
@@ -193,6 +204,13 @@ export const npcSchema = z.object({
   teaches: z.array(teachOfferSchema).default([]),
   /** 门派 id（apprentice_master 传功/收徒时必填，如 xuanmen）。 */
   sectId: id.optional(),
+  /**
+   * 门派辈分（DC-040）：数字越小越尊；弟子落库 generation = 此值 + 1。
+   * apprentice_master 必填。
+   */
+  generation: z.number().int().positive().optional(),
+  /** 收徒规则（DC-040）。 */
+  recruit: recruitSchema.optional(),
   aggressive: z.boolean().default(false),
   respawnSec: z.number().int().positive().optional(),
   dialogue: z.array(z.string()).default([]),

@@ -3,6 +3,15 @@
   "name": "玄真道长",
   "kind": "apprentice_master",
   "sectId": "xuanmen",
+  "generation": 7,
+  "recruit": {
+    "acceptOutsiders": false,
+    "minSkills": [
+      { "skillId": "xuanmen_sword", "level": 40 },
+      { "skillId": "xuanmen_dodge", "level": 30 },
+      { "skillId": "xuanmen_parry", "level": 30 }
+    ]
+  },
   "level": 60,
   "skills": [
     {
@@ -33,9 +42,9 @@
     }
   ],
   "dialogue": [
-    "我玄门剑宗，入门先正心。你既已上山，便与山下种种做个了断——练剑即是修心。",
+    "我玄门剑宗，入门先正心。门外之人，且去跟凌霄把根基打牢。",
     "内功是本，剑法是用。根基不牢，剑再快也是空中楼阁。",
-    "后山野狼近来成患，伤了采药的弟子。你且去料理了它们，也算入门第一课。"
+    "后山野狼近来成患，伤了采药的弟子。你且去料理了它们，也算入门一课。"
   ],
   "description": "白袍负手，气度沉稳。见过大江大浪，如今只在山门里授徒，一句武学即心学教了半生。"
 }

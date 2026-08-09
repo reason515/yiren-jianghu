@@ -10,8 +10,12 @@ export interface SceneNpc {
   id: string;
   name: string;
   kind: "battle" | "vendor" | "tuition_teacher" | "apprentice_master" | "quest_giver" | "npc";
-  /** 门派 id（apprentice_master）；场景可选带回。 */
+  /** 门派 id（apprentice_master）。 */
   sectId?: string;
+  /** 门派辈分（DC-040）；数字越小越尊。 */
+  generation?: number;
+  /** 是否收门外之人（入门点）。 */
+  acceptOutsiders?: boolean;
 }
 
 export interface SceneItem {

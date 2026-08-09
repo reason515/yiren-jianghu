@@ -130,6 +130,22 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
             : `NPC ${npc.id} 为 apprentice_master 但未配置 sectId（无法拜师落库）`,
       });
     }
+    if (npc.kind === "apprentice_master" && npc.sectId && npc.generation == null) {
+      issues.push({
+        code: "apprentice_master_no_generation",
+        severity: "error",
+        message: `NPC ${npc.id} 为 apprentice_master 但未配置 generation（DC-040）`,
+      });
+    }
+    for (const req of npc.recruit?.minSkills ?? []) {
+      if (!skillIds.has(req.skillId)) {
+        issues.push({
+          code: "broken_recruit_skill",
+          severity: "error",
+          message: `NPC ${npc.id} recruit.minSkills 引用不存在技能 ${req.skillId}`,
+        });
+      }
+    }
     for (const good of npc.goods) {
       if (!itemIds.has(good.itemId)) {
         issues.push({

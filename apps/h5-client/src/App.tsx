@@ -1351,6 +1351,8 @@ export function App(): JSX.Element {
           open
           entity={selectedEntity}
           sectId={characterView?.sectId}
+          masterNpcId={characterView?.masterNpcId}
+          masterGeneration={characterView?.generation != null ? characterView.generation - 1 : null}
           onAction={onEntityAction}
           onClose={() => setSelectedEntity(null)}
         />

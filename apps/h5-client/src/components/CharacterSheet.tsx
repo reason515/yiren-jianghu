@@ -134,7 +134,11 @@ export function CharacterSheet({
         </span>
         {character.masterName || character.sectId ? (
           <span className="res sect">
-            师门 <b>{character.masterName ?? character.sectId}</b>
+            师门{" "}
+            <b>
+              {character.masterName ?? character.sectId}
+              {character.generation != null ? ` · 第${character.generation}代` : ""}
+            </b>
           </span>
         ) : null}
       </div>

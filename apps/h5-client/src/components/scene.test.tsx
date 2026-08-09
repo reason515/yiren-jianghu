@@ -139,7 +139,7 @@ describe("EntitySheet（能力→动作）", () => {
     return labels;
   };
 
-  it("商贩→交易；教头→请教；掌门未入门→拜师；已入门→请教；任务→请托；战斗→较量；物品→拾取", () => {
+  it("教头→请教；入门师兄门外可拜；掌门门外无拜师；只向师父请教；可升师见拜师", () => {
     expect(actions({ id: "general_shop", name: "杂货铺掌柜", kind: "vendor" })).toEqual([
       "观察",
       "交谈",
@@ -150,12 +150,52 @@ describe("EntitySheet（能力→动作）", () => {
       "交谈",
       "请教",
     ]);
-    expect(actions({ id: "sect_master", name: "玄真道长", kind: "apprentice_master" })).toEqual([
-      "观察",
-      "交谈",
-      "拜师",
-    ]);
-    const { host: apprenticed } = render(
+    // 门外：仅 acceptOutsiders 的入门点可拜
+    expect(
+      actions({
+        id: "senior_brother",
+        name: "大师兄",
+        kind: "apprentice_master",
+        sectId: "xuanmen",
+        generation: 8,
+        acceptOutsiders: true,
+      }),
+    ).toEqual(["观察", "交谈", "拜师"]);
+    expect(
+      actions({
+        id: "sect_master",
+        name: "玄真道长",
+        kind: "apprentice_master",
+        sectId: "xuanmen",
+        generation: 7,
+      }),
+    ).toEqual(["观察", "交谈"]);
+
+    const { host: withMaster } = render(
+      <EntitySheet
+        open
+        entity={{
+          id: "senior_brother",
+          name: "大师兄",
+          kind: "apprentice_master",
+          sectId: "xuanmen",
+          generation: 8,
+        }}
+        sectId="xuanmen"
+        masterNpcId="senior_brother"
+        masterGeneration={8}
+        onAction={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(
+      [...withMaster.querySelectorAll<HTMLButtonElement>("[data-testid=entity-actions] .chip")].map(
+        (b) => b.textContent ?? "",
+      ),
+    ).toEqual(["观察", "交谈", "请教"]);
+    withMaster.remove();
+
+    const { host: upgrade } = render(
       <EntitySheet
         open
         entity={{
@@ -163,18 +203,22 @@ describe("EntitySheet（能力→动作）", () => {
           name: "玄真道长",
           kind: "apprentice_master",
           sectId: "xuanmen",
+          generation: 7,
         }}
         sectId="xuanmen"
+        masterNpcId="senior_brother"
+        masterGeneration={8}
         onAction={() => undefined}
         onClose={() => undefined}
       />,
     );
     expect(
-      [
-        ...apprenticed.querySelectorAll<HTMLButtonElement>("[data-testid=entity-actions] .chip"),
-      ].map((b) => b.textContent ?? ""),
-    ).toEqual(["观察", "交谈", "请教"]);
-    apprenticed.remove();
+      [...upgrade.querySelectorAll<HTMLButtonElement>("[data-testid=entity-actions] .chip")].map(
+        (b) => b.textContent ?? "",
+      ),
+    ).toEqual(["观察", "交谈", "拜师"]);
+    upgrade.remove();
+
     expect(actions({ id: "shen_buotou", name: "沈捕头", kind: "quest_giver" })).toEqual([
       "观察",
       "交谈",

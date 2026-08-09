@@ -73,6 +73,7 @@ function mockDb() {
               water: character.water ?? 300,
               master_npc_id: null,
               sect_id: null,
+              generation: null,
             })) as unknown as T[],
         };
       }

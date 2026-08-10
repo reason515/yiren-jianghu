@@ -1,5 +1,7 @@
 # 《一人江湖》机制总表（DC-046）
 # 小数值取向（2026-08-10）：历练门槛平方、战力压到千内、气血短打、技能软顶 100/120。
+# 已接线机制（A–D / DC-047–049）：后天四维叠算、装备 stats 进战、招式 dodge、加力 jiali、
+# 伤势双轨 effQi、运功疗伤/护体、回合 busy、命中 hook、演示毒（默认关闭）。
 # 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:
@@ -19,6 +21,12 @@ coeffs:
     defenseBase: 8
     dodgeBase: 4
     parryBase: 4
+    jialiDmgPerLevel: 4
+    jialiNeiliPerLevel: 5
+    woundFactor: 0.35
+    performBusyTurns: 1
+    demoPoisonTurns: 0
+    demoPoisonDmg: 3
   afk:
     maxDurationHours: 8
     dailyDiminishRate: 0.5

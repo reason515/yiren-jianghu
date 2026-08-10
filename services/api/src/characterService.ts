@@ -1,10 +1,14 @@
 import {
+  acquiredAttrs,
+  attrLevelsFromSkills,
   computeMaxVitals,
+  effectiveLevel,
   effectivePotential,
   maxFoodCapacity,
   maxWaterCapacity,
   resolveEnableMap,
   type SkillEnableMap,
+  type SkillRaw,
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
 import type { Db, DbRow } from "./db.js";
@@ -177,13 +181,11 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           : (row.attrs ?? ({} as Record<string, unknown>));
       const attribute = (key: "str" | "int" | "con" | "dex") => {
         const value = Number(rawAttrs[key]);
-        return {
-          cur: Number.isFinite(value) ? value : 0,
-          base: Number.isFinite(value) ? value : 0,
-        };
+        const base = Number.isFinite(value) ? value : 0;
+        return { cur: base, base };
       };
       // 生存资源上限（V2.9）：与 sceneService 同一规则引擎（computeMaxVitals），不重复实现公式。
-      const attrs = {
+      let attrs = {
         str: attribute("str"),
         int: attribute("int"),
         con: attribute("con"),
@@ -202,16 +204,52 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       let moves: CharacterSummary["moves"] = [];
       let performs: CharacterSummary["performs"] = [];
       if (content) {
-        const skillsById = new Map(content.skills.map((skill) => [skill.id, skill]));
         const skillRows = await db.query<{ skill_id: string; level: number }>(
           "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
           [row.id],
         );
         const skillLevels = new Map(skillRows.rows.map((skill) => [skill.skill_id, skill.level]));
-        const forceLevels = skillRows.rows
-          .filter((skill) => skillsById.get(skill.skill_id)?.category === "force")
-          .map((skill) => skill.level);
-        const forceLevel = forceLevels.length > 0 ? Math.max(...forceLevels) : 0;
+        const storedEnable =
+          typeof row.skill_enable === "string"
+            ? (JSON.parse(row.skill_enable) as SkillEnableMap)
+            : (row.skill_enable ?? {});
+        skillEnable = resolveEnableMap(content, skillLevels, storedEnable);
+        const skillMap = new Map<string, SkillRaw>();
+        const skillList: Array<{ category: string; level: number }> = [];
+        for (const [id, level] of skillLevels) {
+          const def = content.skills.find((skill) => skill.id === id);
+          if (!def) continue;
+          skillMap.set(id, {
+            id,
+            level,
+            kind: def.kind,
+            category: def.category,
+            enableSlots: def.enableSlots,
+          });
+          skillList.push({ category: def.category, level });
+        }
+        const forceLevel = effectiveLevel("force", skillMap, skillEnable, content.params);
+        const dodgeLevel = effectiveLevel("dodge", skillMap, skillEnable, content.params);
+        const unarmedLevel = effectiveLevel("unarmed", skillMap, skillEnable, content.params);
+        const cur = acquiredAttrs(
+          {
+            str: attrs.str.base,
+            int: attrs.int.base,
+            con: attrs.con.base,
+            dex: attrs.dex.base,
+          },
+          attrLevelsFromSkills(skillList, {
+            force: forceLevel,
+            dodge: dodgeLevel,
+            unarmed: unarmedLevel,
+          }),
+        );
+        attrs = {
+          str: { cur: cur.str, base: attrs.str.base },
+          int: { cur: cur.int, base: attrs.int.base },
+          con: { cur: cur.con, base: attrs.con.base },
+          dex: { cur: cur.dex, base: attrs.dex.base },
+        };
         const maxVitals = computeMaxVitals(content.params, {
           str: attrs.str.cur,
           int: attrs.int.cur,
@@ -227,11 +265,6 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           food: maxFoodCapacity(content.params, attrs.con.cur),
           water: maxWaterCapacity(content.params, attrs.dex.cur),
         };
-        const storedEnable =
-          typeof row.skill_enable === "string"
-            ? (JSON.parse(row.skill_enable) as SkillEnableMap)
-            : (row.skill_enable ?? {});
-        skillEnable = resolveEnableMap(content, skillLevels, storedEnable);
         const [moveRows, performRows] = await Promise.all([
           db.query<{ move_id: string }>(
             "SELECT move_id FROM character_moves WHERE character_id = $1",

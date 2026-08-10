@@ -1,0 +1,15 @@
+{
+  "id": "lake_ferry",
+  "area": "lake",
+  "name": "碧水渡口",
+  "shortDesc": "河面宽阔，一只旧渡船斜靠在泥岸。",
+  "longDesc": "河面宽阔，水色发青。一只旧渡船斜靠在泥岸，缆绳磨得发白。芦苇从对岸密到这边，风一过，沙沙声里偶尔夹着一声短促的兽嚎。渡口石阶上刻着几个字，半埋在苔里——「过河三文」。",
+  "grid": [0, 0],
+  "exits": [
+    { "dir": "west", "roomId": "city_outskirt" },
+    { "dir": "east", "roomId": "lake_reed" },
+    { "dir": "north", "roomId": "lake_shrine" }
+  ],
+  "npcIds": ["ferry_man"],
+  "actions": [{ "command": "listen_rumor", "label": "打听传闻" }]
+}

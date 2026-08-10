@@ -117,14 +117,14 @@ pvp.report
 # 5. PVE 战斗约定
 
 - `POST /combat/start` 请求 `{ targetIds: string[] }`（1–5 个，须均在当前房间且为 `battle` NPC）；兼容旧字段 `{ targetId }`（视作单元素）。主目标为数组首项（写入 `target_def_id`）；同房 `battleAllies` 由服务端在开战时并入（DC-038）。若任一目标配置了 `minExp` 且玩家历练不足，返回 `409 { error: { code: "underleveled" } }`（阶梯怪谱）。
-- `POST /combat/action` 仅接收 `{ action: "attack" | "recover" | "flee" }`，或 `{ action: "perform", performId, targetId? }`。可选 `targetId` 为敌方槽位键（如 `b0`）；缺省打当前气最低的存活敌人。客户端不提交绝招效果、消耗、冷却或收益。手动战客户端可按节拍自动提交 `attack`（DC-037），绝招须玩家触发。
+- `POST /combat/action` 接收 `{ action: "attack" | "recover" | "flee" }`，或 `{ action: "perform", performId, targetId? }`，或 `{ action: "set_jiali", jiali: 0|1|2|3 }`（DC-048 加力档位）。可选 `targetId` 为敌方槽位键（如 `b0`）；缺省打当前气最低的存活敌人。客户端不提交绝招效果、消耗、冷却或收益。手动战客户端可按节拍自动提交 `attack`（DC-037），绝招须玩家触发；绝招后可能进入忙乱（`busyTurns`，DC-049），忙乱中普攻会被拒绝。
 - 战斗状态 `combatants` 含玩家 `a` 与敌方 `b0`…；`foeIds` 有序列出敌方键。事件 `actor` 为上述键，伤害类 `data.targetId` 标明受击者。旧会话仅有 `a`/`b` 时服务端按 `foeIds:["b"]` 兼容。
 - 服务端在会话 `state` 中保存 RNG 调用计数与绝招冷却；每次 action 返回完整有序事件流。`perform` 事件携带 `performId`，便于客户端演出。
 - 胜利时服务端按 NPC 内容包 `battleRewards` / `drops` 结算，并在事件流追加 `reward`；若命中当前任务 kill 相位，再追加 `quest_progress`（DC-023、DC-024）。
 
 # 6. 任务总览约定
 
-- `GET /quests` 返回 `{ quests, story }`：`quests` 是任务状态与相位进度，`story` 是服务端按内容包与任务记录组装的主线足迹；客户端不得自行推演任务状态。
+- `GET /quests` 返回 `{ quests, story, rumors }`：`quests` 是任务状态与相位进度，`story` 是服务端按内容包与任务记录组装的主线足迹，`rumors` 是江湖传闻池（内容包 `rumors/`，批次 D）；客户端不得自行推演任务状态。
 - 相位返回 `targetName`（玩家可见目标名）及可选 `targetRoomId`（导航指向）；客户端不得展示内部 `targetId`。
 - 移动抵达出口房间时，服务端调用任务进度钩子推进当前 `goto` 相位；击杀相位由战斗域推进。
 
@@ -136,6 +136,7 @@ pvp.report
 - `talk { targetId }`：仅可与当前房间 NPC 交谈；返回内容包对话，并由服务端推进当前 `talk` 任务相位。
 - `take { targetId }`：仅可拾取当前房间物品；每个角色对同一房间物品仅成功一次，返回所得物品。
 - `observe { targetId }`（V2.12 / V2.16）：观察当前房间 NPC/物品。物品返回外观 `description`（及单行 `lines`）。NPC 由服务端拼装多行仪容：`lines` 依次为外形（内容包 `description`）、武功水平（取技能最高等级阶位；无有效武学时战斗怪用野性补句、其余「气息寻常」）、衣着/兵器（内容包 `equipment` 解析为 weapon/armor 物品名；无装备则不写空衣甲，以免与外形文案打架）。`description` 字段为 `lines` 换行拼接，供兼容；客户端宜按 `lines` 串行入见闻。只读不改状态。
+- `listen_rumor`：当前房间 `actions` 含 `listen_rumor` 时可打听；返回 `{ kind: "rumor", rumor: { id, text } }`（加权抽传闻池）。
 - `trade { targetId }`：仅可向当前房间商贩打开交易快照，返回服务端银两、内容包报价及行囊。
 - `buy` / `sell { targetId, itemId, count }`：商贩和物品均由服务端验证；扣款/入囊或扣物/入银两与每日回收额度在同一事务结算。
 

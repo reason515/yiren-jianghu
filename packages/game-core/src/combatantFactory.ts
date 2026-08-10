@@ -1,21 +1,24 @@
 import type { ContentPack, Npc } from "@yjh/content";
 import { autoEnableMap, type SkillEnableMap, type SkillRaw } from "./enable.js";
 import type { Combatant } from "./combat.js";
-import { buildCombatant } from "./combatant.js";
+import { buildCombatant, sumGearStats } from "./combatant.js";
 
 /**
- * 内容包感知的战斗体构造（DC-041）：PVE/PVP/行侠挂机共用同一实现，避免各服务重复
- * 「技能定义投影 + enable 解析 + 兵器判定」的公式漂移。
- * 服务端（api/worker）只需提供角色/NPC 的原始数据，其余全部走内容包。
+ * 内容包感知的战斗体构造（DC-041/047）：PVE/PVP/行侠挂机共用同一实现。
  */
 export interface CharacterCombatSource {
   id: string;
   name: string;
+  /** 先天四维。 */
   attrs: { str: number; int: number; con: number; dex: number };
   qi?: number;
   jing?: number;
   neili?: number;
   exp?: number;
+  effQi?: number;
+  effJing?: number;
+  /** 已装备物品实例对应的内容包 item id。 */
+  equippedItemIds?: string[];
 }
 
 function skillDefsFromPack(content: ContentPack) {
@@ -74,8 +77,7 @@ export function resolveEnableMap(
 }
 
 /**
- * F0/F1/F2 共用的角色战斗体构造（DC-041：激发有效等级）。
- * PVP 以满状态取快照；PVE/挂机传入当前资源。
+ * F0/F1/F2 共用的角色战斗体构造（DC-041/047：激发有效等级 + 装备数值 + 后天四维）。
  */
 export function buildCharacterCombatant(
   content: ContentPack,
@@ -86,11 +88,13 @@ export function buildCharacterCombatant(
   hasWeapon = true,
 ): Combatant {
   const resolved = resolveEnableMap(content, skillLevels, enableMap);
+  const gearStats = sumGearStats(character.equippedItemIds ?? [], content.items);
   return buildCombatant(content.params, character, {
     skills: [...skillLevels].map(([id, level]) => ({ id, level })),
     skillDefs: skillDefsFromPack(content),
     enableMap: resolved,
     hasWeapon,
+    gearStats,
     resourceMode,
   });
 }
@@ -106,7 +110,13 @@ export function buildNpcCombatant(content: ContentPack, npc: Npc): Combatant {
   });
   const combatant = buildCharacterCombatant(
     content,
-    { id: `npc:${npc.id}`, name: npc.name, attrs, exp: level * level * 100 },
+    {
+      id: `npc:${npc.id}`,
+      name: npc.name,
+      attrs,
+      exp: level * level * 100,
+      equippedItemIds: [...npc.equipment],
+    },
     skillLevels,
     "full",
     (npc.skillEnable as SkillEnableMap | undefined) ?? null,

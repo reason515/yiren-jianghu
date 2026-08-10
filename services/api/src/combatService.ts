@@ -70,6 +70,8 @@ export interface CombatActionInput {
   performId?: string;
   /** 敌方槽位键（如 b0）；缺省自动选气最低者。 */
   targetId?: string;
+  /** 加力档位 0–3（DC-048）；仅 action=set_jiali 时必填。 */
+  jiali?: number;
 }
 
 export interface CombatService {
@@ -87,6 +89,8 @@ type CharacterRow = {
   qi: number;
   jing: number;
   neili: number;
+  eff_qi: number;
+  eff_jing: number;
   room_path: string;
   skill_enable: SkillEnableMap | string | null;
 };
@@ -99,11 +103,12 @@ type SessionRow = {
   state: string | BattleState;
 };
 
-/** 角色本场战斗所需的技能/激发/招式上下文（DC-041）；start/action/status 共用一份加载逻辑。 */
+/** 角色本场战斗所需的技能/激发/招式上下文（DC-041/047）；start/action/status 共用一份加载逻辑。 */
 interface CombatContext {
   skillLevels: Map<string, number>;
   enableMap: SkillEnableMap;
   hasWeapon: boolean;
+  equippedItemIds: string[];
   learnedMoveIds: Set<string>;
   learnedPerformIds: Set<string>;
 }
@@ -137,8 +142,6 @@ function actionError(check: ReturnType<typeof canUsePerform>): CombatError {
       return new CombatError("perform_cooling_down", "余势未歇，暂不可再使此式");
     case "cost":
       return new CombatError("perform_cost", "真气未复，此式难发");
-    case "buff_unsupported":
-      return new CombatError("perform_unsupported", "此式变化未成，暂难施展");
     case "condition":
       return new CombatError("perform_condition", "此刻气机未合，难以施展");
     default:
@@ -192,12 +195,17 @@ export function createCombatService(
 ): CombatService {
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
-      "SELECT id, name, attrs, exp, qi, jing, neili, room_path, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
+      "SELECT id, name, attrs, exp, qi, jing, neili, eff_qi, eff_jing, room_path, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     const row = rows.rows[0];
     if (!row) return null;
-    return { ...row, attrs: row.attrs ?? { str: 10, int: 10, con: 10, dex: 10 } };
+    return {
+      ...row,
+      attrs: row.attrs ?? { str: 10, int: 10, con: 10, dex: 10 },
+      eff_qi: Number(row.eff_qi) || Number(row.qi) || 0,
+      eff_jing: Number(row.eff_jing) || Number(row.jing) || 0,
+    };
   };
 
   const skillsOf = async (characterId: string): Promise<Map<string, number>> => {
@@ -206,6 +214,14 @@ export function createCombatService(
       [characterId],
     );
     return new Map(rows.rows.map((row) => [row.skill_id, row.level]));
+  };
+
+  const equippedItemIdsOf = async (characterId: string): Promise<string[]> => {
+    const rows = await db.query<{ item_def_id: string }>(
+      "SELECT item_def_id FROM character_items WHERE character_id = $1 AND slot IS NOT NULL",
+      [characterId],
+    );
+    return rows.rows.map((row) => row.item_def_id);
   };
 
   const hasEquippedWeapon = async (characterId: string): Promise<boolean> => {
@@ -233,16 +249,19 @@ export function createCombatService(
   };
 
   const contextOf = async (character: CharacterRow): Promise<CombatContext> => {
-    const [skillLevels, hasWeapon, learnedMoveIds, learnedPerformIds] = await Promise.all([
-      skillsOf(character.id),
-      hasEquippedWeapon(character.id),
-      learnedMoveIdsOf(character.id),
-      learnedPerformIdsOf(character.id),
-    ]);
+    const [skillLevels, hasWeapon, equippedItemIds, learnedMoveIds, learnedPerformIds] =
+      await Promise.all([
+        skillsOf(character.id),
+        hasEquippedWeapon(character.id),
+        equippedItemIdsOf(character.id),
+        learnedMoveIdsOf(character.id),
+        learnedPerformIdsOf(character.id),
+      ]);
     return {
       skillLevels,
       enableMap: decodeEnableMap(character.skill_enable),
       hasWeapon,
+      equippedItemIds,
       learnedMoveIds,
       learnedPerformIds,
     };
@@ -370,6 +389,10 @@ export function createCombatService(
     if (input.action === "recover" || input.action === "flee") {
       return { action: { type: input.action }, rngCallsUsed: 0 };
     }
+    if (input.action === "set_jiali") {
+      const level = Math.max(0, Math.min(3, Math.floor(Number(input.jiali) || 0)));
+      return { action: { type: "set_jiali", level }, rngCallsUsed: 0 };
+    }
     if (input.action !== "perform") {
       throw new CombatError("invalid_action", "这一式尚未练成");
     }
@@ -453,7 +476,12 @@ export function createCombatService(
       const state = createBattleState(
         buildCharacterCombatant(
           content,
-          character,
+          {
+            ...character,
+            effQi: character.eff_qi,
+            effJing: character.eff_jing,
+            equippedItemIds: ctx.equippedItemIds,
+          },
           ctx.skillLevels,
           "current",
           ctx.enableMap,
@@ -578,11 +606,14 @@ export function createCombatService(
           }
         }
         await db.query(
-          "UPDATE characters SET qi = $1, jing = $2, neili = $3, exp = exp + $4, potential = potential + $5, silver = silver + $6 WHERE id = $7",
+          "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5, exp = exp + $6, potential = potential + $7, silver = silver + $8 WHERE id = $9",
           [
             nextState.combatants[PLAYER_ACTOR]!.qi,
             nextState.combatants[PLAYER_ACTOR]!.jing,
             nextState.combatants[PLAYER_ACTOR]!.neili,
+            nextState.combatants[PLAYER_ACTOR]!.effQi ?? nextState.combatants[PLAYER_ACTOR]!.maxQi,
+            nextState.combatants[PLAYER_ACTOR]!.effJing ??
+              nextState.combatants[PLAYER_ACTOR]!.maxJing,
             totalExp,
             totalPotential,
             totalSilver,
@@ -596,12 +627,18 @@ export function createCombatService(
           );
         }
       } else {
-        await db.query("UPDATE characters SET qi = $1, jing = $2, neili = $3 WHERE id = $4", [
-          nextState.combatants[PLAYER_ACTOR]!.qi,
-          nextState.combatants[PLAYER_ACTOR]!.jing,
-          nextState.combatants[PLAYER_ACTOR]!.neili,
-          character.id,
-        ]);
+        await db.query(
+          "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5 WHERE id = $6",
+          [
+            nextState.combatants[PLAYER_ACTOR]!.qi,
+            nextState.combatants[PLAYER_ACTOR]!.jing,
+            nextState.combatants[PLAYER_ACTOR]!.neili,
+            nextState.combatants[PLAYER_ACTOR]!.effQi ?? nextState.combatants[PLAYER_ACTOR]!.maxQi,
+            nextState.combatants[PLAYER_ACTOR]!.effJing ??
+              nextState.combatants[PLAYER_ACTOR]!.maxJing,
+            character.id,
+          ],
+        );
       }
 
       await db.query(

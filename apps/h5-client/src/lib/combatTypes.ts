@@ -61,7 +61,8 @@ export interface PerformButton {
 
 export type CombatIntent =
   | { action: "attack" | "recover" | "flee" }
-  | { action: "perform"; performId: string; targetId?: string };
+  | { action: "perform"; performId: string; targetId?: string }
+  | { action: "set_jiali"; jiali: number };
 
 export type CombatResult = "win" | "lose" | "escape" | "draw";
 
@@ -92,6 +93,10 @@ export interface CombatState {
   playerMaxJing: number;
   playerNeili: number;
   playerMaxNeili: number;
+  /** 当前加力档位 0–3（DC-048）。 */
+  jiali: number;
+  /** 忙乱剩余回合（DC-049）；>0 时禁普攻。 */
+  busyTurns: number;
   log: CombatLine[];
   performs: PerformButton[];
   inCombat: boolean;
@@ -119,6 +124,8 @@ interface ServerCombatant {
   maxJing: number;
   neili: number;
   maxNeili: number;
+  jiali?: number;
+  busyTurns?: number;
   nature?: "human" | "beast" | "bird";
   stats?: NarrativeCombatant["stats"];
 }
@@ -292,6 +299,8 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
       playerMaxJing: 1,
       playerNeili: 0,
       playerMaxNeili: 1,
+      jiali: 0,
+      busyTurns: 0,
       log: [],
       performs: response.performs,
       inCombat: false,
@@ -333,6 +342,8 @@ export function toCombatState(response: CombatStatusResponse): CombatState {
     playerMaxJing: player.maxJing,
     playerNeili: player.neili,
     playerMaxNeili: player.maxNeili,
+    jiali: player.jiali ?? 0,
+    busyTurns: player.busyTurns ?? 0,
     log: eventsToCombatLines(
       response.events,
       player.name,

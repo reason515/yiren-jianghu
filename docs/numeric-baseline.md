@@ -48,6 +48,14 @@
 | 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架伤 ×`parryDamageFactor`(0.3) | 对齐 combatd；去掉独立「未命中」态 |
 | 伤害 / 气血 | 成人段大血条 | 气血压半（qiBase=50, qiPerCon=8）+ 伤害系数略降 | 手机 4–8 回合短打 |
 | 逃跑 | flee 判定 | `fleeBaseChance=0.7` | PvE 逃生友好 |
+| 后天四维 | `attribute.c`：force/10→con 等 | 查询叠算：`force/10→con`、`dodge/10→dex`、`unarmed/10→str`、`knowledge/10→int`；面板 `cur=base+加成`（DC-047） | 练功见根骨；不写库升级 |
+| 装备进战 | 武器/护甲 stats | 已装备 `item.stats` 叠攻防/躲闪/招架（DC-047） | catalog 已纳入须接线 |
+| 招式 dodge | action.dodge 修正命中 | `Move.dodge` 加到攻方有效攻击等级（DC-047） | 轻灵招式可测 |
+| 加力 jiali | enforce + damage.h | 档位 0–3；`jialiDmgPerLevel=4` / `jialiNeiliPerLevel=5`（DC-048） | 短局决策；耗内换伤 |
+| 伤势双轨 | damage.c eff_qi | `woundFactor=0.35` 压 `effQi`；heal≤eff；`cure_qi`/疗伤抬 eff（DC-048） | 疗伤≠回气 |
+| 运功子集 | force heal/shield | 内容化绝招：疗伤（cure_）+ 护体 buff（DC-048） | 非完整 exert 树 |
+| 忙乱 busy | action.c | `performBusyTurns=1`；忙乱禁普攻（DC-049） | 移动端回合锁 |
+| 演示毒 | condition 子集 | `demoPoisonTurns=0`（默认关）；开启后伤害绝招附带（DC-049） | 至多一种演示 |
 
 ## 2.4 挂机（afk）
 
@@ -85,6 +93,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-10 | 机制迁移 A–D：后天四维/装备/dodge/jiali/伤势/busy 对照列补齐 | DC-047–049 | 接线验收后统一回写，避免半成品口径 |
 | 2026-08-10 | 小数值 P0–P2：门槛²×2、战力压缩、软顶 100/120、气血压半、中期怪分档 | mechanics 调参 | 防后期爆炸、手机短打 |
 | 2026-08-10 | 生效源改为 `mechanics.yaml`；公式 DSL + 清理死字段 | DC-046 | review/运行时同一文件；旧 params.json 退役 |
 | 2026-08-09 | 学习首学精耗 ×2；学费 `learnTuitionBase=2`；建角赠银 10 | DC-039 双轨学艺 | 对齐 xkx learn 首学加倍 + 武馆教头交银语义（按次 GUI） |

@@ -1,0 +1,20 @@
+{
+  "id": "q_lake_clear",
+  "name": "碧水清患",
+  "kind": "bounty",
+  "minExp": 40,
+  "briefing": "碧水渡口近来船少人稀，芦苇荡里有畜生伤人。渡船老汉托你：先到渡口听他细说，再入荡清患，事后回小庙报一声——莫让过河的人再白丢一条命。",
+  "phases": [
+    { "type": "talk", "targetId": "ferry_man" },
+    { "type": "goto", "targetId": "lake_reed" },
+    { "type": "kill", "targetId": "reed_wolf", "count": 1 },
+    { "type": "talk", "targetId": "lake_hermit" }
+  ],
+  "rewards": {
+    "exp": 80,
+    "potential": 18,
+    "silver": 25,
+    "items": [{ "itemId": "die_da_san", "count": 1 }]
+  },
+  "repeatable": true
+}

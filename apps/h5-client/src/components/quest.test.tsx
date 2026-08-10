@@ -24,6 +24,7 @@ const DATA: QuestPanelData = {
     { id: "s_learn", title: "武馆求教", done: true, current: false },
     { id: "s_graduate", title: "出村在望", done: false, current: true },
   ],
+  rumors: [{ id: "r_bandit_road", text: "有人说城东官道夜里有人劫道。" }],
   quests: [
     {
       id: "q_newbie_trail",
@@ -104,6 +105,7 @@ describe("QuestPanel（任务与主线）", () => {
   it("全部相位完成 → 交差", () => {
     const done: QuestPanelData = {
       story: [],
+      rumors: [],
       quests: [
         {
           ...DATA.quests[0]!,

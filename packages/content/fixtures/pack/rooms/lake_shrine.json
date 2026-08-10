@@ -1,0 +1,11 @@
+{
+  "id": "lake_shrine",
+  "area": "lake",
+  "name": "水边小庙",
+  "shortDesc": "半塌的庙门，香灰冷了。",
+  "longDesc": "庙门半塌，匾额只剩半个「水」字。香炉里积着旧灰，没有新香。墙根坐着个打盹的老人，身边一壶冷茶。风从河面吹来，带着腥气，也带着一丝说不清的凉。",
+  "grid": [0, 1],
+  "exits": [{ "dir": "south", "roomId": "lake_ferry" }],
+  "npcIds": ["lake_hermit"],
+  "canSleep": true
+}

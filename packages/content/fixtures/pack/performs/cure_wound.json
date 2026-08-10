@@ -1,0 +1,11 @@
+{
+  "id": "cure_wound",
+  "skillId": "xuanmen_force",
+  "name": "玄门疗伤",
+  "learnMinLevel": 15,
+  "cost": { "qi": 0, "jing": 5, "neili": 20 },
+  "cooldownTurns": 4,
+  "conditions": [{ "type": "self_neili_above_pct", "value": 20 }],
+  "effect": { "type": "heal", "amount": 18, "target": "self" },
+  "description": "真气一转，温热沿经脉漫开。淤滞处渐渐松软，像春水化冰——伤口不喊疼了，只余一息沉稳的暖意。"
+}

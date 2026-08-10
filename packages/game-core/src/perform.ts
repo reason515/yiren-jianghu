@@ -51,7 +51,7 @@ export function evaluatePerformConditions(p: Perform, ctx: PerformEvalContext): 
   return null;
 }
 
-export type PerformUseReason = "condition" | "cost" | "cooldown" | "buff_unsupported";
+export type PerformUseReason = "condition" | "cost" | "cooldown";
 
 export interface CanUsePerformResult {
   ok: boolean;
@@ -66,7 +66,6 @@ export function canUsePerform(
   turn: number,
   cooldown: PerformCooldownTracker,
 ): CanUsePerformResult {
-  if (p.effect.type === "buff") return { ok: false, reason: "buff_unsupported" };
   const condition = evaluatePerformConditions(p, ctx);
   if (condition !== null) return { ok: false, reason: "condition", detail: condition };
   const self = ctx.battle.get(ctx.actor);
@@ -92,7 +91,7 @@ export function scalePerformAmount(
   });
 }
 
-/** 绝招 → 战斗动作（buff 返回 null，v1 不支持）。skillRawLevel 用于按等级放大效果量。 */
+/** 绝招 → 战斗动作（DC-048：含 heal/cure/buff）。skillRawLevel 用于按等级放大效果量。 */
 export function performToBattleAction(p: Perform, skillRawLevel = 0): BattleAction | null {
   const cost = {
     qi: p.cost.qi || undefined,
@@ -112,11 +111,34 @@ export function performToBattleAction(p: Perform, skillRawLevel = 0): BattleActi
     };
   }
   if (p.effect.type === "heal") {
+    // 约定：target=self 且 description 含疗伤语义时用 cure；否则普通回气。
+    // Schema 无独立 cure 类型时：amount 走 heal，另用 effect.target + 命名约定。
+    // DC-048：新增 content 用 effect.type=heal + 特殊 id 前缀 cure_ 表示疗伤。
+    if (p.id.startsWith("cure_") || p.name.includes("疗伤")) {
+      return {
+        type: "perform",
+        performId: p.id,
+        cost,
+        effect: { kind: "cure", flat: scalePerformAmount(p.effect.amount, skillRawLevel) },
+      };
+    }
     return {
       type: "perform",
       performId: p.id,
       cost,
       effect: { kind: "heal", flat: scalePerformAmount(p.effect.amount, skillRawLevel) },
+    };
+  }
+  if (p.effect.type === "buff") {
+    return {
+      type: "perform",
+      performId: p.id,
+      cost,
+      effect: {
+        kind: "buff",
+        flat: scalePerformAmount(p.effect.amount, skillRawLevel),
+        durationTurns: Math.max(1, p.cooldownTurns),
+      },
     };
   }
   return null;

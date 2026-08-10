@@ -9,5 +9,6 @@
     { "dir": "east", "roomId": "city_street" },
     { "dir": "north", "roomId": "city_shop" }
   ],
+  "actions": [{ "command": "listen_rumor", "label": "打听传闻" }],
   "canSleep": true
 }

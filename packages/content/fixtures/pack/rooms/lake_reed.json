@@ -1,0 +1,10 @@
+{
+  "id": "lake_reed",
+  "area": "lake",
+  "name": "芦苇荡",
+  "shortDesc": "芦苇齐人高，水路如网。",
+  "longDesc": "芦苇齐人高，叶缘锋利。脚下泥泞，每一步都像踩进别人的脚印。深处忽然一静——连虫鸣都停了。你听见有什么东西在水里挪动，很轻，却很近。",
+  "grid": [1, 0],
+  "exits": [{ "dir": "west", "roomId": "lake_ferry" }],
+  "npcIds": ["reed_wolf"]
+}

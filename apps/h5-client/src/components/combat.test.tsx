@@ -30,6 +30,8 @@ const STATE: CombatState = {
   playerMaxJing: 100,
   playerNeili: 60,
   playerMaxNeili: 100,
+  jiali: 0,
+  busyTurns: 0,
   log: [
     { id: 1, text: "剑未至，风先裂——你抢先进攻，劫道匪徒仓促招架。" },
     { id: 2, text: "你觑准破绽，一招追风破正中敌手胸口。", kind: "perform" },

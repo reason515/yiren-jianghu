@@ -5,6 +5,9 @@
   "shortDesc": "官道两旁林木森森，路碑上字迹斑驳。",
   "longDesc": "出了城东，官道两旁林木森森，枝叶遮出一片阴凉。路碑上字迹斑驳，勉强能认出几个地名。林子里偶尔传来几声刀兵碰响，又很快归于寂静——近来这官道不太平，总有人赶路赶丢了行囊。",
   "grid": [2, -2],
-  "exits": [{ "dir": "west", "roomId": "city_pawn" }],
+  "exits": [
+    { "dir": "west", "roomId": "city_pawn" },
+    { "dir": "east", "roomId": "lake_ferry" }
+  ],
   "npcIds": ["bandit"]
 }

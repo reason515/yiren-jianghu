@@ -26,6 +26,17 @@ export const paramsSchema = z.object({
     defenseBase: z.number().nonnegative().default(10),
     dodgeBase: z.number().nonnegative().default(5),
     parryBase: z.number().nonnegative().default(5),
+    /** 加力每档额外伤害（DC-048）。 */
+    jialiDmgPerLevel: z.number().nonnegative().default(4),
+    /** 加力每档耗内（DC-048）。 */
+    jialiNeiliPerLevel: z.number().nonnegative().default(5),
+    /** 伤害转为伤势（压 effQi）的比例。 */
+    woundFactor: z.number().min(0).max(1).default(0.35),
+    /** 绝招后忙乱回合数（DC-049）。 */
+    performBusyTurns: z.number().int().nonnegative().default(1),
+    /** 演示毒：伤害绝招附带回合数（0=关闭）。 */
+    demoPoisonTurns: z.number().int().nonnegative().default(0),
+    demoPoisonDmg: z.number().nonnegative().default(3),
   }),
   /** 挂机：时长上限与每日递减 */
   afk: z.object({
@@ -293,7 +304,7 @@ export const itemSchema = z.object({
   description: z.string().default(""),
   usable: z
     .object({
-      effect: z.enum(["heal_qi", "heal_jing", "restore_neili", "feed", "quench"]),
+      effect: z.enum(["heal_qi", "heal_jing", "restore_neili", "feed", "quench", "cure_qi"]),
       amount: z.number().positive(),
     })
     .optional(),
@@ -414,6 +425,14 @@ export const storySchema = z.object({
   conditions: z.array(z.string()).default([]),
 });
 
+/** 江湖传闻池（批次 D：结构借鉴 storyd，文案原创）。 */
+export const rumorSchema = z.object({
+  id,
+  text: z.string().min(1),
+  tags: z.array(z.string().min(1)).default([]),
+  weight: z.number().positive().default(1),
+});
+
 /**
  * 生计挂机（DC-042/045，对标 pkuxkx 配药/钓鱼新手打工）：
  * 离线按时长发银两/经验/潜能；在线沿 route 跑图，合圈发 roundGain。
@@ -497,6 +516,7 @@ export const contentPackSchema = z.object({
   performs: z.array(performSchema).default([]),
   quests: z.array(questSchema).default([]),
   story: z.array(storySchema).default([]),
+  rumors: z.array(rumorSchema).default([]),
   grindJobs: z.array(grindJobSchema).default([]),
   /** 天下图（可选；缺省时服务端仅返回本域房间图） */
   worldMap: worldMapSchema.optional(),
@@ -513,6 +533,7 @@ export type Move = z.infer<typeof moveSchema>;
 export type Perform = z.infer<typeof performSchema>;
 export type Quest = z.infer<typeof questSchema>;
 export type StoryNode = z.infer<typeof storySchema>;
+export type Rumor = z.infer<typeof rumorSchema>;
 export type GrindJob = z.infer<typeof grindJobSchema>;
 export type Manifest = z.infer<typeof manifestSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;

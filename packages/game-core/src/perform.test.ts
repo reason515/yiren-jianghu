@@ -201,8 +201,11 @@ describe("performToBattleAction", () => {
     }
   });
 
-  it("buff 返回 null（v1 不支持）", () => {
-    expect(performToBattleAction(BUFF)).toBeNull();
+  it("buff 映射为护体动作（DC-048）", () => {
+    expect(performToBattleAction(BUFF)).toMatchObject({
+      type: "perform",
+      effect: { kind: "buff", flat: expect.any(Number) },
+    });
   });
 });
 
@@ -277,10 +280,9 @@ describe("canUsePerform（条件/消耗/冷却/类型）", () => {
     expect(r.reason).toBe("cooldown");
   });
 
-  it("buff → reason=buff_unsupported", () => {
+  it("buff → 可用（DC-048 护体已接线）", () => {
     const r = canUsePerform(BUFF, ctx, 1, createPerformCooldownTracker());
-    expect(r.ok).toBe(false);
-    expect(r.reason).toBe("buff_unsupported");
+    expect(r.ok).toBe(true);
   });
 });
 

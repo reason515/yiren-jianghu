@@ -814,6 +814,47 @@ export function narrateBattleEvent(
         ),
       );
     }
+    case "busy":
+      return assemble(
+        event.seq,
+        "danger",
+        pick(
+          [
+            [actorName, "真气未稳，这一式只得暂缓。"],
+            ["气息还在归位。", actorName, "只能先守，不能抢攻。"],
+          ],
+          event.seq,
+        ),
+      );
+    case "set_jiali": {
+      const level = typeof data.jiali === "number" ? data.jiali : 0;
+      if (level <= 0) {
+        return assemble(event.seq, "recover", [actorName, "收回加力，内息复归平稳。"]);
+      }
+      return assemble(
+        event.seq,
+        "recover",
+        pick(
+          [
+            [actorName, `运劲加力至${level}成，掌心隐隐发热。`],
+            ["丹田一紧。", actorName, `把加力提到${level}成，杀机更重了半分。`],
+          ],
+          event.seq,
+        ),
+      );
+    }
+    case "poison_tick":
+      return assemble(
+        event.seq,
+        "hurt",
+        pick(
+          [
+            [actorName, "体内一麻，毒气又啃去一分元气。"],
+            ["寒意沿经脉爬行。", actorName, "脸色微青，却仍咬牙站住。"],
+          ],
+          event.seq,
+        ),
+      );
     case "victory":
       return assemble(
         event.seq,

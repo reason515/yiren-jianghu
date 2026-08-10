@@ -52,6 +52,22 @@
   border-radius: 4px;
   padding: 1px 5px;
 }
+.rumor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rumor-item {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--line);
+  padding-left: 8px;
+}
 .quest-card {
   border: 1px solid var(--line);
   border-radius: 8px;

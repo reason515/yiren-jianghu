@@ -30,6 +30,19 @@ export function QuestPanel({ data, onGoTo, onAccept, onReport }: QuestPanelProps
         </section>
       )}
 
+      {data.rumors.length > 0 && (
+        <section className="quest-section">
+          <h4 className="quest-section-title">江湖传闻</h4>
+          <ul className="rumor-list">
+            {data.rumors.map((rumor) => (
+              <li key={rumor.id} className="rumor-item">
+                {rumor.text}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="quest-section">
         <h4 className="quest-section-title">手头之事</h4>
         {data.quests.length === 0 ? (

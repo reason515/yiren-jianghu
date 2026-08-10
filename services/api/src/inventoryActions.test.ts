@@ -46,6 +46,8 @@ interface CharState {
   neili: number;
   food: number;
   water: number;
+  eff_qi: number;
+  eff_jing: number;
   attrs: { str: number; int: number; con: number; dex: number };
 }
 
@@ -99,6 +101,27 @@ function mockDb() {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
             .map((c) => ({ id: c.id, room_path: "village_start" })) as unknown as T[],
+        };
+      }
+      if (
+        text.includes(
+          "SELECT id, qi, jing, neili, food, water, eff_qi, eff_jing, attrs FROM characters",
+        )
+      ) {
+        return {
+          rows: state.characters
+            .filter((c) => c.id === params[0])
+            .map((c) => ({
+              id: c.id,
+              qi: c.qi,
+              jing: c.jing,
+              neili: c.neili,
+              food: c.food,
+              water: c.water,
+              eff_qi: c.eff_qi,
+              eff_jing: c.eff_jing,
+              attrs: c.attrs,
+            })) as unknown as T[],
         };
       }
       if (text.includes("SELECT id, qi, jing, neili, food, water, attrs FROM characters")) {
@@ -182,13 +205,18 @@ function mockDb() {
         };
       }
       if (text.includes("UPDATE characters SET qi = $1")) {
-        const c = state.characters.find((x) => x.id === params[5]);
+        const withEff = text.includes("eff_qi");
+        const c = state.characters.find((x) => x.id === params[withEff ? 7 : 5]);
         if (c) {
           c.qi = Number(params[0]);
           c.jing = Number(params[1]);
           c.neili = Number(params[2]);
           c.food = Number(params[3]);
           c.water = Number(params[4]);
+          if (withEff) {
+            c.eff_qi = Number(params[5]);
+            c.eff_jing = Number(params[6]);
+          }
         }
         return { rows: [] as unknown as T[] };
       }
@@ -219,6 +247,8 @@ function boot() {
     neili: 0,
     food: 100,
     water: 100,
+    eff_qi: 500,
+    eff_jing: 500,
     attrs: { str: 25, int: 20, con: 20, dex: 15 },
   });
   state.items.push(
@@ -349,6 +379,8 @@ describe("app 集成（inventory 动作路由）", () => {
       neili: 0,
       food: 100,
       water: 100,
+      eff_qi: 500,
+      eff_jing: 500,
       attrs: { str: 25, int: 20, con: 20, dex: 15 },
     });
     state.items.push(

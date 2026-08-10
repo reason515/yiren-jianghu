@@ -63,6 +63,8 @@ function mockDb() {
     qi: 100,
     jing: 100,
     neili: 100,
+    eff_qi: 100,
+    eff_jing: 100,
     room_path: "trail",
     potential: 0,
     silver: 0,
@@ -72,7 +74,9 @@ function mockDb() {
   const drops: Array<{ itemId: string; count: number }> = [];
   const db: Db = {
     async query<T extends DbRow>(text: string, params: unknown[] = []) {
-      if (text.includes("SELECT id, name, attrs, exp, qi, jing, neili, room_path")) {
+      if (
+        text.includes("SELECT id, name, attrs, exp, qi, jing, neili, eff_qi, eff_jing, room_path")
+      ) {
         return { rows: params[0] === "acc_1" ? ([character] as unknown as T[]) : [] };
       }
       if (text.includes("FROM character_skills")) {
@@ -110,6 +114,33 @@ function mockDb() {
       }
       if (text.includes("SELECT seq, type, payload FROM combat_events")) {
         return { rows: events as unknown as T[] };
+      }
+      if (
+        text.includes(
+          "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5, exp = exp +",
+        )
+      ) {
+        character.qi = Number(params[0]);
+        character.jing = Number(params[1]);
+        character.neili = Number(params[2]);
+        character.eff_qi = Number(params[3]);
+        character.eff_jing = Number(params[4]);
+        character.exp += Number(params[5]);
+        character.potential += Number(params[6]);
+        character.silver += Number(params[7]);
+        return { rows: [] as T[] };
+      }
+      if (
+        text.includes(
+          "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5",
+        )
+      ) {
+        character.qi = Number(params[0]);
+        character.jing = Number(params[1]);
+        character.neili = Number(params[2]);
+        character.eff_qi = Number(params[3]);
+        character.eff_jing = Number(params[4]);
+        return { rows: [] as T[] };
       }
       if (text.includes("UPDATE characters SET qi = $1, jing = $2, neili = $3, exp = exp +")) {
         character.qi = Number(params[0]);

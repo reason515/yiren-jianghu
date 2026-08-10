@@ -128,7 +128,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 6. **git 换行警告**（LF→CRLF）是 Windows 正常提示，不影响提交内容；LPC 类部署才需要 CRLF 处理（本项目无 LPC）。
 7. **`index.ts` 的 `export *` 同名导出冲突**：game-core 各模块用 `export *` 汇总，若两个模块导出同名符号（如 growth 与 params 都有 `effectivePotential`）会报 "has already exported a member"。解决：后者只 `import` 使用、不 re-export（growth 的 effectivePotential 从 params 导入）。
 8. **game-core 规则模块地图（C1–C10 已落地，新增规则模块照此扩展并 export 到 index）**：
-   `params`（数值参数）→ `vitals`（动态上限）→ `combat`（战斗引擎+seeded RNG）→ `combatant`（战斗体构造，PVE/PVP/挂机共用，DC-026）→ `perform`（绝招）→ `growth`（成长）→ `tactic`（战术模板，zod）→ `afk`（挂机作业）→ `pvp`（快照/ELO/赛季）→ `economy`（账本/掉落/商店）→ `map`（房间图/导航）。game-core 带 zod 依赖（战术模板 Schema），仍是零 IO 纯函数包。
+   `params`（数值参数）→ `vitals`（动态上限 + 伤势 eff）→ `attrs`（后天四维叠算，DC-047）→ `combat`（战斗引擎+seeded RNG，含 jiali/busy/wound）→ `combatant`（战斗体构造，PVE/PVP/挂机共用，吃后天+装备）→ `perform`（绝招含疗伤/护体）→ `growth`（成长）→ `tactic`（战术模板，zod）→ `afk`（挂机作业）→ `pvp`（快照/ELO/赛季）→ `economy`（账本/掉落/商店）→ `map`（房间图/导航）。game-core 带 zod 依赖（战术模板 Schema），仍是零 IO 纯函数包。
 9. **GitHub Actions**：
    - `secrets` **不能直接用于 `if` 条件**（工作流直接判无效、运行显示无 job 即失败）——先 `env: { X: ${{ secrets.X }} }` 再 `if: env.X != ''`；
    - 运行"无任何 job 直接失败" = 工作流 YAML/表达式解析错误；

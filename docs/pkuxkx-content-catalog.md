@@ -50,15 +50,17 @@
 | 条目 | 来源文件（pkuxkx） | 提取内容 | 依赖 | 权利状态 | 决定 |
 |---|---|---|---|---|---|
 | 战斗契约 | `feature/attribute.c`（1042 行）、`include/combat/damage.h`（calc_damage 184 行） | 动态气血/精神/内力/精力上限；命中/躲闪/招架三态；分系伤害与减伤；内功加成 | 数值参数表 | 机制借鉴 | 纳入（参考契约，重写实现） |
-| 绝招一等公民 | `kungfu/skill/<技能>/` 动作目录、`cmds/std/perform.c`、`do_pfm` 拦截 | 绝招独立数据：id/技能/条件/消耗/冷却/效果/演出；手动按钮与战术模板共用 | 战斗契约、战术模板 | 机制借鉴 | 纳入（抽 4–6 个代表性绝招验证） |
+| 绝招一等公民 | `kungfu/skill/<技能>/` 动作目录、`cmds/skill/perform.c`、`do_pfm` 拦截 | 绝招独立数据：id/技能/条件/消耗/冷却/效果/演出；手动按钮与战术模板共用 | 战斗契约、战术模板 | 机制借鉴 | 纳入（已接线；运功子集疗伤/护体 DC-048） |
 | 技能制成长 | `feature/skill.c`（971 行）、`cmds/skill/{learn,practice,study}.c` | exp + 潜能 + 武功；武功受 exp 约束；学习/练习/领悟挂机循环 | 数值参数表 | 机制借鉴 | 纳入（单潜能货币，无硬等级） |
 | 交银请教（教头） | `d/wuguan/npc/jiaotou.c`（recognize_apprentice + 交银 mark） | 不拜师、交银换学习机会；每次学仍扣精 | 技能制成长、经济 | 机制借鉴 | 纳入（DC-039：改为按次扣银 GUI，非预付次数） |
 | 门派拜师收徒 | `cmds/skill/apprentice.c`、门派 `attempt_apprentice` | 正式收徒写入师门；本门可请教 | 门派内容 | 机制借鉴 | 纳入（DC-039：落库 master/sect，首版无叛师） |
 | 战术模板 | xkx2001 `web/app/src/lib/ruleEngine.ts`（客户端触发器） | 结构化「条件 → 动作 → 冷却 → 优先级」，服务端校验执行 | 绝招契约 | 机制借鉴 | 纳入（服务端权威，不开放脚本） |
 | 数值参数表 | pkuxkx 各公式（对照列） | 经验/潜能/奖励/挂机收益曲线，移动端会话重设计 | — | 机制借鉴 | 纳入（重设计 + 集中参数） |
 | 武学激发（enable） | `cmds/skill/enable.c`、`include/combat/valid_enable.h` | 特殊功挂到基本功槎位（`valid_enable`），有效等级取基本/特殊组合；命令行改为人物簿 GUI | 战斗契约、技能制成长 | 机制借鉴 | 纳入（DC-041：`skill_enable` jsonb + `assertCanEnable`，无命令行） |
-| 招式解锁（action） | `kungfu/skill/<技能>/action.c` | 特殊功达 `min_level` 解锁招式，普攻按已解锁+已激发自动抽式（damage/force/dodge 修正） | 武学激发 | 机制借鉴 | 纳入（DC-041：`character_moves` + `pickMove`） |
-| 命中 skill_power 分段 | `include/combat/combatd.h`（skill_power A/(A+B) 分段） | 命中率不再线性，改用 skill_power 分段公式对照双方技能差 | 战斗契约 | 机制借鉴 | 纳入（DC-041：`skillPower.ts`；旧线性系数保留作伤害基底） |
+| 招式解锁（action） | `kungfu/skill/<技能>/action.c` | 特殊功达 `min_level` 解锁招式，普攻按已解锁+已激发自动抽式（damage/force/dodge 修正） | 武学激发 | 机制借鉴 | 纳入（DC-041 + DC-047：`Move.dodge` 已接入命中） |
+| 命中 skill_power 分段 | `include/combat/probable.h`（skill_power A/(A+B)） | 命中率不再线性，改用 skill_power 分段公式对照双方技能差 | 战斗契约 | 机制借鉴 | 纳入（DC-041：`skillPower.ts`；小数值重标） |
+| 后天四维 | `feature/attribute.c`（force/10→con 等） | 查询叠算非写库；面板 cur / vitals / 战斗吃后天 | 技能制成长 | 机制借鉴 | 纳入（DC-047：`attrs.ts`） |
+| 伤势 / 加力 / busy | `feature/damage.c`、enforce、`action.c` | 伤势双轨、加力档位、绝招后忙乱；演示毒可选 | 战斗契约 | 机制借鉴 | 纳入（DC-048/049，裁剪短管线） |
 
 ## 3.2 玩法层
 
@@ -69,8 +71,9 @@
 | 生计挂机（配药/钓鱼语义） | pkuxkx 配药/钓鱼等非战斗打工 | 时间换银两+少量历练/潜能；内容驱动 `grindJobs`；不做钓鱼小游戏；在线真实跑图合圈发奖 | 挂机作业、经济、地图导航白名单 | 机制借鉴 | 纳入（DC-042/043/045：`kind=grind`，村中杂役/溪边垂钓/山径采药；在线路口原创） |
 | 玄门剑宗（单门派） | `d/wudang/`、武当 NPC 与技能 | 门派武功门类（内功+剑+轻功+招架+知识）、师徒链、任务地形 | 技能数据契约、绝招 | 需改写 | 纳入（名称文本原创） |
 | 结构化 NPC 模型 | `clone/npc.c` 继承、各区域 NPC 文件 | 战斗对象与功能性 NPC（商贩/师父/任务发放）分离；掉落表概率 + min_exp 分级；重生 | 内容包 Schema | 机制借鉴 | 纳入 |
-| 基础装备 + 消耗品 | `clone/` 物品目录 | 武器/护具基础属性、药与食物、穿脱与负重 | 战斗契约、PVP 快照 | 机制借鉴 | 纳入（无宝石/强化/套装） |
+| 基础装备 + 消耗品 | `clone/` 物品目录 | 武器/护具基础属性、药与食物、穿脱与负重 | 战斗契约、PVP 快照 | 机制借鉴 | 纳入（DC-047：装备 stats 已进战；cure_qi 疗伤药分流） |
 | 主线任务图 | `adm/daemons/storyd.c`、`eventd.c` | 节点/前置/分支/奖励结构；切片 3–5 节点原创主线 | 内容包 Schema | 结构参考 | 纳入（文本全部原创） |
+| 江湖传闻池 | `adm/daemons/storyd.c` 传闻结构 | `rumors/*.json` + 客栈/渡口 `listen_rumor` | 内容包 Schema | 结构参考 | 纳入（批次 D，文案原创） |
 
 ## 3.3 内容层（地图结构样本）
 
@@ -79,6 +82,7 @@
 | 新手村 | `d/newbie_lxsz/`（未明谷） | 引导房间链、毕业流程结构 | 纳入（结构，文本重写） |
 | 主城 | `d/city/`（扬州） | 枢纽布局：衙门/客栈/药铺/当铺/门派入口 | 纳入（结构，文本重写） |
 | 门派地图 | `d/wudang/` | 玄门剑宗区域结构与任务地形 | 纳入（结构，文本重写） |
+| 碧水渡（第二区样本） | 渡口/芦荡结构（非整包区域） | 城郊东出第二区：渡口+芦苇荡+小庙 + 多相任务 | 纳入（批次 D 结构样本，文本原创） |
 | 其余区域 | 其余 60+ 区域 | — | 延期（待切片验收后按价值筛选） |
 
 # 4. 明确延期

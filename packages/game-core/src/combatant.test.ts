@@ -81,11 +81,12 @@ describe("buildCombatant（DC-041：基本功/特殊功激发有效等级）", (
     expect(c.stats.weaponLevel).toBe(0);
   });
 
-  it("stats 携带原始属性与战斗经验（供 skillPower 使用）", () => {
+  it("stats 携带后天属性与战斗经验（供 skillPower 使用）", () => {
     const c = buildCombatant(DEFAULT_PARAMS, { ...SOURCE, exp: 12345 }, opts());
+    // force 有效 50 → con +5；dodge/unarmed 有效 5 → 四维不变
     expect(c.stats.str).toBe(15);
     expect(c.stats.dex).toBe(14);
-    expect(c.stats.con).toBe(12);
+    expect(c.stats.con).toBe(17);
     expect(c.stats.combatExp).toBe(12345);
     expect(c.exp).toBe(12345);
   });
@@ -96,9 +97,15 @@ describe("buildCombatant（DC-041：基本功/特殊功激发有效等级）", (
     expect(c.exp).toBe(0);
   });
 
-  it("动态上限沿用 vitals 公式（forceLevel 取有效内功等级）", () => {
+  it("动态上限沿用 vitals 公式（forceLevel 取有效内功等级；attrs 用后天）", () => {
     const c = buildCombatant(DEFAULT_PARAMS, SOURCE, opts());
-    const expected = computeMaxVitals(DEFAULT_PARAMS, { ...SOURCE.attrs, forceLevel: 50 });
+    const expected = computeMaxVitals(DEFAULT_PARAMS, {
+      str: 15,
+      int: 10,
+      con: 17,
+      dex: 14,
+      forceLevel: 50,
+    });
     expect(c.maxQi).toBe(expected.maxQi);
     expect(c.maxJing).toBe(expected.maxJing);
     expect(c.maxNeili).toBe(expected.maxNeili);
@@ -118,11 +125,21 @@ describe("buildCombatant（DC-041：基本功/特殊功激发有效等级）", (
     expect(current.neili).toBe(1);
   });
 
-  it("兼容展示字段：attack = str + 有效攻击槎等级；defense/dodge/parry 含属性基线", () => {
+  it("兼容展示字段：attack = str + 有效攻击槎等级；defense/dodge/parry 含属性基线与装备", () => {
     const c = buildCombatant(DEFAULT_PARAMS, SOURCE, opts());
-    expect(c.stats.attack).toBe(SOURCE.attrs.str + 60);
-    expect(c.stats.defense).toBe(DEFAULT_PARAMS.combat.defenseBase + SOURCE.attrs.con);
-    expect(c.stats.dodge).toBe(DEFAULT_PARAMS.combat.dodgeBase + SOURCE.attrs.dex + 5);
+    expect(c.stats.attack).toBe(15 + 60);
+    expect(c.stats.defense).toBe(DEFAULT_PARAMS.combat.defenseBase + 17);
+    expect(c.stats.dodge).toBe(DEFAULT_PARAMS.combat.dodgeBase + 14 + 5);
     expect(c.stats.parry).toBe(DEFAULT_PARAMS.combat.parryBase + 5);
+  });
+
+  it("装备 stats 叠加攻防（DC-047）", () => {
+    const c = buildCombatant(
+      DEFAULT_PARAMS,
+      SOURCE,
+      opts({ gearStats: { attack: 5, defense: 2 } }),
+    );
+    expect(c.stats.attack).toBe(15 + 60 + 5);
+    expect(c.stats.defense).toBe(DEFAULT_PARAMS.combat.defenseBase + 17 + 2);
   });
 });

@@ -53,7 +53,7 @@ export interface MoveInfo {
   damage: number;
   /** 内功发力加成。 */
   force: number;
-  /** 身法修正（预留，v1 未接入命中判定）。 */
+  /** 身法修正：加成攻方命中侧有效等级（DC-047）。 */
   dodge?: number;
 }
 
@@ -62,8 +62,11 @@ export interface Combatant {
   name: string;
   qi: number;
   maxQi: number;
+  /** 伤势后的有效气血上限（≤ maxQi）；回气不超过此值（DC-048）。 */
+  effQi?: number;
   jing: number;
   maxJing: number;
+  effJing?: number;
   neili: number;
   maxNeili: number;
   stats: CombatStats;
@@ -72,9 +75,25 @@ export interface Combatant {
   /** 本场普攻走的攻击槎（DC-041：有兵器→sword，否则 unarmed）。 */
   attackSkillSlot?: "sword" | "unarmed";
   /** 各槎有效等级快照（叙事/调试用；命中判定以 stats.*SkillLevel 为准）。 */
-  effective?: { force: number; dodge: number; parry: number; weapon: number };
+  effective?: {
+    force: number;
+    dodge: number;
+    parry: number;
+    weapon: number;
+    unarmed?: number;
+  };
   /** 战斗经验（与 stats.combatExp 同值，顶层留一份便于服务端直接读取）。 */
   exp?: number;
+  /** 剩余忙乱回合（DC-049）；>0 时禁普攻。 */
+  busyTurns?: number;
+  /** 加力档位 0–3（DC-048）。 */
+  jiali?: number;
+  /** 临时防御加成与剩余回合（护体 buff）。 */
+  defenseBuff?: number;
+  defenseBuffTurns?: number;
+  /** 演示毒：剩余回合与每回扣气（DC-049）。 */
+  poisonTurns?: number;
+  poisonDmg?: number;
 }
 
 export type ActorKey = "a" | "b";
@@ -97,7 +116,10 @@ export interface BattleContext {
 }
 
 export type PerformEffect =
-  { kind: "damage"; type: DamageType; flat: number } | { kind: "heal"; flat: number };
+  | { kind: "damage"; type: DamageType; flat: number }
+  | { kind: "heal"; flat: number }
+  | { kind: "cure"; flat: number }
+  | { kind: "buff"; flat: number; durationTurns: number };
 
 export interface PerformCost {
   qi?: number;
@@ -109,6 +131,7 @@ export type BattleAction =
   | { type: "attack"; move?: MoveInfo }
   | { type: "recover" }
   | { type: "flee" }
+  | { type: "set_jiali"; level: number }
   | { type: "perform"; performId?: string; effect: PerformEffect; cost: PerformCost };
 
 export type ActionSelector = (ctx: BattleContext, actor: ActorKey, rng: Rng) => BattleAction;
@@ -150,8 +173,9 @@ export interface BattleResult {
 // ---------- 命中判定与伤害（纯函数，可单测） ----------
 
 /**
- * 伤害基数 + 招式加成 + 浮动（DC-041）。
+ * 伤害基数 + 招式加成 + 加力 + 浮动（DC-041 / DC-048）。
  * move 提供时：先按 `(100+move.damage)/100` 放大基数，再叠加 `内功等级×move.force/100` 的发力加成。
+ * jiali>0 时额外加伤并在调用方扣内力。
  */
 export function computeAttackDamage(
   p: GameParams,
@@ -160,13 +184,19 @@ export function computeAttackDamage(
   rng: Rng,
   move?: MoveInfo,
   mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+  jiali = 0,
+  defenseBuff = 0,
 ): number {
   let base = evalFormulaWithCoeffs(mechanics, p, "attackDamageBase", {
     atk: atk.stats.attack,
-    def: def.stats.defense,
+    def: def.stats.defense + defenseBuff,
     weaponLevel: atk.stats.weaponLevel,
     forceLevel: atk.stats.forceLevel,
   });
+  if (jiali > 0) {
+    const per = p.combat.jialiDmgPerLevel ?? 4;
+    base += jiali * per;
+  }
   if (move) {
     base = evalFormulaWithCoeffs(mechanics, p, "moveDamageApplied", {
       base,
@@ -179,16 +209,45 @@ export function computeAttackDamage(
   return Math.max(1, Math.round(base * variance));
 }
 
+/** 伤势：按比例压低 effQi，并钳制当前气（DC-048）。 */
+export function applyCombatDamage(target: Combatant, damage: number, p: GameParams): number {
+  const dealt = Math.max(0, Math.min(target.qi, damage));
+  target.qi = Math.max(0, target.qi - dealt);
+  const factor = p.combat.woundFactor ?? 0.35;
+  const wound = Math.max(0, Math.floor(dealt * factor));
+  const effCap = target.effQi ?? target.maxQi;
+  target.effQi = Math.max(1, Math.min(target.maxQi, effCap - wound));
+  if (target.qi > target.effQi) target.qi = target.effQi;
+  return dealt;
+}
+
+/** 回气/heal：不超过 effQi。 */
+export function applyHealQi(target: Combatant, amount: number): number {
+  const eff = target.effQi ?? target.maxQi;
+  const room = Math.max(0, eff - target.qi);
+  const healed = Math.min(amount, room);
+  target.qi += healed;
+  return healed;
+}
+
+/** 疗伤：抬高 effQi（向 maxQi），并可选同步回一点气。 */
+export function applyCureQi(target: Combatant, amount: number): number {
+  const before = target.effQi ?? target.maxQi;
+  target.effQi = Math.min(target.maxQi, before + amount);
+  const raised = target.effQi - before;
+  applyHealQi(target, Math.floor(raised / 2));
+  return raised;
+}
+
 export type AttackOutcome =
-  | { type: "dodge"; moveId?: string; moveName?: string }
-  | { type: "parry"; damage: number; moveId?: string; moveName?: string }
-  | { type: "damage"; damage: number; moveId?: string; moveName?: string };
+  | { type: "dodge"; moveId?: string; moveName?: string; hook: "after_dodge" }
+  | { type: "parry"; damage: number; moveId?: string; moveName?: string; hook: "after_parry" }
+  | { type: "damage"; damage: number; moveId?: string; moveName?: string; hook: "after_hit" };
 
 /**
- * 命中判定（DC-041：改用 pkuxkx skill_power 的 A/(A+B) 概率模型，不再设独立“未命中”态）：
- * 1. ap = 攻方 skillPower(attackSkillLevel)；dp = 守方 skillPower(dodgeSkillLevel) → 闪避判定；
- * 2. 未闪避则 pp = 守方 skillPower(parrySkillLevel) → 招架判定（命中仍用 ap 对比）；
- * 3. 均未触发则正常命中；招架命中伤害打 3 折。
+ * 命中判定（DC-041 / DC-047）：
+ * 1. ap = 攻方 skillPower(attackSkillLevel + move.dodge)；dp = 守方 skillPower(dodgeSkillLevel)；
+ * 2. 未闪避则招架；3. 均未触发则正常命中。
  */
 export function resolveAttack(
   p: GameParams,
@@ -197,17 +256,13 @@ export function resolveAttack(
   rng: Rng,
   move?: MoveInfo,
   mechanics: CompiledMechanics = DEFAULT_MECHANICS,
+  jiali = 0,
+  defenseBuff = 0,
 ): AttackOutcome {
   const atkAttrs = { str: atk.stats.str, dex: atk.stats.dex };
   const defAttrs = { str: def.stats.str, dex: def.stats.dex };
-  const ap = skillPower(
-    atk.stats.attackSkillLevel,
-    atk.stats.combatExp,
-    atkAttrs,
-    "attack",
-    p,
-    mechanics,
-  );
+  const attackLevel = atk.stats.attackSkillLevel + Math.max(0, move?.dodge ?? 0);
+  const ap = skillPower(attackLevel, atk.stats.combatExp, atkAttrs, "attack", p, mechanics);
   const dp = skillPower(
     def.stats.dodgeSkillLevel,
     def.stats.combatExp,
@@ -217,7 +272,11 @@ export function resolveAttack(
     mechanics,
   );
   if (ap + dp > 0 && chance(rng, dp / (ap + dp))) {
-    return { type: "dodge", ...(move ? { moveId: move.id, moveName: move.name } : {}) };
+    return {
+      type: "dodge",
+      hook: "after_dodge",
+      ...(move ? { moveId: move.id, moveName: move.name } : {}),
+    };
   }
   const pp = skillPower(
     def.stats.parrySkillLevel,
@@ -228,16 +287,18 @@ export function resolveAttack(
     mechanics,
   );
   if (ap + pp > 0 && chance(rng, pp / (ap + pp))) {
-    const full = computeAttackDamage(p, atk, def, rng, move, mechanics);
+    const full = computeAttackDamage(p, atk, def, rng, move, mechanics, jiali, defenseBuff);
     return {
       type: "parry",
       damage: evalFormulaWithCoeffs(mechanics, p, "parryDamage", { fullDamage: full }),
+      hook: "after_parry",
       ...(move ? { moveId: move.id, moveName: move.name } : {}),
     };
   }
   return {
     type: "damage",
-    damage: computeAttackDamage(p, atk, def, rng, move, mechanics),
+    damage: computeAttackDamage(p, atk, def, rng, move, mechanics, jiali, defenseBuff),
+    hook: "after_hit",
     ...(move ? { moveId: move.id, moveName: move.name } : {}),
   };
 }
@@ -280,6 +341,22 @@ export function runBattle(input: BattleInput): BattleResult {
     turns += 1;
     push("turn_start", undefined, { turn: turns });
     for (const actor of TURN_ORDER) {
+      // DC-049：回合初递减忙乱/护体；演示毒跳字
+      if ((c[actor].poisonTurns ?? 0) > 0 && (c[actor].poisonDmg ?? 0) > 0) {
+        applyCombatDamage(c[actor], c[actor].poisonDmg ?? 0, input.params);
+        c[actor].poisonTurns = Math.max(0, (c[actor].poisonTurns ?? 0) - 1);
+        push("poison_tick", actor, {
+          damage: c[actor].poisonDmg ?? 0,
+          remaining: c[actor].poisonTurns ?? 0,
+        });
+      }
+      if ((c[actor].defenseBuffTurns ?? 0) > 0) {
+        c[actor].defenseBuffTurns = Math.max(0, (c[actor].defenseBuffTurns ?? 0) - 1);
+        if ((c[actor].defenseBuffTurns ?? 0) <= 0) c[actor].defenseBuff = 0;
+      }
+      if ((c[actor].busyTurns ?? 0) > 0) {
+        c[actor].busyTurns = Math.max(0, (c[actor].busyTurns ?? 0) - 1);
+      }
       const foe: ActorKey = actor === "a" ? "b" : "a";
       if (c[actor].qi <= 0 || c[foe].qi <= 0) break;
 
@@ -295,9 +372,11 @@ export function runBattle(input: BattleInput): BattleResult {
             rng,
             action.move,
             input.mechanics,
+            c[actor].jiali ?? 0,
+            c[foe].defenseBuff ?? 0,
           );
           if (outcome.type === "damage" || outcome.type === "parry") {
-            c[foe].qi = Math.max(0, c[foe].qi - outcome.damage);
+            applyCombatDamage(c[foe], outcome.damage, input.params);
           }
           push(outcome.type, actor, { ...outcome });
           break;
@@ -319,6 +398,11 @@ export function runBattle(input: BattleInput): BattleResult {
           }
           break;
         }
+        case "set_jiali": {
+          c[actor].jiali = Math.max(0, Math.min(3, Math.floor(action.level)));
+          push("set_jiali", actor, { jiali: c[actor].jiali });
+          break;
+        }
         case "perform": {
           const cost = action.cost;
           const hasCost =
@@ -329,24 +413,51 @@ export function runBattle(input: BattleInput): BattleResult {
             push("perform_failed", actor, { reason: "insufficient_cost" });
             break;
           }
+          if ((c[actor].busyTurns ?? 0) > 0 && action.effect.kind === "damage") {
+            push("busy", actor, { busyTurns: c[actor].busyTurns ?? 0 });
+            break;
+          }
           c[actor].neili -= cost.neili ?? 0;
           c[actor].jing -= cost.jing ?? 0;
           c[actor].qi -= cost.qi ?? 0;
+          const busy = input.params.combat.performBusyTurns ?? 1;
+          c[actor].busyTurns = Math.max(c[actor].busyTurns ?? 0, busy);
           if (action.effect.kind === "damage") {
             const damage = Math.max(1, Math.round(action.effect.flat));
-            c[foe].qi = Math.max(0, c[foe].qi - damage);
+            applyCombatDamage(c[foe], damage, input.params);
             push("perform", actor, {
               damage,
               type: action.effect.type,
               remainingNeili: c[actor].neili,
+              busyTurns: c[actor].busyTurns ?? 0,
+              ...(action.performId ? { performId: action.performId } : {}),
+            });
+          } else if (action.effect.kind === "cure") {
+            const raised = applyCureQi(c[actor], action.effect.flat);
+            push("perform", actor, {
+              cure: raised,
+              effQi: c[actor].effQi ?? c[actor].maxQi,
+              qi: c[actor].qi,
+              busyTurns: c[actor].busyTurns ?? 0,
+              ...(action.performId ? { performId: action.performId } : {}),
+            });
+          } else if (action.effect.kind === "buff") {
+            c[actor].defenseBuff = Math.max(c[actor].defenseBuff ?? 0, action.effect.flat);
+            c[actor].defenseBuffTurns = Math.max(
+              c[actor].defenseBuffTurns ?? 0,
+              action.effect.durationTurns ?? 1,
+            );
+            push("perform", actor, {
+              buff: c[actor].defenseBuff,
+              busyTurns: c[actor].busyTurns ?? 0,
               ...(action.performId ? { performId: action.performId } : {}),
             });
           } else {
-            const healed = Math.min(action.effect.flat, c[actor].maxQi - c[actor].qi);
-            c[actor].qi += healed;
+            const healed = applyHealQi(c[actor], action.effect.flat);
             push("perform", actor, {
               heal: healed,
               qi: c[actor].qi,
+              busyTurns: c[actor].busyTurns ?? 0,
               ...(action.performId ? { performId: action.performId } : {}),
             });
           }
@@ -423,7 +534,32 @@ export interface BattleRoundResult {
 }
 
 function cloneCombatant(c: Combatant): Combatant {
-  return { ...c, stats: { ...c.stats } };
+  return {
+    ...c,
+    stats: { ...c.stats },
+    effective: c.effective ? { ...c.effective } : undefined,
+  };
+}
+
+function tickActorStatus(
+  c: Combatant,
+  p: GameParams,
+  push: (type: string, actor?: string, data?: Json) => void,
+  actorId: string,
+): void {
+  if ((c.poisonTurns ?? 0) > 0 && (c.poisonDmg ?? 0) > 0) {
+    const dmg = c.poisonDmg ?? 0;
+    applyCombatDamage(c, dmg, p);
+    c.poisonTurns = Math.max(0, (c.poisonTurns ?? 0) - 1);
+    push("poison_tick", actorId, { damage: dmg, remaining: c.poisonTurns });
+  }
+  if ((c.defenseBuffTurns ?? 0) > 0) {
+    c.defenseBuffTurns = Math.max(0, (c.defenseBuffTurns ?? 0) - 1);
+    if (c.defenseBuffTurns === 0) c.defenseBuff = 0;
+  }
+  if ((c.busyTurns ?? 0) > 0) {
+    c.busyTurns = Math.max(0, (c.busyTurns ?? 0) - 1);
+  }
 }
 
 /** 补全 foeIds，兼容仅有 `a`/`b` 的旧会话。 */
@@ -570,10 +706,27 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
 
   const actPlayer = (action: BattleAction): void => {
     const actor = PLAYER_ACTOR;
+    const self = combatants[actor]!;
+    if (action.type === "attack" && (self.busyTurns ?? 0) > 0) {
+      push("busy", actor, { busyTurns: self.busyTurns ?? 0 });
+      return;
+    }
     switch (action.type) {
+      case "set_jiali": {
+        self.jiali = Math.max(0, Math.min(3, Math.floor(action.level)));
+        push("set_jiali", actor, { jiali: self.jiali });
+        break;
+      }
       case "attack": {
         const foe = resolveTarget(input.targetId);
         if (!foe) break;
+        const jiali = self.jiali ?? 0;
+        const neiliCost = jiali * (input.params.combat.jialiNeiliPerLevel ?? 5);
+        if (jiali > 0 && self.neili < neiliCost) {
+          push("attack_failed", actor, { reason: "neili" });
+          break;
+        }
+        if (jiali > 0) self.neili -= neiliCost;
         const wasAlive = combatants[foe]!.qi > 0;
         const outcome = resolveAttack(
           input.params,
@@ -582,21 +735,20 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
           rng,
           action.move,
           input.mechanics,
+          jiali,
+          combatants[foe]!.defenseBuff ?? 0,
         );
         if (outcome.type === "damage" || outcome.type === "parry") {
-          combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - outcome.damage);
+          applyCombatDamage(combatants[foe]!, outcome.damage, input.params);
         }
-        push(outcome.type, actor, { ...outcome, targetId: foe });
+        push(outcome.type, actor, { ...outcome, targetId: foe, jiali });
         markDownIfNeeded(foe, wasAlive);
         break;
       }
       case "recover": {
         const gained = input.params.combat.recoverNeiliPerTurn;
-        combatants[actor]!.neili = Math.min(
-          combatants[actor]!.maxNeili,
-          combatants[actor]!.neili + gained,
-        );
-        push("recover", actor, { gained, neili: combatants[actor]!.neili });
+        self.neili = Math.min(self.maxNeili, self.neili + gained);
+        push("recover", actor, { gained, neili: self.neili });
         break;
       }
       case "flee": {
@@ -611,39 +763,62 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
       case "perform": {
         const cost = action.cost;
         const hasCost =
-          combatants[actor]!.neili >= (cost.neili ?? 0) &&
-          combatants[actor]!.jing >= (cost.jing ?? 0) &&
-          combatants[actor]!.qi >= (cost.qi ?? 0);
+          self.neili >= (cost.neili ?? 0) &&
+          self.jing >= (cost.jing ?? 0) &&
+          self.qi >= (cost.qi ?? 0);
         if (!hasCost) {
           push("perform_failed", actor, { reason: "insufficient_cost" });
           break;
         }
-        combatants[actor]!.neili -= cost.neili ?? 0;
-        combatants[actor]!.jing -= cost.jing ?? 0;
-        combatants[actor]!.qi -= cost.qi ?? 0;
+        self.neili -= cost.neili ?? 0;
+        self.jing -= cost.jing ?? 0;
+        self.qi -= cost.qi ?? 0;
+        const busy = input.params.combat.performBusyTurns ?? 1;
+        self.busyTurns = Math.max(self.busyTurns ?? 0, busy);
         if (action.effect.kind === "damage") {
           const foe = resolveTarget(input.targetId);
           if (!foe) break;
           const wasAlive = combatants[foe]!.qi > 0;
           const damage = Math.max(1, Math.round(action.effect.flat));
-          combatants[foe]!.qi = Math.max(0, combatants[foe]!.qi - damage);
+          applyCombatDamage(combatants[foe]!, damage, input.params);
+          // 演示毒：伤害类绝招附带短暂中毒（DC-049）
+          if ((input.params.combat.demoPoisonTurns ?? 0) > 0) {
+            combatants[foe]!.poisonTurns = input.params.combat.demoPoisonTurns ?? 0;
+            combatants[foe]!.poisonDmg = input.params.combat.demoPoisonDmg ?? 3;
+          }
           push("perform", actor, {
             damage,
             type: action.effect.type,
-            remainingNeili: combatants[actor]!.neili,
+            remainingNeili: self.neili,
             targetId: foe,
+            busyTurns: self.busyTurns ?? 0,
             ...(action.performId ? { performId: action.performId } : {}),
           });
           markDownIfNeeded(foe, wasAlive);
+        } else if (action.effect.kind === "cure") {
+          const raised = applyCureQi(self, action.effect.flat);
+          push("perform", actor, {
+            cure: raised,
+            effQi: self.effQi ?? self.maxQi,
+            qi: self.qi,
+            busyTurns: self.busyTurns ?? 0,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
+        } else if (action.effect.kind === "buff") {
+          self.defenseBuff = action.effect.flat;
+          self.defenseBuffTurns = action.effect.durationTurns;
+          push("perform", actor, {
+            buff: action.effect.flat,
+            durationTurns: action.effect.durationTurns,
+            busyTurns: self.busyTurns ?? 0,
+            ...(action.performId ? { performId: action.performId } : {}),
+          });
         } else {
-          const healed = Math.min(
-            action.effect.flat,
-            combatants[actor]!.maxQi - combatants[actor]!.qi,
-          );
-          combatants[actor]!.qi += healed;
+          const healed = applyHealQi(self, action.effect.flat);
           push("perform", actor, {
             heal: healed,
-            qi: combatants[actor]!.qi,
+            qi: self.qi,
+            busyTurns: self.busyTurns ?? 0,
             ...(action.performId ? { performId: action.performId } : {}),
           });
         }
@@ -657,7 +832,14 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
     if ((combatants[foeId]?.qi ?? 0) <= 0) return;
     if ((combatants[PLAYER_ACTOR]?.qi ?? 0) <= 0) return;
     const target = PLAYER_ACTOR;
+    const foeC = combatants[foeId]!;
+    if (action.type === "attack" && (foeC.busyTurns ?? 0) > 0) {
+      push("busy", foeId, { busyTurns: foeC.busyTurns ?? 0 });
+      return;
+    }
     switch (action.type) {
+      case "set_jiali":
+        break;
       case "attack": {
         const outcome = resolveAttack(
           input.params,
@@ -666,20 +848,19 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
           rng,
           action.move,
           input.mechanics,
+          0,
+          combatants[target]!.defenseBuff ?? 0,
         );
         if (outcome.type === "damage" || outcome.type === "parry") {
-          combatants[target]!.qi = Math.max(0, combatants[target]!.qi - outcome.damage);
+          applyCombatDamage(combatants[target]!, outcome.damage, input.params);
         }
         push(outcome.type, foeId, { ...outcome, targetId: target });
         break;
       }
       case "recover": {
         const gained = input.params.combat.recoverNeiliPerTurn;
-        combatants[foeId]!.neili = Math.min(
-          combatants[foeId]!.maxNeili,
-          combatants[foeId]!.neili + gained,
-        );
-        push("recover", foeId, { gained, neili: combatants[foeId]!.neili });
+        foeC.neili = Math.min(foeC.maxNeili, foeC.neili + gained);
+        push("recover", foeId, { gained, neili: foeC.neili });
         break;
       }
       case "flee": {
@@ -689,37 +870,36 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
       case "perform": {
         const cost = action.cost;
         const hasCost =
-          combatants[foeId]!.neili >= (cost.neili ?? 0) &&
-          combatants[foeId]!.jing >= (cost.jing ?? 0) &&
-          combatants[foeId]!.qi >= (cost.qi ?? 0);
+          foeC.neili >= (cost.neili ?? 0) &&
+          foeC.jing >= (cost.jing ?? 0) &&
+          foeC.qi >= (cost.qi ?? 0);
         if (!hasCost) {
           push("perform_failed", foeId, { reason: "insufficient_cost" });
           break;
         }
-        combatants[foeId]!.neili -= cost.neili ?? 0;
-        combatants[foeId]!.jing -= cost.jing ?? 0;
-        combatants[foeId]!.qi -= cost.qi ?? 0;
+        foeC.neili -= cost.neili ?? 0;
+        foeC.jing -= cost.jing ?? 0;
+        foeC.qi -= cost.qi ?? 0;
         if (action.effect.kind === "damage") {
           const damage = Math.max(1, Math.round(action.effect.flat));
-          combatants[target]!.qi = Math.max(0, combatants[target]!.qi - damage);
+          applyCombatDamage(combatants[target]!, damage, input.params);
           push("perform", foeId, {
             damage,
             type: action.effect.type,
-            remainingNeili: combatants[foeId]!.neili,
+            remainingNeili: foeC.neili,
             targetId: target,
             ...(action.performId ? { performId: action.performId } : {}),
           });
+        } else if (action.effect.kind === "cure") {
+          const raised = applyCureQi(foeC, action.effect.flat);
+          push("perform", foeId, { cure: raised, effQi: foeC.effQi ?? foeC.maxQi, qi: foeC.qi });
+        } else if (action.effect.kind === "buff") {
+          foeC.defenseBuff = action.effect.flat;
+          foeC.defenseBuffTurns = action.effect.durationTurns;
+          push("perform", foeId, { buff: action.effect.flat });
         } else {
-          const healed = Math.min(
-            action.effect.flat,
-            combatants[foeId]!.maxQi - combatants[foeId]!.qi,
-          );
-          combatants[foeId]!.qi += healed;
-          push("perform", foeId, {
-            heal: healed,
-            qi: combatants[foeId]!.qi,
-            ...(action.performId ? { performId: action.performId } : {}),
-          });
+          const healed = applyHealQi(foeC, action.effect.flat);
+          push("perform", foeId, { heal: healed, qi: foeC.qi });
         }
         break;
       }
@@ -728,7 +908,15 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
   };
 
   push("turn_start", undefined, { turn });
-  actPlayer(input.playerAction);
+  tickActorStatus(combatants[PLAYER_ACTOR]!, input.params, push, PLAYER_ACTOR);
+  for (const id of foeIds) {
+    if (combatants[id]) tickActorStatus(combatants[id]!, input.params, push, id);
+  }
+  if ((combatants[PLAYER_ACTOR]?.qi ?? 0) <= 0) {
+    winner = "b";
+    push("victory", livingFoes()[0] ?? foeIds[0], { target: PLAYER_ACTOR });
+  }
+  if (winner === undefined) actPlayer(input.playerAction);
   if (winner === undefined) {
     for (const foeId of livingFoes()) {
       if (winner !== undefined) break;

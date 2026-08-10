@@ -58,6 +58,7 @@ export interface QuestStoryNodeView {
 export interface QuestOverview {
   quests: QuestView[];
   story: QuestStoryNodeView[];
+  rumors: Array<{ id: string; text: string; tags: string[] }>;
 }
 
 export interface QuestsService {
@@ -196,7 +197,15 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
         if (current) hasCurrent = true;
         return { id: node.id, title: node.title, done, current };
       });
-      return { quests, story };
+      return {
+        quests,
+        story,
+        rumors: (content.rumors ?? []).map((r) => ({
+          id: r.id,
+          text: r.text,
+          tags: r.tags ?? [],
+        })),
+      };
     },
 
     async acceptQuest(accountId, questId) {

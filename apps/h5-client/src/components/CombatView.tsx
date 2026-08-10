@@ -182,8 +182,23 @@ export function CombatView({
         </div>
       ) : (
         <div className="combat-float-bar" data-testid="combat-actions">
-          <p className="combat-auto-hint">交手自行推进 · 择机使招</p>
+          <p className="combat-auto-hint">
+            {state.busyTurns > 0
+              ? `真气未稳（忙乱 ${state.busyTurns}）· 可回气或运功`
+              : "交手自行推进 · 择机使招"}
+            {state.jiali > 0 ? ` · 加力${state.jiali}` : ""}
+          </p>
           <div className="combat-actions">
+            {[0, 1, 2, 3].map((level) => (
+              <Chip
+                key={`jiali-${level}`}
+                label={level === 0 ? "加力关" : `加力${level}`}
+                variant="action"
+                className={state.jiali === level ? undefined : "ghost"}
+                disabled={busy}
+                onClick={() => onAction({ action: "set_jiali", jiali: level })}
+              />
+            ))}
             {state.performs.map((p) => (
               <Chip
                 key={p.id}

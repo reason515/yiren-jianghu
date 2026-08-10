@@ -130,8 +130,8 @@ describe("applyRegen（V2.12 自然恢复，参照 pkuxkx 时间恢复）", () =
     neili: 0,
     food: 300,
     water: 300,
-    effQi: 0,
-    effJing: 0,
+    effQi: 420,
+    effJing: 420,
   };
 
   it("按上限比例 + 时间差恢复，封顶上限；食水按绝对值消耗", () => {

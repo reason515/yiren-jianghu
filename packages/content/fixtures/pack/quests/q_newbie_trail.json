@@ -3,8 +3,12 @@
   "name": "初试身手",
   "kind": "bounty",
   "minExp": 0,
-  "briefing": "村外的野狗成了祸患，糟蹋庄稼不说，夜里还扰得人心惊。村长托你走一趟村外小径，收拾了这群畜生——回头他自有酬谢。",
-  "phases": [{ "type": "kill", "targetId": "wild_dog", "count": 1 }],
+  "briefing": "村外的野狗成了祸患，糟蹋庄稼不说，夜里还扰得人心惊。村长托你：先去村口找他领个准话，再走村外小径收拾畜生——回头他自有酬谢。",
+  "phases": [
+    { "type": "talk", "targetId": "village_chief" },
+    { "type": "goto", "targetId": "village_trail" },
+    { "type": "kill", "targetId": "wild_dog", "count": 1 }
+  ],
   "rewards": { "exp": 30, "potential": 8, "silver": 5 },
   "repeatable": true
 }

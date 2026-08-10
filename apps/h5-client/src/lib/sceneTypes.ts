@@ -80,8 +80,13 @@ export interface SceneObserveResult {
   lines?: string[];
 }
 
+export interface SceneRumorResult {
+  kind: "rumor";
+  rumor: { id: string; text: string };
+}
+
 export type SceneActionResult =
-  SceneTalkResult | SceneTradeResult | SceneTakeResult | SceneObserveResult;
+  SceneTalkResult | SceneTradeResult | SceneTakeResult | SceneObserveResult | SceneRumorResult;
 
 export type SceneActionInput =
   | { type: "talk"; targetId: string }
@@ -89,4 +94,5 @@ export type SceneActionInput =
   | { type: "observe"; targetId: string }
   | { type: "trade"; targetId: string }
   | { type: "buy"; targetId: string; itemId: string; count: number }
-  | { type: "sell"; targetId: string; itemId: string; count: number };
+  | { type: "sell"; targetId: string; itemId: string; count: number }
+  | { type: "listen_rumor" };

@@ -1,0 +1,10 @@
+{
+  "id": "die_da_san",
+  "name": "跌打散",
+  "kind": "drug",
+  "value": 80,
+  "weight": 1,
+  "stackable": true,
+  "description": "苦涩的褐色药散，专治跌打瘀伤。吞下去喉头一热，伤处的钝痛便淡了半分——气血仍虚，却能再撑一阵。",
+  "usable": { "effect": "cure_qi", "amount": 30 }
+}

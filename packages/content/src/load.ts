@@ -23,6 +23,7 @@ const COLLECTIONS = [
   "performs",
   "quests",
   "story",
+  "rumors",
   "grind_jobs",
 ] as const;
 
@@ -108,6 +109,7 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
     performs: loaded.performs,
     quests: loaded.quests,
     story: loaded.story,
+    rumors: loaded.rumors,
     grindJobs: loaded.grind_jobs,
     ...(worldMap ? { worldMap } : {}),
   });

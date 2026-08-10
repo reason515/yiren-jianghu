@@ -8,6 +8,7 @@ import { PROTOCOL_VERSION } from "@yjh/shared";
 export const GAME_CORE_VERSION = `core-${PROTOCOL_VERSION}`;
 
 export { PROTOCOL_VERSION };
+export * from "./attrs.js";
 export * from "./params.js";
 export * from "./vitals.js";
 export * from "./random.js";

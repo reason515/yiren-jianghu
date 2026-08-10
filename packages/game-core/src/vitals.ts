@@ -71,10 +71,13 @@ export function applyRegen(
   const capped = Math.min(deltaMinutes, r.maxWindowMinutes);
   const gain = (maxValue: number, perMin: number): number => Math.floor(maxValue * perMin * capped);
   const drain = (perMin: number | undefined): number => Math.floor((perMin ?? 0) * capped);
+  // DC-048：回气不超过有效气血上限（伤势）；effQi≤0 视为未追踪，回退 maxQi。
+  const qiCap = current.effQi > 0 ? Math.min(max.maxQi, current.effQi) : max.maxQi;
+  const jingCap = current.effJing > 0 ? Math.min(max.maxJing, current.effJing) : max.maxJing;
   return {
     ...current,
-    qi: Math.min(max.maxQi, current.qi + gain(max.maxQi, r.qiPerMin)),
-    jing: Math.min(max.maxJing, current.jing + gain(max.maxJing, r.jingPerMin)),
+    qi: Math.min(qiCap, current.qi + gain(max.maxQi, r.qiPerMin)),
+    jing: Math.min(jingCap, current.jing + gain(max.maxJing, r.jingPerMin)),
     jingli: Math.min(max.maxJingli, current.jingli + gain(max.maxJingli, r.jingliPerMin)),
     neili: Math.min(max.maxNeili, current.neili + gain(max.maxNeili, r.neiliPerMin)),
     food: Math.max(0, current.food - drain(r.foodPerMin)),
@@ -106,17 +109,20 @@ export function clampVitals(
   foodCap: number,
   waterCap: number,
 ): VitalsState {
-  const qi = Math.max(0, Math.min(state.qi, max.maxQi));
-  const jing = Math.max(0, Math.min(state.jing, max.maxJing));
+  const effQi = clampEff(state.effQi, max.maxQi);
+  const effJing = clampEff(state.effJing, max.maxJing);
+  // DC-048：当前气/精不超过有效上限；eff=0 视为未追踪伤势，回退先天上限。
+  const qiCap = effQi > 0 ? Math.min(max.maxQi, effQi) : max.maxQi;
+  const jingCap = effJing > 0 ? Math.min(max.maxJing, effJing) : max.maxJing;
   return {
-    qi,
-    jing,
+    qi: Math.max(0, Math.min(state.qi, qiCap)),
+    jing: Math.max(0, Math.min(state.jing, jingCap)),
     jingli: Math.max(0, Math.min(state.jingli, max.maxJingli)),
     neili: Math.max(0, Math.min(state.neili, max.maxNeili)),
     food: Math.max(0, Math.min(state.food, foodCap)),
     water: Math.max(0, Math.min(state.water, waterCap)),
-    effQi: clampEff(state.effQi, max.maxQi),
-    effJing: clampEff(state.effJing, max.maxJing),
+    effQi,
+    effJing,
   };
 }
 

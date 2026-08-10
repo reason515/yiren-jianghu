@@ -39,6 +39,7 @@ export interface StoryNodeView {
 export interface QuestPanelData {
   quests: QuestView[];
   story: StoryNodeView[];
+  rumors: Array<{ id: string; text: string }>;
 }
 
 interface ApiQuestPhase {
@@ -62,6 +63,7 @@ interface ApiQuest {
 export interface QuestOverviewResponse {
   quests: ApiQuest[];
   story: StoryNodeView[];
+  rumors?: Array<{ id: string; text: string; tags?: string[] }>;
 }
 
 function panelState(status: ApiQuest["status"]): QuestView["state"] | null {
@@ -82,6 +84,7 @@ function panelState(status: ApiQuest["status"]): QuestView["state"] | null {
 export function toQuestPanelData(response: QuestOverviewResponse): QuestPanelData {
   return {
     story: response.story,
+    rumors: (response.rumors ?? []).map((r) => ({ id: r.id, text: r.text })),
     quests: response.quests.flatMap((quest) => {
       const state = panelState(quest.status);
       if (!state) return [];

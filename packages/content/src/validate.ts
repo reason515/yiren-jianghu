@@ -68,6 +68,7 @@ export function validateContentPack(
   issues.push(...dup(pack.performs, "performs"));
   issues.push(...dup(pack.quests, "quests"));
   issues.push(...dup(pack.story, "story"));
+  issues.push(...dup(pack.rumors ?? [], "rumors"));
   issues.push(...dup(pack.grindJobs ?? [], "grindJobs"));
 
   // 技能（DC-041）
@@ -316,13 +317,7 @@ export function validateContentPack(
         });
       }
     }
-    if (perform.effect.type === "buff") {
-      issues.push({
-        code: "perform_buff_unsupported",
-        severity: "warning",
-        message: `绝招 ${perform.id} 为 buff 类型，v1 战斗引擎未实现（保留 Schema，后续版本支持）`,
-      });
-    }
+    // DC-048：buff（护体）已由战斗引擎接线，不再 warning。
   }
 
   // 任务

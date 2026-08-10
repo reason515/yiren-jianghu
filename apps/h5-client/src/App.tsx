@@ -1120,15 +1120,16 @@ export function App(): JSX.Element {
   combatActionRef.current = onCombatAction;
   combatPacingRef.current = combatPacing;
 
-  // 自动普攻节拍（DC-037）：战报逐行显现期间暂停，避免读不过来。
+  // 自动普攻节拍（DC-037）：战报逐行显现期间暂停，避免读不过来；忙乱中不提交（DC-049）。
   useEffect(() => {
     if (!combat?.inCombat) return;
     const handle = window.setInterval(() => {
       if (combatBusyRef.current || combatPacingRef.current) return;
+      if ((combat.busyTurns ?? 0) > 0) return;
       combatActionRef.current({ action: "attack" });
     }, 4200);
     return () => window.clearInterval(handle);
-  }, [combat?.inCombat]);
+  }, [combat?.inCombat, combat?.busyTurns]);
 
   const closeCombat = (): void => {
     if (combat?.inCombat) {
@@ -1256,7 +1257,21 @@ export function App(): JSX.Element {
               const item = room.items.find((candidate) => candidate.id === itemId);
               if (item) setSelectedEntity(item);
             }}
-            onAction={() => openQuests()}
+            onAction={(command) => {
+              if (command === "listen_rumor") {
+                void api
+                  .sceneAction({ type: "listen_rumor" })
+                  .then((result) => {
+                    if (result.kind === "rumor") {
+                      addJournal(`听闻：${result.rumor.text}`);
+                      showToast("耳边多了一句闲话。");
+                    }
+                  })
+                  .catch(notify);
+                return;
+              }
+              openQuests();
+            }}
             onOpenMap={openMap}
             exitsLocked={afkStatus.lockExits}
           />

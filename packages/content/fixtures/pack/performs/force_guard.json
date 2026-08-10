@@ -1,0 +1,11 @@
+{
+  "id": "force_guard",
+  "skillId": "xuanmen_force",
+  "name": "护体真气",
+  "learnMinLevel": 20,
+  "cost": { "qi": 0, "jing": 0, "neili": 25 },
+  "cooldownTurns": 5,
+  "conditions": [{ "type": "self_neili_above_pct", "value": 25 }],
+  "effect": { "type": "buff", "amount": 8, "target": "self" },
+  "description": "内息外放，周身三寸像罩了一层薄雾。刀风掠过，雾不动，人也不动——只听得一声闷响，劲力散在气罩之外。"
+}

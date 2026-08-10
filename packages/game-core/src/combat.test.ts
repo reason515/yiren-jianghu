@@ -3,6 +3,9 @@ import { DEFAULT_PARAMS } from "./params.js";
 import {
   advanceBattleRound,
   aliveFoeIds,
+  applyCombatDamage,
+  applyCureQi,
+  applyHealQi,
   attackOnly,
   attackOrRecover,
   createBattleState,
@@ -135,6 +138,46 @@ describe("命中判定与伤害（纯函数，DC-041 skillPower 模型）", () =
       move,
     );
     expect(outcome).toMatchObject({ type: "damage", moveId: "m1", moveName: "式一" });
+  });
+
+  it("招式 dodge 加成攻方命中侧有效等级（DC-047）", () => {
+    const move: MoveInfo = { id: "m1", name: "轻灵", damage: 0, force: 0, dodge: 100 };
+    expect(
+      resolveAttack(DEFAULT_PARAMS, evenFighter("a"), evenFighter("b"), stubRng([0.4])).type,
+    ).toBe("dodge");
+    expect(
+      resolveAttack(
+        DEFAULT_PARAMS,
+        evenFighter("a"),
+        evenFighter("b"),
+        stubRng([0.4, 0.99, 0.5]),
+        move,
+      ).type,
+    ).toBe("damage");
+  });
+
+  it("命中结果带 hook 标记（DC-049）", () => {
+    expect(
+      resolveAttack(DEFAULT_PARAMS, evenFighter("a"), evenFighter("b"), stubRng([0.0])).hook,
+    ).toBe("after_dodge");
+    expect(
+      resolveAttack(DEFAULT_PARAMS, evenFighter("a"), evenFighter("b"), stubRng([0.99, 0.99, 0.5]))
+        .hook,
+    ).toBe("after_hit");
+  });
+
+  it("伤势压低 effQi，回气不超过伤势上限（DC-048）", () => {
+    const target = fighter("t", { qi: 100, maxQi: 100, effQi: 100 });
+    applyCombatDamage(target, 40, DEFAULT_PARAMS);
+    expect(target.qi).toBe(60);
+    expect(target.effQi).toBeLessThan(100);
+    const before = target.qi;
+    applyHealQi(target, 999);
+    expect(target.qi).toBe(target.effQi);
+    expect(target.qi).toBeGreaterThanOrEqual(before);
+    const raised = applyCureQi(target, 20);
+    expect(raised).toBeGreaterThan(0);
+    expect(target.effQi).toBeLessThanOrEqual(100);
   });
 });
 

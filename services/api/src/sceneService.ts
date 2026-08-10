@@ -1,4 +1,4 @@
-import type { ContentPack, Item, Npc, Room, Skill } from "@yjh/content";
+import type { ContentPack, Item, Npc, Room, Rumor, Skill } from "@yjh/content";
 import {
   buildNpcObserveLines,
   computeMaxVitals,
@@ -104,9 +104,15 @@ export type SceneActionInput =
   | { type: "observe"; targetId: string }
   | { type: "trade"; targetId: string }
   | { type: "buy"; targetId: string; itemId: string; count: number }
-  | { type: "sell"; targetId: string; itemId: string; count: number };
+  | { type: "sell"; targetId: string; itemId: string; count: number }
+  | { type: "listen_rumor" };
 
-export type SceneActionView = TalkView | TradeView | TakeView | ObserveView;
+export interface RumorView {
+  kind: "rumor";
+  rumor: { id: string; text: string };
+}
+
+export type SceneActionView = TalkView | TradeView | TakeView | ObserveView | RumorView;
 
 export interface ContentIndex {
   rooms: Map<string, Room>;
@@ -115,6 +121,7 @@ export interface ContentIndex {
   skills: Map<string, Skill>;
   params: ContentPack["params"];
   worldMap?: ContentPack["worldMap"];
+  rumors: Rumor[];
 }
 
 export function buildContentIndex(pack: ContentPack): ContentIndex {
@@ -125,6 +132,7 @@ export function buildContentIndex(pack: ContentPack): ContentIndex {
     skills: new Map(pack.skills.map((s) => [s.id, s])),
     params: pack.params,
     worldMap: pack.worldMap,
+    rumors: pack.rumors ?? [],
   };
 }
 
@@ -451,6 +459,27 @@ export function createSceneService(
 
     async act(accountId, input) {
       await regenCharacter(db, accountId);
+      if (input.type === "listen_rumor") {
+        const character = await activeCharacter(db, accountId);
+        if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
+        const room = roomFor(character.room_path);
+        if (!room.actions.some((a) => a.command === "listen_rumor")) {
+          throw new SceneError("no_rumor", "此处无人闲谈");
+        }
+        const pool = content.rumors;
+        if (pool.length === 0) throw new SceneError("no_rumor", "江湖一时无声");
+        const total = pool.reduce((sum, r) => sum + (r.weight ?? 1), 0);
+        let roll = Math.random() * total;
+        let picked = pool[0]!;
+        for (const rumor of pool) {
+          roll -= rumor.weight ?? 1;
+          if (roll <= 0) {
+            picked = rumor;
+            break;
+          }
+        }
+        return { kind: "rumor", rumor: { id: picked.id, text: picked.text } };
+      }
       if (input.type === "talk") {
         const character = await activeCharacter(db, accountId);
         if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
@@ -686,10 +715,13 @@ export function createSceneService(
         neili: number;
         food: number;
         water: number;
+        eff_qi: number;
+        eff_jing: number;
         attrs: { str: number; int: number; con: number; dex: number };
-      }>("SELECT id, qi, jing, neili, food, water, attrs FROM characters WHERE id = $1", [
-        character.id,
-      ]);
+      }>(
+        "SELECT id, qi, jing, neili, food, water, eff_qi, eff_jing, attrs FROM characters WHERE id = $1",
+        [character.id],
+      );
       const current = me.rows[0]!;
       const forceRows = await db.query<{ skill_id: string; level: number }>(
         "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
@@ -711,13 +743,23 @@ export function createSceneService(
       const maxWater = maxWaterCapacity(content.params, attrs.dex);
 
       let { qi, jing, neili, food, water } = current;
+      let effQi = Math.min(maxVitals.maxQi, Math.max(0, current.eff_qi ?? maxVitals.maxQi));
+      const effJing = Math.min(
+        maxVitals.maxJing,
+        Math.max(0, current.eff_jing ?? maxVitals.maxJing),
+      );
       const amount = usable.amount;
       switch (usable.effect) {
         case "heal_qi":
-          qi = Math.min(maxVitals.maxQi, qi + amount);
+          // DC-048：回气不超过伤势上限
+          qi = Math.min(effQi, qi + amount);
           break;
         case "heal_jing":
-          jing = Math.min(maxVitals.maxJing, jing + amount);
+          jing = Math.min(effJing, jing + amount);
+          break;
+        case "cure_qi":
+          effQi = Math.min(maxVitals.maxQi, effQi + amount);
+          qi = Math.min(effQi, qi + Math.floor(amount / 2));
           break;
         case "restore_neili":
           neili = Math.min(maxVitals.maxNeili, neili + amount);
@@ -730,8 +772,8 @@ export function createSceneService(
           break;
       }
       await db.query(
-        "UPDATE characters SET qi = $1, jing = $2, neili = $3, food = $4, water = $5 WHERE id = $6",
-        [qi, jing, neili, food, water, character.id],
+        "UPDATE characters SET qi = $1, jing = $2, neili = $3, food = $4, water = $5, eff_qi = $6, eff_jing = $7 WHERE id = $8",
+        [qi, jing, neili, food, water, effQi, effJing, character.id],
       );
       if (row.quantity > 1) {
         await db.query("UPDATE character_items SET quantity = quantity - 1 WHERE id = $1", [

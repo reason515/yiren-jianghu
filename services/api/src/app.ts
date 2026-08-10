@@ -292,6 +292,9 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         if (type === "move") {
           return await scene.move(accountId, typeof body.dir === "string" ? body.dir : "");
         }
+        if (type === "listen_rumor") {
+          return await scene.act(accountId, { type: "listen_rumor" });
+        }
         if (type === "talk" || type === "take" || type === "trade" || type === "observe") {
           if (typeof body.targetId !== "string" || !body.targetId) {
             return envelope(reply, 400, "invalid_request", "缺少场景目标");
@@ -680,12 +683,14 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
         action?: unknown;
         performId?: unknown;
         targetId?: unknown;
+        jiali?: unknown;
       };
       try {
         return await combat.action(accountId, {
           action: typeof body.action === "string" ? body.action : "",
           performId: typeof body.performId === "string" ? body.performId : undefined,
           targetId: typeof body.targetId === "string" ? body.targetId : undefined,
+          jiali: typeof body.jiali === "number" ? body.jiali : undefined,
         });
       } catch (err) {
         if (err instanceof CombatError) {

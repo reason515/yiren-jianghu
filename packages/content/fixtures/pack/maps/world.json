@@ -20,10 +20,18 @@
       "kind": "sect",
       "geo": [28, -86],
       "scale": "pass"
+    },
+    {
+      "id": "lake",
+      "name": "碧水渡",
+      "kind": "landmark",
+      "geo": [52, -12],
+      "scale": "landmark"
     }
   ],
   "roads": [
     { "from": "newbie", "to": "city", "mode": "road" },
-    { "from": "city", "to": "sect", "mode": "road" }
+    { "from": "city", "to": "sect", "mode": "road" },
+    { "from": "city", "to": "lake", "mode": "path" }
   ]
 }

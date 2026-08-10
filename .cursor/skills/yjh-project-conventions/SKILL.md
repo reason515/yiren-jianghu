@@ -58,6 +58,7 @@ pnpm test:e2e      # E2E 冒烟（需真实 PostgreSQL + Redis：本地 pnpm dev
   - **SQL 造数点标注**：依赖未落地的域（战斗/商店/回精）用 SQL 直接准备状态（如提 exp/潜能、推进任务相位、造行囊、回精），**必须注释标注"待 X 域落地后移除"**；唯一邀请码按运行生成 → 幂等可重跑。
   - **复用 dev 库的断言要稳健**：榜单/对手 TopN 会被历史运行数据占满（新角色 exp 0 排不进 Top10）——断言"排除自己/非空/计数≥"，不断言"包含特定新角色"。
   - **e2e 的价值**：mock db 测不到的真实集成问题——复合主键缺失（ON CONFLICT 42P10）、jsonb 二次解析、限流生效、精耗尽导致结算空转。新域落地后至少让 journey 走一遍。
+  - **内容/数值漂移后同步 journey**：任务加厚相位（talk/goto/kill）或调 `studyJingBase`/`studyAttemptsPerHour` 后，须改 journey 步骤与精耗窗口；行侠挂机启动仍要求当前相位为击杀。本地若出现 `column "presence" does not exist`，多为 DC-043 改表前旧卷——`docker compose down -v` 后重建（CI 每次新库无此问题）。
 - **CI**（`.github/workflows/ci.yml`）：quality（build/typecheck/test/test:docs/test:docs-design/lint/format + content:validate）、migrations（up/down）、e2e 三个作业。
 - **CD**（`.github/workflows/deploy.yml`，脚手架）：main 推送/手动触发 → 构建 API/Worker 镜像推 GHCR → scp 上传发布脚本 → SSH 执行。激活需 secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`。**部署运维细节（loopback 绑定、.dockerignore、镜像加速、回滚、down -v 警示）见 `deploy/README.md`（吸收 typhoon 部署规范 + G1 实战）**。
 - 新增服务（worker、h5）时：补 Dockerfile、加入 `docker-compose.prod.yml` 与 CD 推送步骤；**并检查容器入口接线**（见常见坑 #24）。

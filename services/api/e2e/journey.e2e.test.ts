@@ -276,7 +276,7 @@ describe("F3 全链路旅程", () => {
     });
   });
 
-  it("5. 任务：接 q_newbie_trail → 前往村外 → 战胜野狗 → 自动推进 → 交差发奖", async () => {
+  it("5. 任务：接 q_newbie_trail → 与村长谈 → 前往村外 → 战胜野狗 → 自动推进 → 交差发奖", async () => {
     const list = await app.inject({ method: "GET", url: "/quests", headers: auth(tokenA) });
     expect(list.statusCode).toBe(200);
     const quests = (list.json() as { quests: Array<{ id: string; status: string }> }).quests;
@@ -292,6 +292,15 @@ describe("F3 全链路旅程", () => {
     expect(accept.statusCode).toBe(200);
     expect((accept.json() as { status: string }).status).toBe("ongoing");
 
+    // DC-047/049：主线加厚为 talk → goto → kill，须先在村口问准话
+    const talk = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "talk", targetId: "village_chief" },
+    });
+    expect(talk.statusCode).toBe(200);
+
     for (const dir of ["east", "east"]) {
       const move = await app.inject({
         method: "POST",
@@ -301,6 +310,11 @@ describe("F3 全链路旅程", () => {
       });
       expect(move.statusCode).toBe(200);
     }
+    expect(
+      (await app
+        .inject({ method: "GET", url: "/scene", headers: auth(tokenA) })
+        .then((r) => r.json())) as { id: string },
+    ).toMatchObject({ id: "village_trail" });
 
     // SQL 造数：回精/回气机制尚未落地，避免此前学武消耗令首战教学随机落败；待休息域落地后移除。
     await pool.query("UPDATE characters SET qi = 500, jing = 500, neili = 500 WHERE id = $1", [
@@ -356,7 +370,8 @@ describe("F3 全链路旅程", () => {
     expect(status.statusCode).toBe(200);
     expect((status.json() as { status: string }).status).toBe("running");
 
-    // F2：模拟 worker 结算（now 前移 10 分钟 → deltaHours > 0），验证修炼收益落库
+    // F2：模拟 worker 结算（now 前移 20 分钟 → 约 4 次参悟），验证修炼收益落库
+    // studyJingBase=40 后，10 分钟仅 ~2 次×42≈84，不足以形成「显著精耗」信号
     // SQL 造数：回精（回精/休息机制随 food/rest 域落地后移除）
     await pool.query("UPDATE characters SET jing = 500 WHERE id = $1", [characterA]);
     const resumeBefore = await app.inject({
@@ -371,7 +386,7 @@ describe("F3 全链路旅程", () => {
       .then((r) => r.json())) as Array<{ id: string; level: number; practicePoints: number }>;
     const swordBefore = skillsBefore.find((s) => s.id === "basic_sword")!;
     const sumBefore = swordBefore.level + swordBefore.practicePoints;
-    await settleDueJobs({ pool, content: pack, now: Date.now() + 10 * 60_000 });
+    await settleDueJobs({ pool, content: pack, now: Date.now() + 20 * 60_000 });
 
     // 结算信号：精显著消耗（修炼次数=时长×每小时次数 × 参悟耗精）
     const resumeAfter = await app.inject({
@@ -390,7 +405,7 @@ describe("F3 全链路旅程", () => {
     expect(swordAfter.level + swordAfter.practicePoints).toBeGreaterThanOrEqual(sumBefore);
 
     const status2 = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
-    expect((status2.json() as { status: string }).status).toBe("running"); // 10 分钟 < 30 分钟，未到期
+    expect((status2.json() as { status: string }).status).toBe("running"); // 20 分钟 < 30 分钟，未到期
 
     const stop = await app.inject({ method: "POST", url: "/afk/stop", headers: auth(tokenA) });
     expect(stop.statusCode).toBe(200);
@@ -418,6 +433,17 @@ describe("F3 全链路旅程", () => {
     expect(template.statusCode).toBe(200);
     const templateId = (template.json() as { id: string }).id;
 
+    // 步骤 5 后在村外小径；行侠启动要求当前相位为击杀，先回村口再走完整相位
+    for (const dir of ["west", "west"]) {
+      const move = await app.inject({
+        method: "POST",
+        url: "/scene/action",
+        headers: auth(tokenA),
+        payload: { type: "move", dir },
+      });
+      expect(move.statusCode).toBe(200);
+    }
+
     const accept = await app.inject({
       method: "POST",
       url: "/quests/accept",
@@ -425,6 +451,24 @@ describe("F3 全链路旅程", () => {
       payload: { questId: "q_newbie_trail" },
     });
     expect(accept.statusCode).toBe(200);
+
+    const talk = await app.inject({
+      method: "POST",
+      url: "/scene/action",
+      headers: auth(tokenA),
+      payload: { type: "talk", targetId: "village_chief" },
+    });
+    expect(talk.statusCode).toBe(200);
+    for (const dir of ["east", "east"]) {
+      const move = await app.inject({
+        method: "POST",
+        url: "/scene/action",
+        headers: auth(tokenA),
+        payload: { type: "move", dir },
+      });
+      expect(move.statusCode).toBe(200);
+    }
+
     // SQL 造数：回精/回气机制待 rest 域落地，保证挂机战术仅验证作业结算而不因上次战斗资源耗尽失败。
     await pool.query("UPDATE characters SET qi = 500, jing = 500, neili = 500 WHERE id = $1", [
       characterA,

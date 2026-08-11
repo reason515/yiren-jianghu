@@ -73,4 +73,15 @@ describe("pickMove（DC-041 普攻招式抽选）", () => {
     const b = pickMove({ ...opts, rng: createSeededRng(42) });
     expect(a).toEqual(b);
   });
+
+  it("skillIds：仅从指定技能抽（佩剑不抽未列技能）", () => {
+    const opts = {
+      moves: MOVES,
+      learnedMoveIds: new Set(["m1", "m2", "m3"]),
+      enabledSpecialIds: ["xuanmen_sword", "beiming_sword"],
+      skillIds: ["xuanmen_sword"],
+    };
+    expect(pickMove({ ...opts, rng: () => 0 })?.id).toBe("m1");
+    expect(pickMove({ ...opts, rng: () => 0.99 })?.id).toBe("m2");
+  });
 });

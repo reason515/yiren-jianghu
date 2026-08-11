@@ -59,7 +59,7 @@ describe("攻防闭环与兽性词库", () => {
       expect(line!.text).toMatch(/你/);
       expect(line!.text).toMatch(/野狗/);
     }
-    expect(texts.some((t) => /硬扛|硬接|挡下|扛住|顶开/.test(t))).toBe(true);
+    expect(texts.some((t) => /硬扛|硬接|挡下|扛住|顶开|硬生生接住|架住了/.test(t))).toBe(true);
   });
 
   it("dodge + 人攻兽闪：无衣角，且含起手与躲开", () => {
@@ -75,6 +75,11 @@ describe("攻防闭环与兽性词库", () => {
       expect(line!.text).toMatch(/你/);
       expect(line!.text).toMatch(/野狗/);
       expect(line!.text).toMatch(/空|躲|闪|让|晃|滚/);
+      expect(line!.text).not.toMatch(/牙关空咬/);
+      expect(line!.text).not.toMatch(/算是闪避开来/);
+      const dodgeIdx = line!.text.search(/躲开|闪避|让开|砸空|落空/);
+      expect(dodgeIdx).toBeGreaterThan(-1);
+      expect(line!.text.slice(0, dodgeIdx)).toContain("野狗");
     }
   });
 
@@ -126,6 +131,67 @@ describe("攻防闭环与兽性词库", () => {
     );
     expect(hit).not.toBeNull();
     expect(hit!.text).not.toMatch(/肘|虎口|架势|衣角/);
+  });
+
+  it("佩剑命中：不用掌拳；有 moveName 时嵌招式名", () => {
+    const swordOpts: BattleLineOptions = {
+      ...options,
+      combatantOf: (actor) => {
+        const base = options.combatantOf?.(actor);
+        if (!base) return undefined;
+        return { ...base, attackSkillSlot: actor === "a" ? "sword" : base.attackSkillSlot };
+      },
+    };
+    const hit = narrateBattleEvent(
+      {
+        seq: 5,
+        type: "damage",
+        actor: "a",
+        data: { targetId: "b", damage: 12, moveName: "蜻蜓点水" },
+      },
+      "沈青崖",
+      "野狗",
+      swordOpts,
+    );
+    expect(hit).not.toBeNull();
+    expect(hit!.text).toContain("蜻蜓点水");
+    expect(hit!.text).not.toMatch(/一掌|拳头|掌风/);
+
+    const swordHit = narrateBattleEvent(
+      { seq: 6, type: "damage", actor: "a", data: { targetId: "b", damage: 8 } },
+      "沈青崖",
+      "野狗",
+      swordOpts,
+    );
+    expect(swordHit).not.toBeNull();
+    expect(swordHit!.text).toMatch(/剑|斩|刺/);
+    expect(swordHit!.text).not.toMatch(/一掌|拳头/);
+  });
+
+  it("闪避可嵌 dodgeMoveName 与 moveName，守方主语清晰", () => {
+    const playerDodge = narrateBattleEvent(
+      {
+        seq: 8,
+        type: "dodge",
+        actor: "a",
+        data: { targetId: "b", moveName: "指南针", dodgeMoveName: "檐下避雨" },
+      },
+      "沈青崖",
+      "野狗",
+      {
+        ...options,
+        combatantOf: (actor) => {
+          const base = options.combatantOf?.(actor);
+          if (!base) return undefined;
+          return { ...base, attackSkillSlot: "sword" };
+        },
+      },
+    );
+    expect(playerDodge).not.toBeNull();
+    expect(playerDodge!.text).toContain("指南针");
+    expect(playerDodge!.text).toContain("檐下避雨");
+    expect(playerDodge!.text).toMatch(/野狗/);
+    expect(playerDodge!.text).not.toMatch(/一掌|牙关空咬/);
   });
 });
 

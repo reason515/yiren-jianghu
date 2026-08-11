@@ -25,6 +25,8 @@ export interface NarrativeCombatant {
   nature?: CombatNature;
   stats?: NarrativeStats;
   maxQi?: number;
+  /** 本场普攻攻击槽（有兵器→sword，否则 unarmed；DC-053 叙事分流）。 */
+  attackSkillSlot?: "sword" | "unarmed";
 }
 
 export interface BattleLineOptions {
@@ -142,6 +144,80 @@ function assemble(id: number, kind: CombatLineKind | undefined, parts: Part[]): 
 
 function kw(text: string, mark: CombatMark): Part {
   return { t: text, m: mark };
+}
+
+function strField(data: Record<string, unknown>, key: string): string | undefined {
+  const v = data[key];
+  return typeof v === "string" && v.length > 0 ? v : undefined;
+}
+
+function attackSlotOf(actor: string | undefined, options?: BattleLineOptions): "sword" | "unarmed" {
+  const slot = options?.combatantOf?.(actor)?.attackSkillSlot;
+  return slot === "sword" ? "sword" : "unarmed";
+}
+
+/** 攻方起手：有招式名则嵌「一招「名」」；否则按兵器/空手分流（DC-053）。 */
+function attackWindup(
+  fromPlayer: boolean,
+  actorName: string,
+  slot: "sword" | "unarmed",
+  moveName?: string,
+): Part[] {
+  const who = fromPlayer ? "你" : actorName;
+  if (moveName) {
+    return [who, "一招「", kw(moveName, "perform"), "」递出——"];
+  }
+  if (slot === "sword") {
+    return [who, "剑光一闪——"];
+  }
+  return [who, "抬手一记——"];
+}
+
+/** 守方闪避结果：具名身法优先，否则通用躲开（主语必须是守方）。 */
+function dodgeResult(
+  hitTarget: string,
+  dodgeMoveName?: string,
+  variant: 0 | 1 | 2 | 3 | 4 = 0,
+): Part[] {
+  if (dodgeMoveName) {
+    const named: Part[][] = [
+      [hitTarget, "一式「", kw(dodgeMoveName, "perform"), "」，硬是", kw("躲开", "dodge"), "了。"],
+      [
+        hitTarget,
+        "使出「",
+        kw(dodgeMoveName, "perform"),
+        "」，身形一晃，",
+        kw("闪避", "dodge"),
+        "开来。",
+      ],
+      [
+        hitTarget,
+        "足下一碾，正是「",
+        kw(dodgeMoveName, "perform"),
+        "」——来招",
+        kw("落空", "dodge"),
+        "。",
+      ],
+      [
+        hitTarget,
+        "「",
+        kw(dodgeMoveName, "perform"),
+        "」一展，人已",
+        kw("让开", "dodge"),
+        "半步。",
+      ],
+      [hitTarget, "借「", kw(dodgeMoveName, "perform"), "」之力，险险", kw("躲开", "dodge"), "。"],
+    ];
+    return named[variant]!;
+  }
+  const plain: Part[][] = [
+    [hitTarget, "侧身一滚，硬是", kw("躲开", "dodge"), "了。"],
+    [hitTarget, "身形一晃，已", kw("闪避", "dodge"), "开。"],
+    [hitTarget, "低伏着窜开，来招", kw("砸空", "dodge"), "，只扬起尘土。"],
+    [hitTarget, "偏头让过，算是", kw("躲开", "dodge"), "了这一记。"],
+    [hitTarget, "后撤半步，肩背一拧，力道", kw("落空", "dodge"), "。"],
+  ];
+  return plain[variant]!;
 }
 
 function natureOf(
@@ -624,7 +700,95 @@ function youHitFoe(
   foeKind: BeastKind,
   yourTier: CombatTier,
   band: DamageBand,
+  slot: "sword" | "unarmed" = "unarmed",
+  moveName?: string,
 ): CombatLine {
+  const data = asRecord(event.data);
+  const named = moveName ?? strField(data, "moveName");
+  if (named) {
+    const sword = slot === "sword";
+    return assemble(
+      event.seq,
+      "damage",
+      pick(
+        `youhit-named-${band}`,
+        [
+          [
+            "你一招「",
+            kw(named, "perform"),
+            "」",
+            kw("命中", "hit"),
+            "——",
+            hitTarget,
+            band === "heavy"
+              ? "气血翻涌，站立不稳。"
+              : band === "mid"
+                ? "闷哼一声，身形一滞。"
+                : "吃痛一晃，却没退远。",
+          ],
+          [
+            "「",
+            kw(named, "perform"),
+            "」递出，",
+            sword ? "剑势" : "掌力",
+            kw("贯中", "hit"),
+            hitTarget,
+            band === "heavy" ? "——这一下又准又狠。" : "，力道结结实实。",
+          ],
+          [
+            "你使出「",
+            kw(named, "perform"),
+            "」，",
+            kw("打中", "hit"),
+            hitTarget,
+            band === "light" ? "要害旁寸许。" : "，对方脚步乱了。",
+          ],
+          [
+            "没有花哨。你一式「",
+            kw(named, "perform"),
+            "」已",
+            kw("中了", "hit"),
+            "——",
+            hitTarget,
+            "眼神一暗。",
+          ],
+          [
+            "杀机先至。「",
+            kw(named, "perform"),
+            "」",
+            kw("扫中", "hit"),
+            hitTarget,
+            sword ? "，剑风未尽。" : "，余劲未散。",
+          ],
+        ],
+        event,
+      ),
+    );
+  }
+
+  if (slot === "sword") {
+    return assemble(
+      event.seq,
+      "damage",
+      pick(
+        `youhit-sword-${foeNature}-${band}`,
+        [
+          [
+            "你剑光一闪，",
+            kw("斩中", "hit"),
+            hitTarget,
+            band === "heavy" ? "——血光溅起。" : "，对方身形一滞。",
+          ],
+          ["你递剑前刺，", kw("点中", "hit"), hitTarget, "，力道不轻。"],
+          ["剑势一起，你", kw("扫中", "hit"), hitTarget, band === "light" ? "皮毛。" : "要害旁。"],
+          ["你剑尖一抖，", kw("贯中", "hit"), hitTarget, "——对方闷哼出口。"],
+          ["没有花哨。你一剑", kw("命中", "hit"), "——", hitTarget, "脚步乱了。"],
+        ],
+        event,
+      ),
+    );
+  }
+
   if (foeNature === "beast" || foeNature === "bird") {
     if (foeNature === "bird") {
       if (band === "light") {
@@ -948,8 +1112,15 @@ function dodgeLine(
   defenderNature: CombatNature,
   attackerKind: BeastKind,
   fromPlayer: boolean,
+  slot: "sword" | "unarmed" = "unarmed",
+  moveName?: string,
+  dodgeMoveName?: string,
 ): CombatLine {
-  // 兽攻 → 人/兽闪
+  const data = asRecord(event.data);
+  const atkMove = moveName ?? strField(data, "moveName");
+  const defDodge = dodgeMoveName ?? strField(data, "dodgeMoveName");
+
+  // 兽攻 → 人/兽闪（dodge 色只落在守方结果或来招落空，不染扑上）
   if (attackerNature === "beast") {
     if (attackerKind === "serpentine") {
       return assemble(
@@ -961,10 +1132,16 @@ function dodgeLine(
             [
               actorName,
               "电射而来——",
-              hitTarget,
-              "横移半步，毒牙",
-              kw("扑空", "dodge"),
-              "，只带起一阵腥风。",
+              ...(defDodge
+                ? [
+                    hitTarget,
+                    "一式「",
+                    kw(defDodge, "perform"),
+                    "」，毒牙",
+                    kw("扑空", "dodge"),
+                    "。",
+                  ]
+                : [hitTarget, "横移半步，毒牙", kw("扑空", "dodge"), "，只带起一阵腥风。"]),
             ],
             [actorName, "身子一卷扑上，", hitTarget, "就地一滚，鳞光", kw("擦空", "dodge"), "。"],
             [
@@ -977,7 +1154,16 @@ function dodgeLine(
               "开，尘土在脚边打旋。",
             ],
             [actorName, "贴地窜来，", hitTarget, "提气拔高半寸，尾梢", kw("抽空", "dodge"), "。"],
-            [hitTarget, "侧让寸许。", actorName, "这一", kw("噬", "dodge"), "落空，寒意掠过脚踝。"],
+            [
+              hitTarget,
+              "侧让寸许。",
+              actorName,
+              "这一噬落空，寒意掠过脚踝——",
+              hitTarget,
+              "已",
+              kw("躲开", "dodge"),
+              "。",
+            ],
           ],
           event,
         ),
@@ -991,11 +1177,13 @@ function dodgeLine(
         [
           [
             actorName,
-            "猛地",
-            kw("扑上", "dodge"),
-            "——",
+            "猛地扑上——",
             hitTarget,
-            "横移半步，利爪只带起一阵土腥。",
+            "横移半步，利爪只带起一阵土腥，",
+            hitTarget,
+            "已",
+            kw("躲开", "dodge"),
+            "。",
           ],
           [
             actorName,
@@ -1006,13 +1194,22 @@ function dodgeLine(
             "开，尘土在脚边打了个旋。",
           ],
           [hitTarget, "就地一滚，", actorName, "的利爪", kw("抓空", "dodge"), "，刨起一片碎石。"],
-          [actorName, "低吼着欺近，", hitTarget, "脚下一拧，这一", kw("扑", "dodge"), "落空。"],
+          [
+            actorName,
+            "低吼着欺近，",
+            hitTarget,
+            "脚下一拧，这一扑落空——",
+            hitTarget,
+            "已",
+            kw("躲开", "dodge"),
+            "。",
+          ],
           [
             "风声先至。",
             actorName,
             "扑杀而来——",
             hitTarget,
-            "让开半寸，牙关",
+            "让开半寸，来势",
             kw("咬空", "dodge"),
             "。",
           ],
@@ -1029,61 +1226,46 @@ function dodgeLine(
       pick(
         "dodge-bird-atk",
         [
-          [actorName, "一个猛", kw("扑啄", "dodge"), "——", hitTarget, "低头一矮，喙尖擦过发梢。"],
+          [
+            actorName,
+            "一个猛扑啄——",
+            hitTarget,
+            "低头一矮，喙尖擦过发梢，",
+            hitTarget,
+            "已",
+            kw("躲开", "dodge"),
+            "。",
+          ],
           [actorName, "翅影罩下，", hitTarget, "侧滚开去，利爪", kw("抓空", "dodge"), "。"],
           ["锐鸣中，", actorName, "俯冲而来——", hitTarget, "已", kw("闪避", "dodge"), "开。"],
           [actorName, "连啄两下，第二下被", hitTarget, kw("让开", "dodge"), "，只余翅风。"],
-          [hitTarget, "提气拔高。", actorName, "这一", kw("扑", "dodge"), "落空，羽毛乱颤。"],
+          [
+            hitTarget,
+            "提气拔高。",
+            actorName,
+            "这一扑落空，羽毛乱颤——",
+            hitTarget,
+            "已",
+            kw("躲开", "dodge"),
+            "。",
+          ],
         ],
         event,
       ),
     );
   }
 
-  // 人攻 → 守方分流
+  // 人攻 → 守方分流（起手嵌招式/兵器；结果主语必须是守方）
   if (defenderNature === "beast") {
     return assemble(
       event.seq,
       "dodge",
       pick(
         "dodge-human-vs-beast",
-        [
-          [
-            fromPlayer ? "你一掌拍去——" : actorName + "一掌拍去——",
-            hitTarget,
-            "侧身一滚，这一记",
-            kw("扑了个空", "dodge"),
-            "。",
-          ],
-          [
-            fromPlayer ? "你斩落——" : actorName + "斩落——",
-            hitTarget,
-            "身形一晃，爪子刨地，硬是",
-            kw("躲开", "dodge"),
-            "了。",
-          ],
-          [
-            fromPlayer ? "你递出一记——" : actorName + "递出一记——",
-            hitTarget,
-            "低伏着窜开，力道",
-            kw("砸空", "dodge"),
-            "，只扬起尘土。",
-          ],
-          [
-            fromPlayer ? "你出手如风——" : actorName + "出手如风——",
-            hitTarget,
-            "偏头让过，牙关空咬一声，算是",
-            kw("闪避", "dodge"),
-            "开来。",
-          ],
-          [
-            fromPlayer ? "你欺近就打——" : actorName + "欺近就打——",
-            hitTarget,
-            "后撤半步，肩背一拧，力道",
-            kw("落空", "dodge"),
-            "。",
-          ],
-        ],
+        [0, 1, 2, 3, 4].map((i) => [
+          ...attackWindup(fromPlayer, actorName, slot, atkMove),
+          ...dodgeResult(hitTarget, defDodge, i as 0 | 1 | 2 | 3 | 4),
+        ]),
         event,
       ),
     );
@@ -1096,35 +1278,37 @@ function dodgeLine(
         "dodge-human-vs-bird",
         [
           [
-            fromPlayer ? "你掌风递出——" : actorName + "掌风递出——",
+            ...attackWindup(fromPlayer, actorName, slot, atkMove),
             hitTarget,
-            "拔高半丈，这一记",
-            kw("扑了个空", "dodge"),
+            "拔高半丈，来招",
+            kw("落空", "dodge"),
             "。",
           ],
           [
-            fromPlayer ? "你跃起就打——" : actorName + "跃起就打——",
+            ...attackWindup(fromPlayer, actorName, slot, atkMove),
             hitTarget,
             "翅影一斜，已",
             kw("躲开", "dodge"),
             "。",
           ],
           [
-            fromPlayer ? "你盯准落点——" : actorName + "盯准落点——",
+            ...attackWindup(fromPlayer, actorName, slot, atkMove),
             hitTarget,
             "一个侧旋，力道",
             kw("砸空", "dodge"),
             "。",
           ],
           [
-            fromPlayer ? "你出手——" : actorName + "出手——",
+            ...attackWindup(fromPlayer, actorName, slot, atkMove),
             hitTarget,
-            "锐鸣着扬起，羽毛乱颤，算是",
+            "锐鸣着扬起，羽毛乱颤——",
+            hitTarget,
+            "已",
             kw("闪避", "dodge"),
-            "开来。",
+            "开。",
           ],
           [
-            fromPlayer ? "你连环两手——" : actorName + "连环两手——",
+            ...attackWindup(fromPlayer, actorName, slot, atkMove),
             hitTarget,
             "第二记到来前已",
             kw("让开", "dodge"),
@@ -1144,11 +1328,13 @@ function dodgeLine(
       "dodge-human-vs-human",
       [
         [
-          fromPlayer ? "你一记递出——" : actorName + "一记递出——",
+          ...attackWindup(fromPlayer, actorName, slot, atkMove),
           hitTarget,
           "侧身半寸，招式擦过，只带起一阵空风——",
+          hitTarget,
+          "已",
           kw("闪避", "dodge"),
-          "开来。",
+          "开。",
         ],
         [
           "差一点。",
@@ -1160,18 +1346,18 @@ function dodgeLine(
           "，尘土在脚边打了个旋。",
         ],
         [
-          fromPlayer ? "你出手如电——" : actorName + "出手如电——",
+          ...attackWindup(fromPlayer, actorName, slot, atkMove),
           "没有人看清那一瞬——",
           hitTarget,
           "已让开，招式",
-          kw("扑了个空", "dodge"),
+          kw("落空", "dodge"),
           "。",
         ],
         fromPlayer
           ? [hitTarget, "脚步一滑，竟", kw("躲开", "dodge"), "了你这一记。"]
           : ["你脚步一滑，竟", kw("躲开", "dodge"), "了", actorName, "这一记。"],
         [
-          fromPlayer ? "你掌力送上——" : actorName + "掌力送上——",
+          ...attackWindup(fromPlayer, actorName, slot, atkMove),
           hitTarget,
           "肩头一沉，人已",
           kw("让开", "dodge"),
@@ -1195,8 +1381,12 @@ function parryLine(
   defenderNature: CombatNature,
   defenderKind: BeastKind,
   fromPlayer: boolean,
+  slot: "sword" | "unarmed" = "unarmed",
+  moveName?: string,
 ): CombatLine {
-  const atkLead = actorName;
+  const data = asRecord(event.data);
+  const named = moveName ?? strField(data, "moveName");
+  const windup = (): Part[] => attackWindup(fromPlayer, actorName, slot, named);
 
   if (defenderNature === "beast") {
     if (defenderKind === "serpentine") {
@@ -1207,40 +1397,16 @@ function parryLine(
           "parry-serpent",
           [
             [
-              fromPlayer ? "你斩落——" : `${atkLead}攻来——`,
+              ...windup(),
               hitTarget,
               "身子一卷，鳞片",
               kw("硬接", "parry"),
               "这一击，震得沙沙作响。",
             ],
-            [
-              fromPlayer ? "你一掌拍去——" : `${atkLead}一记砸来——`,
-              hitTarget,
-              "尾梢横扫，",
-              kw("挡下", "parry"),
-              "力道，颈项却僵了一瞬。",
-            ],
-            [
-              fromPlayer ? "你递出杀招——" : `${atkLead}杀招递到——`,
-              hitTarget,
-              "偏头用身躯",
-              kw("扛住", "parry"),
-              "，鳞光乱颤。",
-            ],
-            [
-              fromPlayer ? "你力透三寸——" : `${atkLead}力透三寸——`,
-              hitTarget,
-              "盘成一团，",
-              kw("架住了", "parry"),
-              "这一下，涎水滴落。",
-            ],
-            [
-              fromPlayer ? "你欺近就打——" : `${atkLead}欺近就打——`,
-              hitTarget,
-              "信子一收，用背脊",
-              kw("硬生生接住", "parry"),
-              "，骨节发麻。",
-            ],
+            [...windup(), hitTarget, "尾梢横扫，", kw("挡下", "parry"), "力道，颈项却僵了一瞬。"],
+            [...windup(), hitTarget, "偏头用身躯", kw("扛住", "parry"), "，鳞光乱颤。"],
+            [...windup(), hitTarget, "盘成一团，", kw("架住了", "parry"), "这一下，涎水滴落。"],
+            [...windup(), hitTarget, "信子一收，用背脊", kw("硬生生接住", "parry"), "，骨节发麻。"],
           ],
           event,
         ),
@@ -1252,41 +1418,11 @@ function parryLine(
       pick(
         "parry-beast",
         [
-          [
-            fromPlayer ? "你斩落——" : `${atkLead}攻来——`,
-            hitTarget,
-            "偏头用肩颈",
-            kw("硬扛", "parry"),
-            "，牙关咬得咯吱响。",
-          ],
-          [
-            fromPlayer ? "你一掌拍去——" : `${atkLead}一记砸来——`,
-            hitTarget,
-            "前爪撑地，用身躯",
-            kw("挡下", "parry"),
-            "这一击，肩背猛颤。",
-          ],
-          [
-            fromPlayer ? "你递出杀招——" : `${atkLead}杀招递到——`,
-            hitTarget,
-            "低吼着侧身，以肩",
-            kw("硬接", "parry"),
-            "，涎水甩落。",
-          ],
-          [
-            fromPlayer ? "你力透脊背——" : `${atkLead}力道沉沉——`,
-            hitTarget,
-            "呲牙",
-            kw("扛住了", "parry"),
-            "，爪子深刨进土里。",
-          ],
-          [
-            fromPlayer ? "你欺近就打——" : `${atkLead}欺近就打——`,
-            hitTarget,
-            "不退反进，用头颈",
-            kw("顶开", "parry"),
-            "这一记，却也震得发麻。",
-          ],
+          [...windup(), hitTarget, "偏头用肩颈", kw("硬接", "parry"), "，闷哼一声。"],
+          [...windup(), hitTarget, "爪子一横，", kw("挡下", "parry"), "力道，却震得后退。"],
+          [...windup(), hitTarget, "用身躯", kw("扛住", "parry"), "这一击，涎水滴落。"],
+          [...windup(), hitTarget, "牙关一错，头颈", kw("顶开", "parry"), "半寸。"],
+          [...windup(), hitTarget, "肩背一沉，", kw("硬生生接住", "parry"), "，骨节发麻。"],
         ],
         event,
       ),
@@ -1300,55 +1436,24 @@ function parryLine(
       pick(
         "parry-bird",
         [
-          [
-            fromPlayer ? "你掌风递出——" : `${atkLead}攻来——`,
-            hitTarget,
-            "扑翅横截，以翅骨",
-            kw("硬接", "parry"),
-            "，羽毛纷飞。",
-          ],
-          [
-            fromPlayer ? "你跃起就打——" : `${atkLead}跃起就打——`,
-            hitTarget,
-            "翅影一翻，",
-            kw("挡下", "parry"),
-            "力道，身形却矮了半寸。",
-          ],
-          [
-            fromPlayer ? "你盯准落点——" : `${atkLead}盯准落点——`,
-            hitTarget,
-            "锐鸣一声，用爪",
-            kw("格开", "parry"),
-            "这一击。",
-          ],
-          [
-            fromPlayer ? "你连环出手——" : `${atkLead}连环出手——`,
-            hitTarget,
-            "双翅合拢，",
-            kw("扛住了", "parry"),
-            "，风声尖啸。",
-          ],
-          [
-            fromPlayer ? "你杀招已至——" : `${atkLead}杀招已至——`,
-            hitTarget,
-            "侧飞半圈，以翼",
-            kw("硬生生接住", "parry"),
-            "。",
-          ],
+          [...windup(), hitTarget, "翅骨一横，", kw("挡下", "parry"), "来势，羽毛乱颤。"],
+          [...windup(), hitTarget, "翼缘", kw("硬接", "parry"), "，身形却矮了半寸。"],
+          [...windup(), hitTarget, "利爪一格，", kw("架住了", "parry"), "这一击。"],
+          [...windup(), hitTarget, "扑翅", kw("顶开", "parry"), "半寸，锐鸣更急。"],
+          [...windup(), hitTarget, "用翅背", kw("扛住", "parry"), "，几乎栽斜。"],
         ],
         event,
       ),
     );
   }
 
-  // 人守
-  const humanAtkLead = fromPlayer
-    ? "你"
-    : attackerNature === "beast"
-      ? `${actorName}扑来——`
-      : attackerNature === "bird"
-        ? `${actorName}扑啄而下——`
-        : `${actorName}一记砸来——`;
+  // 人守：兽/鸟攻用扑咬起手；人攻用兵器/招式起手
+  const humanDef = hitTarget === "你" ? "你" : hitTarget;
+  const beastBirdWindup = (): Part[] => {
+    if (attackerNature === "beast") return [actorName, "扑来——"];
+    if (attackerNature === "bird") return [actorName, "扑啄而下——"];
+    return windup();
+  };
 
   return assemble(
     event.seq,
@@ -1356,41 +1461,17 @@ function parryLine(
     pick(
       "parry-human",
       [
+        [...beastBirdWindup(), humanDef, "以肘", kw("硬接", "parry"), "，虎口发麻。"],
+        [...beastBirdWindup(), humanDef, "横开架势，", kw("挡下", "parry"), "来势。"],
+        [...beastBirdWindup(), humanDef, "腕骨一沉，", kw("架住了", "parry"), "这一记。"],
         [
-          fromPlayer ? "你攻来——" : humanAtkLead,
-          hitTarget,
-          "横开架势，硬生生把这一击",
-          kw("招架", "parry"),
-          "住。虎口发麻，人却没退。",
+          ...beastBirdWindup(),
+          humanDef,
+          "肩头一扛，",
+          kw("硬生生接住", "parry"),
+          "，脚步却退了半寸。",
         ],
-        [
-          fromPlayer ? "你斩落——" : humanAtkLead,
-          "金石相交，一串短响。",
-          hitTarget,
-          kw("架住了", "parry"),
-          "，腕骨隐隐发酸。",
-        ],
-        [
-          fromPlayer ? "你杀招递到——" : humanAtkLead,
-          hitTarget,
-          "以肘硬接，",
-          kw("挡下", "parry"),
-          "这记，肩头却震得发麻。",
-        ],
-        [
-          fromPlayer ? "你力透三寸——" : humanAtkLead,
-          hitTarget,
-          "沉肩",
-          kw("硬接", "parry"),
-          "，脚下刨出两道痕。",
-        ],
-        [
-          fromPlayer ? "你欺近就打——" : humanAtkLead,
-          hitTarget,
-          "双手交叉，",
-          kw("格开", "parry"),
-          "这一击，虎口却已裂开。",
-        ],
+        [...beastBirdWindup(), humanDef, "双手一错，", kw("卸开", "parry"), "力道。"],
       ],
       event,
     ),
@@ -1529,7 +1610,16 @@ export function narrateBattleEvent(
     }
     case "damage":
       if (fromPlayer) {
-        return youHitFoe(event, hitTarget, targetNature, targetKind, yourTier, band);
+        return youHitFoe(
+          event,
+          hitTarget,
+          targetNature,
+          targetKind,
+          yourTier,
+          band,
+          attackSlotOf(event.actor ?? "a", options),
+          strField(data, "moveName"),
+        );
       }
       if (actorNature === "beast") return beastHurtYou(event, actorName, band, actorKind);
       if (actorNature === "bird") return birdHurtYou(event, actorName, band);
@@ -1543,6 +1633,8 @@ export function narrateBattleEvent(
         targetNature,
         targetKind,
         fromPlayer,
+        attackSlotOf(event.actor, options),
+        strField(data, "moveName"),
       );
     case "miss":
     case "dodge":
@@ -1554,6 +1646,9 @@ export function narrateBattleEvent(
         targetNature,
         actorKind,
         fromPlayer,
+        attackSlotOf(event.actor, options),
+        strField(data, "moveName"),
+        strField(data, "dodgeMoveName"),
       );
     case "recover":
       return assemble(

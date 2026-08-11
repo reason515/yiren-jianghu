@@ -1,0 +1,10 @@
+{
+  "id": "xm_dodge_he",
+  "skillId": "xuanmen_dodge",
+  "name": "鹤步横空",
+  "minLevel": 40,
+  "damage": 0,
+  "force": 0,
+  "dodge": 45,
+  "description": "膝弯一弹，身形拔起半尺。来势再急，也只从脚底掠过——落地时衣袂仍稳。"
+}

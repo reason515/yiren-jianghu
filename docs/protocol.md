@@ -121,6 +121,7 @@ pvp.report
 - `POST /combat/action` 接收 `{ action: "attack" | "recover" | "flee" }`，或 `{ action: "perform", performId, targetId? }`，或 `{ action: "set_jiali", jiali: 0|1|2|3 }`（DC-048 加力档位）。可选 `targetId` 为敌方槽位键（如 `b0`）；缺省打当前气最低的存活敌人。客户端不提交绝招效果、消耗、冷却或收益。手动战客户端可按节拍自动提交 `attack`（DC-037），绝招须玩家触发；绝招后可能进入忙乱（`busyTurns`，默认 `performBusyTurns=2`，DC-049/050），忙乱中普攻会被拒绝。
 - 战斗状态 `combatants` 含玩家 `a` 与敌方 `b0`…；`foeIds` 有序列出敌方键。事件 `actor` 为上述键，伤害类 `data.targetId` 标明受击者。旧会话仅有 `a`/`b` 时服务端按 `foeIds:["b"]` 兼容。
 - 服务端在会话 `state` 中保存 RNG 调用计数与绝招冷却；每次 action 返回完整有序事件流。`perform` 事件携带 `performId`，便于客户端演出。
+- 普攻命中/招架/闪避事件可带攻方 `moveId`/`moveName`（已解锁且攻击槽已激发特殊功上抽中的招式，DC-041/053）；闪避成功时另可带守方 `dodgeMoveId`/`dodgeMoveName`（身法槽已激发特殊功上的招式，对齐 xkx `query_dodge_msg` 结构）。客户端战报须嵌招式名并按 `attackSkillSlot`（sword/unarmed）分流兵器/空手动词；主语须攻守自洽。
 - 胜利时服务端按 NPC 内容包 `battleRewards` / `drops` 结算，并在事件流追加 `reward`；若命中当前任务 kill 相位，再追加 `quest_progress`（DC-023、DC-024）。
 
 # 6. 任务总览约定

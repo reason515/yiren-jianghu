@@ -8,7 +8,9 @@ import {
   performToBattleAction,
   pickMove,
   PLAYER_ACTOR,
+  resolveEnableMap,
   rollDrops,
+  unlockedMoves,
   type BattleAction,
   type BattleContext,
   type BattleEvent,
@@ -240,6 +242,22 @@ export function createCombatService(
     return new Set(rows.rows.map((row) => row.move_id));
   };
 
+  /** 按当前技能等级补齐应解锁招式（修 minLevel=0 历史漏写）。 */
+  const reconcileUnlockedMoves = async (
+    characterId: string,
+    skillLevels: Map<string, number>,
+  ): Promise<void> => {
+    for (const [skillId, level] of skillLevels) {
+      if (level <= 0) continue;
+      for (const move of unlockedMoves(skillId, level, content.moves)) {
+        await db.query(
+          "INSERT INTO character_moves (character_id, move_id) VALUES ($1, $2) ON CONFLICT (character_id, move_id) DO NOTHING",
+          [characterId, move.id],
+        );
+      }
+    }
+  };
+
   const learnedPerformIdsOf = async (characterId: string): Promise<Set<string>> => {
     const rows = await db.query<{ perform_id: string }>(
       "SELECT perform_id FROM character_performs WHERE character_id = $1",
@@ -249,17 +267,22 @@ export function createCombatService(
   };
 
   const contextOf = async (character: CharacterRow): Promise<CombatContext> => {
-    const [skillLevels, hasWeapon, equippedItemIds, learnedMoveIds, learnedPerformIds] =
-      await Promise.all([
-        skillsOf(character.id),
-        hasEquippedWeapon(character.id),
-        equippedItemIdsOf(character.id),
-        learnedMoveIdsOf(character.id),
-        learnedPerformIdsOf(character.id),
-      ]);
+    const [skillLevels, hasWeapon, equippedItemIds, learnedPerformIds] = await Promise.all([
+      skillsOf(character.id),
+      hasEquippedWeapon(character.id),
+      equippedItemIdsOf(character.id),
+      learnedPerformIdsOf(character.id),
+    ]);
+    await reconcileUnlockedMoves(character.id, skillLevels);
+    const learnedMoveIds = await learnedMoveIdsOf(character.id);
+    const enableMap = resolveEnableMap(
+      content,
+      skillLevels,
+      decodeEnableMap(character.skill_enable),
+    );
     return {
       skillLevels,
-      enableMap: decodeEnableMap(character.skill_enable),
+      enableMap,
       hasWeapon,
       equippedItemIds,
       learnedMoveIds,
@@ -351,7 +374,7 @@ export function createCombatService(
     };
   };
 
-  /** 玩家「攻击」时按 DC-041 从已解锁 + 已激发的招式中抽一式；无可用招式落回纯基础攻击。 */
+  /** 玩家「攻击」时按 DC-041/053 从攻击槽已激发特殊功上抽一式；无可用招式落回纯基础攻击。 */
   const resolveAttackAction = (
     state: BattleState,
     ctx: CombatContext,
@@ -360,6 +383,8 @@ export function createCombatService(
     const enabledSpecialIds = Object.values(ctx.enableMap).filter((id): id is string =>
       Boolean(id),
     );
+    const attackSkillId = ctx.hasWeapon ? ctx.enableMap.sword : ctx.enableMap.unarmed;
+    const skillIds = attackSkillId ? [attackSkillId] : [];
     const base = createSeededRng(seed);
     for (let i = 0; i < state.rngCalls; i += 1) base();
     let rngCallsUsed = 0;
@@ -367,16 +392,37 @@ export function createCombatService(
       rngCallsUsed += 1;
       return base();
     };
-    const move = pickMove({
-      moves: content.moves,
-      learnedMoveIds: ctx.learnedMoveIds,
-      enabledSpecialIds,
-      rng: countingRng,
-    });
+    const move =
+      skillIds.length > 0
+        ? pickMove({
+            moves: content.moves,
+            learnedMoveIds: ctx.learnedMoveIds,
+            enabledSpecialIds,
+            skillIds,
+            rng: countingRng,
+          })
+        : null;
     return {
       action: { type: "attack", ...(move ? { move: toMoveInfo(move) } : {}) },
       rngCallsUsed,
     };
+  };
+
+  /** 守方身法招式（仅玩家有 character_moves；敌方无则返回 null）。 */
+  const pickPlayerDodgeMove = (ctx: CombatContext, rng: () => number): MoveInfo | null => {
+    const dodgeSkillId = ctx.enableMap.dodge;
+    if (!dodgeSkillId) return null;
+    const enabledSpecialIds = Object.values(ctx.enableMap).filter((id): id is string =>
+      Boolean(id),
+    );
+    const move = pickMove({
+      moves: content.moves,
+      learnedMoveIds: ctx.learnedMoveIds,
+      enabledSpecialIds,
+      skillIds: [dodgeSkillId],
+      rng,
+    });
+    return move ? toMoveInfo(move) : null;
   };
 
   const resolvePlayerAction = (
@@ -544,6 +590,10 @@ export function createCombatService(
         playerAction,
         opponentAction: { type: "attack" },
         ...(input.targetId ? { targetId: input.targetId } : {}),
+        pickDodgeMove: (defenderId, rng) => {
+          if (defenderId !== PLAYER_ACTOR) return null;
+          return pickPlayerDodgeMove(ctx, rng);
+        },
       });
       const finished = round.state.winner !== undefined;
       const result =

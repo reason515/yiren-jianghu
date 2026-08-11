@@ -279,7 +279,15 @@ export function applyCureQi(target: Combatant, amount: number): number {
 }
 
 export type AttackOutcome =
-  | { type: "dodge"; moveId?: string; moveName?: string; hook: "after_dodge" }
+  | {
+      type: "dodge";
+      moveId?: string;
+      moveName?: string;
+      /** 守方身法招式名（DC-053；由回合推进时附带）。 */
+      dodgeMoveId?: string;
+      dodgeMoveName?: string;
+      hook: "after_dodge";
+    }
   | { type: "parry"; damage: number; moveId?: string; moveName?: string; hook: "after_parry" }
   | { type: "damage"; damage: number; moveId?: string; moveName?: string; hook: "after_hit" };
 
@@ -567,6 +575,11 @@ export interface BattleRoundInput {
   opponentAction?: BattleAction;
   foeActions?: Record<string, BattleAction>;
   maxTurns?: number;
+  /**
+   * 闪避成功时为守方抽身法招式（DC-053，对齐 xkx query_dodge_msg 结构）。
+   * 消耗与普攻相同的战斗 rng，保证可复现。
+   */
+  pickDodgeMove?: (defenderId: string, rng: Rng) => MoveInfo | null;
 }
 
 export interface BattleRoundResult {
@@ -782,7 +795,15 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
         if (outcome.type === "damage" || outcome.type === "parry") {
           applyCombatDamage(combatants[foe]!, outcome.damage, input.params);
         }
-        push(outcome.type, actor, { ...outcome, targetId: foe, jiali });
+        const dodgeExtra: Json = {};
+        if (outcome.type === "dodge" && input.pickDodgeMove) {
+          const dodgeMove = input.pickDodgeMove(foe, rng);
+          if (dodgeMove) {
+            dodgeExtra.dodgeMoveId = dodgeMove.id;
+            dodgeExtra.dodgeMoveName = dodgeMove.name;
+          }
+        }
+        push(outcome.type, actor, { ...outcome, targetId: foe, jiali, ...dodgeExtra });
         markDownIfNeeded(foe, wasAlive);
         break;
       }
@@ -895,7 +916,15 @@ export function advanceBattleRound(state: BattleState, input: BattleRoundInput):
         if (outcome.type === "damage" || outcome.type === "parry") {
           applyCombatDamage(combatants[target]!, outcome.damage, input.params);
         }
-        push(outcome.type, foeId, { ...outcome, targetId: target });
+        const dodgeExtra: Json = {};
+        if (outcome.type === "dodge" && input.pickDodgeMove) {
+          const dodgeMove = input.pickDodgeMove(target, rng);
+          if (dodgeMove) {
+            dodgeExtra.dodgeMoveId = dodgeMove.id;
+            dodgeExtra.dodgeMoveName = dodgeMove.name;
+          }
+        }
+        push(outcome.type, foeId, { ...outcome, targetId: target, ...dodgeExtra });
         break;
       }
       case "recover": {

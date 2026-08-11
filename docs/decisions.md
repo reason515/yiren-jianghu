@@ -71,6 +71,7 @@
 | DC-050 | 2026-08 | 战斗读感：HUD 回放 + 攻防交换 + 悬念软化 | ①客户端血条按已显现战报行回放，禁止终态抢跑。②回合内玩家动作块与敌还手之间插入 `exchange` 停顿 + 行动方高亮。③命中率夹逼（floor/ceil）、伤害浮动加大、弱打强 sqrt 软帽、`performBusyTurns=2`。不引入秒级双心跳/暴击/反震 | 对照 xkx「一招闭环」读感与悬念杠杆；修扣血错位、对砍感、稳赢稳输 | numeric-baseline、mechanics.yaml、combat.ts、CombatView/combatReplay、yjh-combat-presentation、sibling-borrowings | ✅ |
 | DC-051 | 2026-08 | 自然恢复对齐 xkx heal_up 绝对值 | ①废弃上限比例 `*PerMin`；改为每拍 `con/3+maxNeili/10`（精同构 +maxJingli）、精力 `(str+dex)/4`、内力 `forceLevel/2`，×`(60/tickSeconds)`×分钟（`tickSeconds=9.5`）。②饥渴不回气精。③贴 eff 后缓慢抬伤势上限。④`settleCharacterVitals` 读写 `eff_qi`/`eff_jing`（修非空血无法回升）。场外 exert recover / 歇脚另案 | 实测比例回速约为 MUD 1/5～1/10；对齐桌面站桩回血手感 | mechanics.yaml、schema、vitals.ts、vitalsSettle、numeric-baseline、protocol.md | ✅ |
 | DC-052 | 2026-08 | 场外运功子集（疗伤/回气/回精） | ①`POST /skills/exert`：已学自疗类绝招场外可用（heal / cure_ / heal_jing）；拒 damage/buff、拒战斗中。②无回合冷却，靠消耗与条件。③顶栏+人物簿双入口。④新增 `force_calm_spirit` 回精。歇脚入眠仍另案 | 补 DC-051 场外缺口；不违 DC-041「无完整 exert 树」 | protocol、numeric-baseline、game-core/exert、skillsService、ExertSheet/StatusBar | ✅ |
+| DC-053 | 2026-08 | 战报具名招式 + 兵器分流 + 主语归属 | ①普攻/闪避事件带 `moveName`/`dodgeMoveName`，战报嵌「一招/一式「名」」（非绝招）。②`pickMove` 按攻击槽（sword/unarmed）过滤；身法招式挂 dodge 槽。③首次习得 `oldLevel=-1` 解锁 `minLevel:0`；开战/武学 reconcile 补漏。④战斗 `resolveEnableMap`。⑤叙事禁悬空「闪避开来」、人攻兽闪禁攻方扑空词；佩剑用剑动词 | 对齐 xkx action/`query_dodge_msg` 结构；修「佩剑像空手」「学了招看不到名」「闪避主语错乱」 | protocol、combatNarrative、movePick、enable、combatService、content moves、yjh-combat-presentation | ✅ |
 
 # 3. 被替代决策（变更历史）
 

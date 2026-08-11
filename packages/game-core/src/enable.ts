@@ -133,7 +133,11 @@ export function unlockedMoves(skillId: string, newLevel: number, allMoves: Move[
   return allMoves.filter((move) => move.skillId === skillId && move.minLevel <= newLevel);
 }
 
-/** 由 oldLevel 升到 newLevel 这一步新解锁的招式（旧级未达门槛、新级已达）。 */
+/**
+ * 由 oldLevel 升到 newLevel 这一步新解锁的招式（跨越门槛：旧级未达、新级已达）。
+ * 首次习得传入 `oldLevel = -1`，才能解锁 `minLevel: 0` 的入门招式
+ * （未学时 getSkill 默认 level=0，若仍传 0 则 0 级招永远跨不过门槛）。
+ */
 export function newlyUnlockedMoves(
   skillId: string,
   oldLevel: number,
@@ -141,6 +145,9 @@ export function newlyUnlockedMoves(
   moves: Move[],
 ): Move[] {
   return moves.filter(
-    (move) => move.skillId === skillId && move.minLevel > oldLevel && move.minLevel <= newLevel,
+    (move) =>
+      move.skillId === skillId &&
+      move.minLevel <= newLevel &&
+      (oldLevel < 0 || move.minLevel > oldLevel),
   );
 }

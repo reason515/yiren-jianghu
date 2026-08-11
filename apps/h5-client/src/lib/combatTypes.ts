@@ -144,6 +144,7 @@ interface ServerCombatant {
   busyTurns?: number;
   nature?: "human" | "beast" | "bird";
   stats?: NarrativeCombatant["stats"];
+  attackSkillSlot?: "sword" | "unarmed";
 }
 
 interface ServerCombatEvent {
@@ -204,6 +205,7 @@ function narrativeOf(
       nature: player.nature ?? "human",
       stats: player.stats,
       maxQi: player.maxQi,
+      attackSkillSlot: player.attackSkillSlot,
     };
   }
   const foe = response.state.combatants[actor];
@@ -213,6 +215,7 @@ function narrativeOf(
     nature: foe.nature,
     stats: foe.stats,
     maxQi: foe.maxQi,
+    attackSkillSlot: foe.attackSkillSlot,
   };
 }
 

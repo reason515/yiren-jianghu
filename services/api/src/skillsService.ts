@@ -11,6 +11,7 @@ import {
   isFieldExertPerform,
   learnUp,
   newlyUnlockedMoves,
+  unlockedMoves,
   practiceOnce,
   previewLearnCost,
   resolveEnableMap,
@@ -351,6 +352,25 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
     }));
   };
 
+  /**
+   * 按当前技能等级补齐应解锁招式（修 minLevel=0 历史漏写；幂等）。
+   * 首次请教须传 oldLevel=-1，见 unlockMoves 调用处。
+   */
+  const reconcileUnlockedMoves = async (
+    characterId: string,
+    skillLevels: Map<string, number>,
+  ): Promise<void> => {
+    for (const [skillId, level] of skillLevels) {
+      if (level <= 0) continue;
+      for (const move of unlockedMoves(skillId, level, content.moves)) {
+        await db.query(
+          "INSERT INTO character_moves (character_id, move_id) VALUES ($1, $2) ON CONFLICT (character_id, move_id) DO NOTHING",
+          [characterId, move.id],
+        );
+      }
+    }
+  };
+
   const persistSkills = async (
     characterId: string,
     entries: Array<[string, { level: number; practicePoints: number }]>,
@@ -628,7 +648,8 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
         throw new SkillsError(result.reason, reasonMessage[result.reason] ?? "学武受挫");
       }
 
-      const oldLevel = getSkill(skills, skillId).level;
+      // 未学过：oldLevel=-1，才能解锁 minLevel=0 入门招式（getSkill 默认 0 会漏写）。
+      const oldLevel = skills[skillId] ? getSkill(skills, skillId).level : -1;
       const next = result.skills[skillId]!;
       await db.query(
         "UPDATE characters SET potential = potential - $1, learned_points = learned_points + $1, jing = jing - $2, silver = silver - $3 WHERE id = $4",
@@ -953,6 +974,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       const skills = await skillMapOf(ch.id);
       const raw = rawSkillsOf(skills);
       const skillLevels = new Map([...raw].map(([id, s]) => [id, s.level]));
+      await reconcileUnlockedMoves(ch.id, skillLevels);
       const enableMap = resolveEnableMap(content, skillLevels, decodeEnableMap(ch.skill_enable));
       const effective = {} as Record<EnableSlot, number>;
       for (const slot of ENABLE_SLOTS) effective[slot] = effectiveLevel(slot, raw, enableMap);

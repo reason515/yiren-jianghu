@@ -267,4 +267,12 @@ describe("unlockedMoves / newlyUnlockedMoves", () => {
       "m3",
     ]);
   });
+
+  it("newlyUnlockedMoves：首次习得 oldLevel=-1 解锁 minLevel=0", () => {
+    expect(newlyUnlockedMoves("xuanmen_sword", -1, 1, moves).map((m) => m.id)).toEqual(["m1"]);
+    expect(newlyUnlockedMoves("xuanmen_sword", -1, 20, moves).map((m) => m.id)).toEqual([
+      "m1",
+      "m2",
+    ]);
+  });
 });

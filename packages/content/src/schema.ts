@@ -389,7 +389,8 @@ export const performSchema = z.object({
   cooldownTurns: z.number().positive(),
   conditions: z.array(performConditionSchema).default([]),
   effect: z.object({
-    type: z.enum(["damage", "heal", "buff"]),
+    /** heal=回气；heal_jing=回精（DC-052 场外运功）；cure_ 前缀的 heal=疗伤抬 eff。 */
+    type: z.enum(["damage", "heal", "heal_jing", "buff"]),
     amount: z.number().positive(),
     target: z.enum(["enemy", "self"]).default("enemy"),
   }),

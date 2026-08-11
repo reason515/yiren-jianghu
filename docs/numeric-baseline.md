@@ -54,7 +54,7 @@
 | 招式 dodge | action.dodge 修正命中 | `Move.dodge` 加到攻方有效攻击等级（DC-047） | 轻灵招式可测 |
 | 加力 jiali | enforce + damage.h | 档位 0–3；`jialiDmgPerLevel=4` / `jialiNeiliPerLevel=5`（DC-048） | 短局决策；耗内换伤 |
 | 伤势双轨 | damage.c eff_qi | `woundFactor=0.35` 压 `effQi`；heal≤eff；`cure_qi`/疗伤抬 eff（DC-048） | 疗伤≠回气 |
-| 运功子集 | force heal/shield | 内容化绝招：疗伤（cure_）+ 护体 buff（DC-048） | 非完整 exert 树 |
+| 运功子集 | force heal/shield | 战斗：疗伤（cure_）+ 护体 buff（DC-048）；场外：`POST /skills/exert` 疗伤/回气/`heal_jing` 回精（DC-052） | 非完整 exert 树；歇脚另案 |
 | 忙乱 busy | action.c | `performBusyTurns=2`；忙乱禁普攻（DC-049/050） | 放完绝招要挨打 |
 | 演示毒 | condition 子集 | `demoPoisonTurns=0`（默认关）；开启后伤害绝招附带（DC-049） | 至多一种演示 |
 | 战报/HUD 时序 | 分段 combat_msg | 血条随显现行回放；玩家↔敌 `exchange` 停顿（DC-050） | 扣血与文案对齐；一攻一防读感 |
@@ -95,6 +95,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-11 | 场外运功 DC-052：`/skills/exert` + heal_jing 绝招 | exert.ts + protocol | 补 DC-051 场外另案；疗伤/回气/回精入口 |
 | 2026-08-11 | 自然恢复 DC-051：xkx 绝对值（tickSeconds=9.5、con/内力分母）；修 eff 读写 | mechanics + vitalsSettle | 对齐 MUD 站桩回血；非空血可回升 |
 | 2026-08-11 | 战斗读感 DC-050：命中夹逼/浮动 0.3/弱打强软帽/busy=2；HUD 回放+exchange | mechanics + CombatView | 扣血对齐文案；攻防对位；缓解稳赢稳输 |
 | 2026-08-10 | 机制迁移 A–D：后天四维/装备/dodge/jiali/伤势/busy 对照列补齐 | DC-047–049 | 接线验收后统一回写，避免半成品口径 |

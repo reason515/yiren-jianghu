@@ -303,17 +303,19 @@ export function createCombatService(
       },
       markUsed() {},
     };
-    // DC-041：绝招须已学（character_performs），不再以技能等级 > 0 作为可用依据。
+    // DC-041：绝招须已学；DC-052：heal_jing 等仅场外运功不进战斗条。
     const performs = content.performs
-      .filter((perform) => ctx.learnedPerformIds.has(perform.id))
+      .filter((perform) => {
+        if (!ctx.learnedPerformIds.has(perform.id)) return false;
+        const skillLevel = ctx.skillLevels.get(perform.skillId) ?? 0;
+        return performToBattleAction(perform, skillLevel) !== null;
+      })
       .map((perform) => {
         const skillLevel = ctx.skillLevels.get(perform.skillId) ?? 0;
         return {
           id: perform.id,
           name: perform.name,
-          ready:
-            performToBattleAction(perform, skillLevel) !== null &&
-            canUsePerform(perform, { battle, actor: "a", skillLevel }, turn, cooldown).ok,
+          ready: canUsePerform(perform, { battle, actor: "a", skillLevel }, turn, cooldown).ok,
         };
       });
     const eventRows = await db.query<{

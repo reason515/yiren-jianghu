@@ -22,6 +22,9 @@ export interface CharacterSheetProps {
   onRename?: (name: string) => void;
   /** 放弃角色入口（由上层接 ConfirmSheet 二次确认）。 */
   onDiscard?: () => void;
+  /** 场外运功（DC-052）：打开运功 Sheet 或直接施展。 */
+  onOpenExert?: () => void;
+  onExertPerform?: (performId: string) => void;
 }
 
 const TAB_OPTIONS: Array<{ value: CharacterTab; label: string }> = [
@@ -95,6 +98,8 @@ export function CharacterSheet({
   onInventoryAction,
   onRename,
   onDiscard,
+  onOpenExert,
+  onExertPerform,
 }: CharacterSheetProps): JSX.Element | null {
   const [tab, setTab] = useState<CharacterTab>("body");
   const [expandedSkillId, setExpandedSkillId] = useState<string | null>(null);
@@ -433,7 +438,17 @@ export function CharacterSheet({
             </section>
 
             <section className="char-section">
-              <h4 className="char-section-title">绝招</h4>
+              <div className="char-section-head">
+                <h4 className="char-section-title">绝招</h4>
+                {onOpenExert && (
+                  <Chip
+                    label="运功"
+                    variant="perform"
+                    disabled={Boolean(pendingAction)}
+                    onClick={onOpenExert}
+                  />
+                )}
+              </div>
               {performs.length === 0 ? (
                 <p className="char-empty">达级后当面请教师父，方可学会绝招。</p>
               ) : (
@@ -442,6 +457,14 @@ export function CharacterSheet({
                     <li key={pf.id}>
                       <span>{pf.name}</span>
                       <em>{skillName(pf.skillId)}</em>
+                      {pf.fieldKind && onExertPerform && (
+                        <Chip
+                          label={isPending(`exert:${pf.id}`) ? "运功中…" : "运功"}
+                          variant="perform"
+                          disabled={Boolean(pendingAction)}
+                          onClick={() => onExertPerform(pf.id)}
+                        />
+                      )}
                     </li>
                   ))}
                 </ul>

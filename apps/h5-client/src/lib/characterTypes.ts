@@ -41,11 +41,14 @@ export interface MoveRowView {
   skillId: string;
 }
 
-/** 已学绝招（DC-041：character_performs）。 */
+/** 已学绝招（DC-041：character_performs；DC-052 含场外运功元数据）。 */
 export interface PerformRowView {
   id: string;
   name: string;
   skillId: string;
+  effectType?: "damage" | "heal" | "heal_jing" | "buff";
+  fieldKind?: "heal" | "cure" | "heal_jing" | null;
+  cost?: { qi: number; jing: number; neili: number };
 }
 
 /** 激发图：槎 → 特殊功 id；null 表示该槎显式回退基本功。 */

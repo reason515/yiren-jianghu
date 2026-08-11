@@ -37,7 +37,7 @@
 | **ChoiceRow**（泛型分段按钮，禁 select） | AttributeAllocator 有类似 | 抽成通用 `ChoiceRow<T>`（E14.10 易用性） |
 | **TrainSheet / buildPracticeOptions** | 缺（E14.2 学武面板） | 结构借鉴：可学武功选项/学/练动作；本项目 learn/practice/study API |
 | **CharacterSheet 五页签 + 行内展开** | V2.15 四页签人物簿（DC-035） | 借鉴页签分层与点开再动手；本项目定为状态/武学/行囊/档案，不借 enable/prepare/wimpy/命令刷面板；仪容短述借鉴 look me 结构 |
-| **FloatingPerfBar**（战斗悬浮绝招，战斗中屏底） | CombatView `.combat-float-bar` | 已落地：自动战悬浮动作条（绝招/回气/逃跑），进行中可收起 Sheet（DC-037） |
+| **FloatingPerfBar**（战斗悬浮绝招，战斗中屏底） | CombatView `.combat-float-bar` 两行：上行加力/回气/逃跑，下行绝招横滑 | 已落地（DC-037 + 动作条重构） |
 | **s_combatd 战斗文案结构**（guard_msg 击间闲笔、人/兽/鸟 race、分级 damage_msg） | `combatNarrative.ts` | 只借结构神韵：击间盯破绽/移步、兽扑咬抓、伤势分档；句子原创；关键字着色非整行 |
 | **do_attack 一招闭环读感**（出招→躲架→伤→描述） | CombatView HUD 回放 + `exchange` 停顿（DC-050） | 借「一招打完再换边」的呈现节奏；**不借**秒级双 heart_beat |
 | **heal_up 自然恢复绝对值**（damage.c：`con/3+max_neili/10`，约 9.5s 一拍） | `applyRegen` + `params.regen`（DC-051） | 借拍间隔与绝对值公式；仍用 `last_heal_at` 入口结算，不跑秒级心跳 |

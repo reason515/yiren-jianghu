@@ -4,6 +4,7 @@ import {
   computeMaxVitals,
   effectiveLevel,
   effectivePotential,
+  fieldExertKind,
   maxFoodCapacity,
   maxWaterCapacity,
   resolveEnableMap,
@@ -62,8 +63,15 @@ export interface CharacterSummary {
   skillEnable: SkillEnableMap;
   /** 已学招式（DC-041，character_moves）。 */
   moves: Array<{ id: string; name: string; skillId: string }>;
-  /** 已学绝招（DC-041，character_performs）。 */
-  performs: Array<{ id: string; name: string; skillId: string }>;
+  /** 已学绝招（DC-041，character_performs；DC-052 附场外运功元数据）。 */
+  performs: Array<{
+    id: string;
+    name: string;
+    skillId: string;
+    effectType?: "damage" | "heal" | "heal_jing" | "buff";
+    fieldKind?: "heal" | "cure" | "heal_jing" | null;
+    cost?: { qi: number; jing: number; neili: number };
+  }>;
 }
 
 export const ATTR_MIN = 10;
@@ -283,7 +291,17 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         });
         performs = performRows.rows.flatMap((r) => {
           const def = performsById.get(r.perform_id);
-          return def ? [{ id: def.id, name: def.name, skillId: def.skillId }] : [];
+          if (!def) return [];
+          return [
+            {
+              id: def.id,
+              name: def.name,
+              skillId: def.skillId,
+              effectType: def.effect.type,
+              fieldKind: fieldExertKind(def),
+              cost: { qi: def.cost.qi, jing: def.cost.jing, neili: def.cost.neili },
+            },
+          ];
         });
       }
       return {

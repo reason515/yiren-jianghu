@@ -50,6 +50,7 @@ POST /skills/enable (auth)
 POST /skills/apprentice (auth)
 POST /skills/practice (auth)
 POST /skills/study (auth)
+POST /skills/exert (auth)
 GET /quests (auth)
 POST /quests/accept (auth)
 POST /quests/report (auth)
@@ -152,7 +153,8 @@ pvp.report
 - 人物簿演练/参悟仍走 `/skills/practice`、`/skills/study`；升级同样触发 `unlockedMoves`；不可远程万能请教。
 - `POST /skills/enable { slot, skillId }`（DC-041）：将特殊功挂到基本功槎位（`slot` ∈ force/dodge/parry/unarmed/sword/blade），`skillId` 为 `null` 时清空该槎（回退按 `autoEnableMap` 自动补齐）。服务端校验该特殊功 `enableSlots` 含此槎且已学（等级 > 0）。返回补齐后的 `skillEnable` 全图与各槎有效等级 `effective`。挂到槎上的特殊功等级越高，普攻越可能抽中其解锁招式（`pickMove`），未挂槎则该槎恒用基本功等级。
 - `POST /skills/learn-perform { performId, npcId }`（DC-041）：学会绝招须同房师父/教头当面传授，且该 NPC `teaches` 含此绝招所属武功；须满足 `learnMinLevel` + `learnRequires`（前置技能等级门槛）；写入 `character_performs`，此后战斗中 `POST /combat/action { action: "perform", performId }` 方可使用。已学绝招不可重复学。
-- `GET /skills/mastery`：人物簿「武学」页一站式视图——`skills`（含 `kind`/`enableSlots`）、`skillEnable`、各槎 `effective` 有效等级、已学 `moves`、已学 `performs`。无角色返回 404。
+- `GET /skills/mastery`：人物簿「武学」页一站式视图——`skills`（含 `kind`/`enableSlots`）、`skillEnable`、各槎 `effective` 有效等级、已学 `moves`、已学 `performs`（含 `effectType`/`fieldKind`/`cost`，DC-052）。无角色返回 404。
+- `POST /skills/exert { performId }`（DC-052，补 DC-051 场外另案）：场外运功。仅已学且效果为自疗/回气/`heal_jing` 回精的绝招；战斗进行中拒绝（`in_combat`）。先按 `last_heal_at` 结算自然恢复，再扣消耗并钳制 vitals（heal≤eff；cure 抬 eff）。返回 `kind`/`amount`/`message`/更新后 `vitals`。客户端不得自算恢复量。
 
 # 9. 挂机约定（DC-026 / DC-042 / DC-043 / DC-045）
 

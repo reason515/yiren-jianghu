@@ -54,12 +54,19 @@ describe("CombatView（自动战 + 抓时机）", () => {
     expect(host.textContent).toContain("交手自行推进");
     expect(host.querySelector("[data-testid=combat-log]")?.textContent).toContain("追风破");
     expect([...host.querySelectorAll(".chip")].some((c) => c.textContent === "普攻")).toBe(false);
+    expect(host.querySelector("[data-testid=combat-row-primary]")).toBeTruthy();
+    expect(host.querySelector("[data-testid=combat-row-performs]")).toBeTruthy();
+    expect(host.querySelector("[data-testid=combat-performs-scroll]")).toBeTruthy();
+    expect(host.querySelector("[data-testid=combat-jiali] .seg")).toBeTruthy();
 
-    const chips = [
-      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-actions] .chip"),
+    const performChips = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-performs-scroll] .chip"),
     ];
-    act(() => chips.find((c) => c.textContent === "疾风斩")!.click());
-    act(() => chips.find((c) => c.textContent === "逃跑")!.click());
+    const primaryChips = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-row-primary] .chip"),
+    ];
+    act(() => performChips.find((c) => c.textContent === "疾风斩")!.click());
+    act(() => primaryChips.find((c) => c.textContent === "逃跑")!.click());
     expect(commands).toEqual([{ action: "perform", performId: "swift_slash" }, { action: "flee" }]);
   });
 
@@ -83,13 +90,28 @@ describe("CombatView（自动战 + 抓时机）", () => {
 
   it("绝招未就绪（冷却/消耗）禁用；逃跑为危险动作", () => {
     const { host } = render(<CombatView state={STATE} onAction={() => undefined} />);
-    const chips = [
-      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-actions] .chip"),
+    const performChips = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-performs-scroll] .chip"),
     ];
-    const notReady = chips.find((c) => c.textContent === "追风破")!;
+    const primaryChips = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-row-primary] .chip"),
+    ];
+    const notReady = performChips.find((c) => c.textContent === "追风破")!;
     expect(notReady.disabled).toBe(true);
     expect(notReady.classList.contains("danger")).toBe(false);
-    expect(chips.find((c) => c.textContent === "逃跑")!.classList.contains("danger")).toBe(true);
+    expect(primaryChips.find((c) => c.textContent === "逃跑")!.classList.contains("danger")).toBe(
+      true,
+    );
+  });
+
+  it("加力分段切换发出 set_jiali", () => {
+    const commands: Array<{ action: string; jiali?: number }> = [];
+    const { host } = render(<CombatView state={STATE} onAction={(c) => commands.push(c)} />);
+    const btn = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-jiali] .seg-btn"),
+    ].find((el) => el.textContent === "二")!;
+    act(() => btn.click());
+    expect(commands).toEqual([{ action: "set_jiali", jiali: 2 }]);
   });
 
   it("结果横幅收束（wuxia 文案），离去可点", () => {

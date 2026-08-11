@@ -87,7 +87,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.3 PVE 战斗接线契约（E14.5 / DC-037 / DC-038）
 
 - 开战用 `POST /combat/start { targetIds }`（兼容 `{ targetId }`）；服务端并入同房 `battleAllies`，同场最多 5 敌。战斗内刷新/恢复用 `GET /combat/status`；玩家意图：`attack`（客户端自动节拍）/ `recover` / `flee`，或 `{ action: "perform", performId, targetId? }`。客户端不得计算绝招效果、消耗、冷却、胜负或掉落。
-- `CombatView`：全屏 Sheet（`full`）+ 顶部紧凑 HUD（敌气血 / 我方气·内力，不显示精）+ 中部可滚战报 + 底部动作条或结果所得；`state`/`events` 为唯一事实来源。进行中 × = 收起面板（自动普攻仍推进）；结束后 × /「离去」关闭。所得阅历/潜能/银两配色对齐人物簿。
+- `CombatView`：全屏 Sheet（`full`）+ 顶部紧凑 HUD（敌气血 / 我方气·内力，不显示精）+ 中部可滚战报 + **两行动作条**（上行：加力 `ChoiceRow` + 回气 + 逃跑；下行：绝招横滑）或结果所得；`state`/`events` 为唯一事实来源。进行中 × = 收起面板（自动普攻仍推进）；结束后 × /「离去」关闭。所得阅历/潜能/银两配色对齐人物簿。
 - **战报呈现**（关键字着色、击间闲笔、人兽鸟/境界分流、字号行距、逐行显现）权威见 `yjh-combat-presentation`；文案神韵见 `yjh-wuxia-copywriting`。改 CombatView 战报区 / `combatNarrative` 时先读该 skill。
 - 战斗结束后先收束结果横幅，再在同一叙事回合展示收益/任务推进；逃跑和落败只给状态结果，不伪造奖励。断线恢复时优先请求 status，存在 ongoing 会话才重开战局浮层。
 - 绝招按钮的可用态是服务端最终裁决；客户端可基于最近 state 做弱提示，但 400 错误须以 toast 显示服务端武侠文案，并保留当前战局。
@@ -96,7 +96,8 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 
 - 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。武功列表客户端按「已学优先」排序；`description` / `practicePoints` 随技能快照展示。
 - **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签（下划线式 `.char-tabs`，非大按钮）——**状态**（行止当前/上限细轨 + 四维）/ **武学**（仅 `level>0`；空态「尚未学会」；点开再出请教·演练·参悟）/ **行囊**（当前佩挂置顶：兵器+衣甲；尚无独立饰品槽）/ **档案**（仪容短述 + 性别、改名、放弃）。默认打开「状态」。内容区 `.char-tab-panel` **固定高度**滚动，切换页签不跳动。
-- **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿（默认状态页）。
+- **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿（默认状态页）；顶栏另有独立「运功」（`onExert` → `ExertSheet`，DC-052），不与人物簿冲突。
+- **场外运功（DC-052）**：`POST /skills/exert { performId }`；列表来自角色快照 `performs` 的 `fieldKind`（heal/cure/heal_jing）；人物簿武学页绝招区亦可「运功」。
 - **仪容**：客户端 `buildCharacterLook` 由性别、已学最高等级、佩挂衣甲/兵器拼装第二人称短述（对齐 xkx look me 结构，无命令）；建角时服务端赠送并穿戴 `cubu_yi`（`START_CLOTH_ITEM_ID`）。
 - 行止、四维、经验、有效潜能、银两、性别取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。
 - 请教/演练/参悟与佩上/卸下/使用、改名（`PUT /characters/name`）均只提交受控意图；请求期间禁用重复操作，成功后重新拉取人物簿快照，再以一条 toast 告知结果。不得乐观扣减资源、改等级或改行囊数量。

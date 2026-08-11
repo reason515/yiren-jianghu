@@ -2,9 +2,13 @@ import type { ContentPack, Npc, Skill } from "@yjh/content";
 import {
   ENABLE_SLOTS,
   EnableError,
+  applyFieldExert,
   assertCanEnable,
+  computeMaxVitals,
   effectiveLevel,
+  fieldExertKind,
   getSkill,
+  isFieldExertPerform,
   learnUp,
   newlyUnlockedMoves,
   practiceOnce,
@@ -13,11 +17,13 @@ import {
   resolveTeachCap,
   studyOnce,
   type EnableSlot,
+  type ExertVitals,
   type SkillEnableMap,
   type SkillMap,
   type SkillRaw,
 } from "@yjh/game-core";
 import type { Db } from "./db.js";
+import { settleCharacterVitals, vitalsContentFromPack } from "./vitalsSettle.js";
 
 /** 武功域错误（code 进入错误信封）。 */
 export class SkillsError extends Error {
@@ -52,12 +58,16 @@ export interface MoveView {
   description: string;
 }
 
-/** 已学绝招摘要（DC-041：character_performs）。 */
+/** 已学绝招摘要（DC-041：character_performs；DC-052 含场外运功元数据）。 */
 export interface PerformView {
   id: string;
   name: string;
   skillId: string;
   description: string;
+  effectType: "damage" | "heal" | "heal_jing" | "buff";
+  /** heal 且疗伤语义时为 cure；否则同 effectType 语义标签。 */
+  fieldKind: "heal" | "cure" | "heal_jing" | null;
+  cost: { qi: number; jing: number; neili: number };
 }
 
 export interface EnableInput {
@@ -168,8 +178,28 @@ export interface SkillsService {
   enable(accountId: string, input: EnableInput): Promise<EnableView>;
   /** 学会绝招（DC-041）：须同房师父/教头教授该绝招所属武功，并满足 learnMinLevel/learnRequires。 */
   learnPerform(accountId: string, input: LearnPerformInput): Promise<LearnPerformResult>;
+  /** 场外运功（DC-052）：自疗/回气/回精；战斗中不可用。 */
+  exert(accountId: string, performId: string): Promise<ExertResultView>;
   /** 武学页一站式视图：技能 + 激发 + 有效等级 + 已学招式/绝招。 */
   getMastery(accountId: string): Promise<MasteryView | null>;
+}
+
+export interface ExertResultView {
+  performId: string;
+  performName: string;
+  kind: "heal" | "cure" | "heal_jing";
+  amount: number;
+  message: string;
+  vitals: {
+    qi: number;
+    jing: number;
+    jingli: number;
+    neili: number;
+    food: number;
+    water: number;
+    effQi: number;
+    effJing: number;
+  };
 }
 
 export const MAX_PRACTICE_COUNT = 50;
@@ -181,6 +211,12 @@ type CharacterRow = {
   learned_points: number | string;
   jing: number;
   qi: number;
+  jingli: number;
+  neili: number;
+  food: number;
+  water: number;
+  eff_qi: number;
+  eff_jing: number;
   silver: number | string;
   room_path: string;
   master_npc_id: string | null;
@@ -194,6 +230,24 @@ function decodeEnableMap(raw: SkillEnableMap | string | null): SkillEnableMap {
   if (!raw) return {};
   return typeof raw === "string" ? (JSON.parse(raw) as SkillEnableMap) : raw;
 }
+
+function toPerformView(p: ContentPack["performs"][number]): PerformView {
+  return {
+    id: p.id,
+    name: p.name,
+    skillId: p.skillId,
+    description: p.description,
+    effectType: p.effect.type,
+    fieldKind: fieldExertKind(p),
+    cost: { qi: p.cost.qi, jing: p.cost.jing, neili: p.cost.neili },
+  };
+}
+
+const EXERT_MESSAGES: Record<"heal" | "cure" | "heal_jing", string> = {
+  heal: "真气游走周身，伤处暖意渐起。",
+  cure: "内息温养，淤滞渐松，伤势缓缓合拢。",
+  heal_jing: "心神一敛，昏沉散去，眼前重新立得住。",
+};
 
 type SkillRow = {
   skill_id: string;
@@ -211,7 +265,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
 
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
-      "SELECT id, exp, potential, learned_points, jing, qi, silver, room_path, master_npc_id, sect_id, generation, attrs, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
+      "SELECT id, exp, potential, learned_points, jing, qi, jingli, neili, food, water, eff_qi, eff_jing, silver, room_path, master_npc_id, sect_id, generation, attrs, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     const r = rows.rows[0];
@@ -798,6 +852,101 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       };
     },
 
+    async exert(accountId, performId) {
+      await settleCharacterVitals(db, vitalsContentFromPack(content), accountId);
+      const ch = await activeCharacter(accountId);
+      if (!ch) throw new SkillsError("no_character", "尚未立名闯江湖");
+
+      const ongoing = await db.query<{ id: string }>(
+        "SELECT id FROM combat_sessions WHERE character_id = $1 AND kind = 'pve' AND status = 'ongoing' LIMIT 1",
+        [ch.id],
+      );
+      if (ongoing.rows[0]) {
+        throw new SkillsError("in_combat", "交手之中，难以静心运功");
+      }
+
+      const perform = content.performs.find((p) => p.id === performId);
+      if (!perform) throw new SkillsError("perform_not_found", "此式未在江湖谱中");
+      if (!isFieldExertPerform(perform)) {
+        throw new SkillsError("not_field_exert", "此式不可场外运功");
+      }
+
+      const learned = await db.query<{ perform_id: string }>(
+        "SELECT perform_id FROM character_performs WHERE character_id = $1 AND perform_id = $2",
+        [ch.id, perform.id],
+      );
+      if (!learned.rows[0]) throw new SkillsError("perform_not_learned", "此式尚未参悟");
+
+      const skills = await skillMapOf(ch.id);
+      const skillLevel = getSkill(skills, perform.skillId).level;
+      const forceLevel = content.skills
+        .filter((s) => s.category === "force")
+        .reduce((acc, s) => Math.max(acc, getSkill(skills, s.id).level), 0);
+      const maxVitals = computeMaxVitals(content.params, {
+        str: ch.attrs.str,
+        int: ch.attrs.int,
+        con: ch.attrs.con,
+        dex: ch.attrs.dex,
+        forceLevel,
+      });
+
+      const before: ExertVitals = {
+        qi: ch.qi,
+        maxQi: maxVitals.maxQi,
+        effQi: Math.min(maxVitals.maxQi, Math.max(0, Number(ch.eff_qi) || ch.qi)),
+        jing: ch.jing,
+        maxJing: maxVitals.maxJing,
+        effJing: Math.min(maxVitals.maxJing, Math.max(0, Number(ch.eff_jing) || ch.jing)),
+        neili: ch.neili,
+        maxNeili: maxVitals.maxNeili,
+      };
+
+      const result = applyFieldExert({
+        perform,
+        learned: true,
+        skillLevel,
+        vitals: before,
+        params: content.params,
+      });
+      if (!result.ok) {
+        if (result.reason === "cost") throw new SkillsError("perform_cost", "真气未复，此式难发");
+        if (result.reason === "condition")
+          throw new SkillsError("perform_condition", "此刻气机未合，难以运功");
+        if (result.reason === "no_effect") throw new SkillsError("no_effect", "气机已满，无需再运");
+        throw new SkillsError("exert_failed", result.detail ?? "运功未成");
+      }
+
+      await db.query(
+        "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5 WHERE id = $6",
+        [
+          result.vitals.qi,
+          result.vitals.jing,
+          result.vitals.neili,
+          result.vitals.effQi,
+          result.vitals.effJing,
+          ch.id,
+        ],
+      );
+
+      return {
+        performId: perform.id,
+        performName: perform.name,
+        kind: result.kind,
+        amount: result.amount,
+        message: EXERT_MESSAGES[result.kind],
+        vitals: {
+          qi: result.vitals.qi,
+          jing: result.vitals.jing,
+          jingli: ch.jingli,
+          neili: result.vitals.neili,
+          food: ch.food,
+          water: ch.water,
+          effQi: result.vitals.effQi,
+          effJing: result.vitals.effJing,
+        },
+      };
+    },
+
     async getMastery(accountId) {
       const ch = await activeCharacter(accountId);
       if (!ch) return null;
@@ -831,7 +980,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
           .map((m) => ({ id: m.id, name: m.name, skillId: m.skillId, description: m.description })),
         performs: content.performs
           .filter((p) => learnedPerformIds.has(p.id))
-          .map((p) => ({ id: p.id, name: p.name, skillId: p.skillId, description: p.description })),
+          .map((p) => toPerformView(p)),
       };
     },
   };

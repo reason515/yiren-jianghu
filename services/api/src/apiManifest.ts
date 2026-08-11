@@ -56,6 +56,7 @@ export const API_MANIFEST: ApiRoute[] = [
   { method: "POST", path: "/skills/apprentice", auth: true, domain: "skills" },
   { method: "POST", path: "/skills/practice", auth: true, domain: "skills" },
   { method: "POST", path: "/skills/study", auth: true, domain: "skills" },
+  { method: "POST", path: "/skills/exert", auth: true, domain: "skills" },
   // 任务
   { method: "GET", path: "/quests", auth: true, domain: "quests" },
   { method: "POST", path: "/quests/accept", auth: true, domain: "quests" },

@@ -19,6 +19,7 @@ export * from "./combat.js";
 export * from "./combatant.js";
 export * from "./combatantFactory.js";
 export * from "./perform.js";
+export * from "./exert.js";
 export * from "./growth.js";
 export * from "./tactic.js";
 export * from "./afk.js";

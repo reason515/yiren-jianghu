@@ -600,6 +600,28 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       }
     });
 
+    app.post("/skills/exert", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
+      const accountId = authContexts.get(req)?.accountId ?? "";
+      const body = (req.body ?? {}) as { performId?: unknown };
+      if (typeof body.performId !== "string" || !body.performId) {
+        return envelope(reply, 400, "invalid_request", "缺少绝招 id");
+      }
+      try {
+        return await skills.exert(accountId, body.performId);
+      } catch (err) {
+        if (err instanceof SkillsError) {
+          const status =
+            err.code === "no_character" || err.code === "perform_not_found"
+              ? 404
+              : err.code === "invalid_request"
+                ? 400
+                : 409;
+          return envelope(reply, status, err.code, err.message);
+        }
+        throw err;
+      }
+    });
+
     app.get("/quests", { preHandler: requireAuth(verifyToken) }, async (req, reply) => {
       const accountId = authContexts.get(req)?.accountId ?? "";
       const overview = await quests.getOverview(accountId);

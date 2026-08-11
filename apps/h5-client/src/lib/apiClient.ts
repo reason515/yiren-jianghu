@@ -82,6 +82,24 @@ export interface ApiClient {
   ): Promise<{ performId: string; performName: string; teacher: { id: string; name: string } }>;
   /** 武学页一站式视图：技能 + 激发 + 有效等级 + 已学招式/绝招（DC-041）。 */
   getMastery(): Promise<MasteryView>;
+  /** 场外运功（DC-052）。 */
+  exert(performId: string): Promise<{
+    performId: string;
+    performName: string;
+    kind: "heal" | "cure" | "heal_jing";
+    amount: number;
+    message: string;
+    vitals: {
+      qi: number;
+      jing: number;
+      jingli: number;
+      neili: number;
+      food: number;
+      water: number;
+      effQi: number;
+      effJing: number;
+    };
+  }>;
   getQuests(): Promise<QuestOverviewResponse>;
   acceptQuest(questId: string): Promise<unknown>;
   reportQuest(questId: string): Promise<unknown>;
@@ -179,6 +197,7 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     enableSkill: (slot, skillId) => post("/skills/enable", { slot, skillId }),
     learnPerform: (performId, npcId) => post("/skills/learn-perform", { performId, npcId }),
     getMastery: () => get("/skills/mastery"),
+    exert: (performId) => post("/skills/exert", { performId }),
     getQuests: () => get("/quests"),
     acceptQuest: (questId) => post("/quests/accept", { questId }),
     reportQuest: (questId) => post("/quests/report", { questId }),

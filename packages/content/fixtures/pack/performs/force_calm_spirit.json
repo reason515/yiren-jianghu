@@ -1,0 +1,11 @@
+{
+  "id": "force_calm_spirit",
+  "skillId": "xuanmen_force",
+  "name": "静心回神",
+  "learnMinLevel": 10,
+  "cost": { "qi": 0, "jing": 0, "neili": 18 },
+  "cooldownTurns": 3,
+  "conditions": [{ "type": "self_neili_above_pct", "value": 15 }],
+  "effect": { "type": "heal_jing", "amount": 22, "target": "self" },
+  "description": "内息一敛，杂念如落叶离枝。丹田暖意上行，眉心那一点昏沉渐渐散开——耳中风声远了，眼前的字迹又重新立得住。"
+}

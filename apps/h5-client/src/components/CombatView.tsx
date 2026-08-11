@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { Chip } from "./base/Chip.js";
+import { ChoiceRow } from "./base/ChoiceRow.js";
 import { renderCombatSegments } from "./combatRender.js";
 import {
   combatLineClassName,
@@ -8,6 +9,13 @@ import {
 } from "../lib/combatTypes.js";
 import { replayCombatHud } from "../lib/combatReplay.js";
 import { latestPerformLine } from "../lib/effects.js";
+
+const JIALI_OPTIONS = [
+  { value: "0", label: "关" },
+  { value: "1", label: "一" },
+  { value: "2", label: "二" },
+  { value: "3", label: "三" },
+] as const;
 
 /** 战报逐行显现间隔（毫秒）；显现中暂停自动普攻。 */
 export const LINE_REVEAL_MS = 1100;
@@ -183,39 +191,51 @@ export function CombatView({
               : "交手自行推进 · 择机使招"}
             {state.jiali > 0 ? ` · 加力${state.jiali}` : ""}
           </p>
-          <div className="combat-actions">
-            {[0, 1, 2, 3].map((level) => (
+          <div className="combat-row-primary" data-testid="combat-row-primary">
+            <div className="combat-jiali" data-testid="combat-jiali">
+              <span className="combat-jiali-label">加力</span>
+              <ChoiceRow
+                label="加力档位"
+                options={JIALI_OPTIONS.map((opt) => ({ ...opt, disabled: busy }))}
+                value={String(state.jiali) as "0" | "1" | "2" | "3"}
+                onChange={(v) => {
+                  if (busy) return;
+                  onAction({ action: "set_jiali", jiali: Number(v) });
+                }}
+              />
+            </div>
+            <div className="combat-primary-actions">
               <Chip
-                key={`jiali-${level}`}
-                label={level === 0 ? "加力关" : `加力${level}`}
+                label="回气"
                 variant="action"
-                className={state.jiali === level ? undefined : "ghost"}
                 disabled={busy}
-                onClick={() => onAction({ action: "set_jiali", jiali: level })}
+                onClick={() => onAction({ action: "recover" })}
               />
-            ))}
-            {state.performs.map((p) => (
               <Chip
-                key={p.id}
-                label={p.name}
-                variant="perform"
-                disabled={busy || !p.ready}
-                onClick={() => onAction({ action: "perform", performId: p.id })}
+                label="逃跑"
+                variant="danger"
+                className="ghost"
+                disabled={busy}
+                onClick={() => onAction({ action: "flee" })}
               />
-            ))}
-            <Chip
-              label="回气"
-              variant="action"
-              disabled={busy}
-              onClick={() => onAction({ action: "recover" })}
-            />
-            <Chip
-              label="逃跑"
-              variant="danger"
-              className="ghost"
-              disabled={busy}
-              onClick={() => onAction({ action: "flee" })}
-            />
+            </div>
+          </div>
+          <div className="combat-row-performs" data-testid="combat-row-performs">
+            {state.performs.length === 0 ? (
+              <p className="combat-performs-empty">尚无可用绝招</p>
+            ) : (
+              <div className="combat-performs-scroll" data-testid="combat-performs-scroll">
+                {state.performs.map((p) => (
+                  <Chip
+                    key={p.id}
+                    label={p.name}
+                    variant="perform"
+                    disabled={busy || !p.ready}
+                    onClick={() => onAction({ action: "perform", performId: p.id })}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

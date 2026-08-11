@@ -129,6 +129,10 @@ export function performToBattleAction(p: Perform, skillRawLevel = 0): BattleActi
       effect: { kind: "heal", flat: scalePerformAmount(p.effect.amount, skillRawLevel) },
     };
   }
+  // heal_jing 仅场外运功（DC-052）；战斗内不映射。
+  if (p.effect.type === "heal_jing") {
+    return null;
+  }
   if (p.effect.type === "buff") {
     return {
       type: "perform",

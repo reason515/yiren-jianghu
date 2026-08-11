@@ -35,7 +35,7 @@ const PACK = {
       kind: "food",
       value: 2,
       stackable: true,
-      usable: { effect: "quench", amount: 90 },
+      usable: { effect: "quench", amount: 500 },
     },
     { id: "herbs", name: "药草", kind: "misc", value: 1, stackable: true },
   ],
@@ -356,10 +356,11 @@ describe("sceneService.useItem", () => {
     });
   });
 
-  it("陶壶清水补饮水（上限钳制）", async () => {
+  it("陶壶清水从空喝到满（上限钳制）", async () => {
     const { scene, state } = boot();
+    state.characters[0]!.water = 0;
     await scene.useItem("acc_1", "it_water");
-    // maxWater = 100 + 15*5 = 175；100 + 90 = 175（触顶）
+    // maxWater = 100 + 15*5 = 175；0 + 500 → 钳到满
     expect(state.characters[0]?.water).toBe(175);
     expect(state.items.find((i) => i.id === "it_water")).toBeUndefined();
   });

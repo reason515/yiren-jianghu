@@ -5,6 +5,6 @@
   "value": 2,
   "weight": 2,
   "stackable": true,
-  "description": "粗陶壶，泥印还湿，灌满井水。揭盖便有凉意——一壶灌尽，喉头干涩散得干干净净。",
-  "usable": { "effect": "quench", "amount": 90 }
+  "description": "粗陶壶，泥印还湿，灌满井水。揭盖便有凉意——渴极之时一壶灌尽，口舌再无半点干涩。",
+  "usable": { "effect": "quench", "amount": 500 }
 }

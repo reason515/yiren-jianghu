@@ -1,10 +1,10 @@
 {
   "id": "clear_water",
-  "name": "清水",
+  "name": "陶壶清水",
   "kind": "food",
-  "value": 1,
-  "weight": 1,
+  "value": 2,
+  "weight": 2,
   "stackable": true,
-  "description": "粗陶瓶里盛着刚打的井水，凉意贴手。一口灌下，喉头那点干涩便散了。",
-  "usable": { "effect": "quench", "amount": 30 }
+  "description": "粗陶壶，泥印还湿，灌满井水。揭盖便有凉意——一壶灌尽，喉头干涩散得干干净净。",
+  "usable": { "effect": "quench", "amount": 90 }
 }

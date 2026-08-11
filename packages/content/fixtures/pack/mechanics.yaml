@@ -2,6 +2,7 @@
 # 小数值取向（2026-08-10）：历练门槛平方、战力压到千内、气血短打、技能软顶 100/120。
 # 已接线机制（A–D / DC-047–049）：后天四维叠算、装备 stats 进战、招式 dodge、加力 jiali、
 # 伤势双轨 effQi、运功疗伤/护体、回合 busy、命中 hook、演示毒（默认关闭）。
+# DC-050：命中夹逼 hitChanceFloor/Ceil、伤害浮动、弱打强 underdogDamageFloor、performBusyTurns=2。
 # 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:

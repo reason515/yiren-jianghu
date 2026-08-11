@@ -16,7 +16,8 @@ export const paramsSchema = z.object({
     weaponDmgPerLevel: z.number().default(0.5),
     forceDmgPerLevel: z.number().default(0.4),
     defenseReduce: z.number().default(0.5),
-    damageVariance: z.number().min(0).max(0.5).default(0.1),
+    /** 伤害浮动幅度（DC-050 基线 0.3）。 */
+    damageVariance: z.number().min(0).max(0.5).default(0.3),
     /** 闪避/招架概率地板（DC-050）：弱方仍有机会躲开。 */
     hitChanceFloor: z.number().min(0).max(0.5).default(0.15),
     /** 闪避/招架概率天花板：强方仍有机会落空。 */
@@ -38,8 +39,8 @@ export const paramsSchema = z.object({
     jialiNeiliPerLevel: z.number().nonnegative().default(5),
     /** 伤害转为伤势（压 effQi）的比例。 */
     woundFactor: z.number().min(0).max(1).default(0.35),
-    /** 绝招后忙乱回合数（DC-049/050）。 */
-    performBusyTurns: z.number().int().nonnegative().default(1),
+    /** 绝招后忙乱回合数（DC-050 基线 2）。 */
+    performBusyTurns: z.number().int().nonnegative().default(2),
     /** 演示毒：伤害绝招附带回合数（0=关闭）。 */
     demoPoisonTurns: z.number().int().nonnegative().default(0),
     demoPoisonDmg: z.number().nonnegative().default(3),

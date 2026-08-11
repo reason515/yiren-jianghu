@@ -60,7 +60,7 @@
 | 招式解锁（action） | `kungfu/skill/<技能>/action.c` | 特殊功达 `min_level` 解锁招式，普攻按已解锁+已激发自动抽式（damage/force/dodge 修正） | 武学激发 | 机制借鉴 | 纳入（DC-041 + DC-047：`Move.dodge` 已接入命中） |
 | 命中 skill_power 分段 | `include/combat/probable.h`（skill_power A/(A+B)） | 命中率不再线性，改用 skill_power 分段公式对照双方技能差 | 战斗契约 | 机制借鉴 | 纳入（DC-041：`skillPower.ts`；小数值重标） |
 | 后天四维 | `feature/attribute.c`（force/10→con 等） | 查询叠算非写库；面板 cur / vitals / 战斗吃后天 | 技能制成长 | 机制借鉴 | 纳入（DC-047：`attrs.ts`） |
-| 伤势 / 加力 / busy | `feature/damage.c`、enforce、`action.c` | 伤势双轨、加力档位、绝招后忙乱；演示毒可选 | 战斗契约 | 机制借鉴 | 纳入（DC-048/049，裁剪短管线） |
+| 伤势 / 加力 / busy | `feature/damage.c`、enforce、`action.c` | 伤势双轨、加力档位、绝招后忙乱；命中夹逼与弱打强软帽；演示毒可选 | 战斗契约 | 机制借鉴 | 纳入（DC-048/049/050，裁剪短管线） |
 
 ## 3.2 玩法层
 

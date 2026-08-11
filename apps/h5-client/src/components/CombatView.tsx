@@ -6,10 +6,17 @@ import {
   type CombatResult,
   type CombatViewProps,
 } from "../lib/combatTypes.js";
+import { replayCombatHud } from "../lib/combatReplay.js";
 import { latestPerformLine } from "../lib/effects.js";
 
 /** 战报逐行显现间隔（毫秒）；显现中暂停自动普攻。 */
 export const LINE_REVEAL_MS = 1100;
+/** 攻防交换 spacer 略长停顿，强化「你打完 → 对方还手」（DC-050）。 */
+export const EXCHANGE_REVEAL_MS = 1600;
+
+function revealDelayMs(kind: string | undefined): number {
+  return kind === "exchange" ? EXCHANGE_REVEAL_MS : LINE_REVEAL_MS;
+}
 
 function CombatVital(props: {
   label: string;
@@ -64,11 +71,12 @@ export function CombatView({
       return;
     }
     onPacingChange?.(true);
+    const nextKind = state.log[visibleCount]?.kind;
     const timer = window.setTimeout(() => {
       setVisibleCount((count) => Math.min(count + 1, logLen));
-    }, LINE_REVEAL_MS);
+    }, revealDelayMs(nextKind));
     return () => window.clearTimeout(timer);
-  }, [visibleCount, logLen, onPacingChange]);
+  }, [visibleCount, logLen, onPacingChange, state.log]);
 
   useEffect(() => {
     const el = logRef.current;
@@ -80,23 +88,14 @@ export function CombatView({
 
   if (!state.inCombat && !state.result) return null;
 
-  const enemies =
-    state.enemies.length > 0
-      ? state.enemies
-      : [
-          {
-            id: "b0",
-            name: state.enemyName,
-            qi: state.enemyQi,
-            maxQi: state.enemyMaxQi,
-            down: state.enemyQi <= 0,
-          },
-        ];
+  const hud = replayCombatHud(state, visibleCount);
+  const enemies = hud.enemies;
   const foeNames = enemies.map((e) => e.name);
   const visibleLog = state.log.slice(0, visibleCount);
   const revealDone = visibleCount >= logLen;
   /** 服务端已终局，但战报余韵未散时不弹所得。 */
   const showResult = Boolean(state.result) && revealDone;
+  const activeSelf = hud.activeActorId === "a";
 
   return (
     <div className="combat" data-testid="combat" role="region" aria-label="战局">
@@ -107,10 +106,11 @@ export function CombatView({
               foe.maxQi > 0
                 ? Math.min(100, Math.max(0, Math.round((foe.qi / foe.maxQi) * 100)))
                 : 0;
+            const activeFoe = hud.activeActorId === foe.id;
             return (
               <div
                 key={foe.id}
-                className={`combat-foe${foe.down ? " down" : ""}`}
+                className={`combat-foe${foe.down ? " down" : ""}${activeFoe ? " active" : ""}`}
                 data-testid={`combat-foe-${foe.id}`}
               >
                 <span className="combat-name foe-name">
@@ -127,15 +127,10 @@ export function CombatView({
             );
           })}
         </div>
-        <div className="combat-self" data-testid="combat-self">
+        <div className={`combat-self${activeSelf ? " active" : ""}`} data-testid="combat-self">
           <span className="combat-name self-title">你</span>
-          <CombatVital label="气" value={state.playerQi} max={state.playerMaxQi} tone="qi" />
-          <CombatVital
-            label="内"
-            value={state.playerNeili}
-            max={state.playerMaxNeili}
-            tone="neili"
-          />
+          <CombatVital label="气" value={hud.playerQi} max={state.playerMaxQi} tone="qi" />
+          <CombatVital label="内" value={hud.playerNeili} max={state.playerMaxNeili} tone="neili" />
         </div>
       </div>
 

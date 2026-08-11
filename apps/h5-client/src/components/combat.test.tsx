@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ReactElement } from "react";
-import { CombatView, LINE_REVEAL_MS } from "./CombatView.js";
+import { CombatView, LINE_REVEAL_MS, EXCHANGE_REVEAL_MS } from "./CombatView.js";
 import type { CombatState } from "../lib/combatTypes.js";
 
 function render(ui: ReactElement): { host: HTMLDivElement; root: Root } {
@@ -158,6 +158,65 @@ describe("CombatView（自动战 + 抓时机）", () => {
       "阅历 6",
     );
     expect(host.querySelector("[data-testid=combat-winding-down]")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("血条随战报显现行回放，不抢跑终态", async () => {
+    vi.useFakeTimers();
+    const start: CombatState = {
+      ...STATE,
+      playerQi: 160,
+      enemyQi: 60,
+      enemies: [{ id: "b0", name: "劫道匪徒", qi: 60, maxQi: 120, down: false }],
+      log: [{ id: 1, text: "你与劫道匪徒对上了。", kind: "start" }],
+    };
+    const afterRound: CombatState = {
+      ...start,
+      log: [
+        { id: 1, text: "你与劫道匪徒对上了。", kind: "start" },
+        {
+          id: 2,
+          text: "你这一击落在劫道匪徒身上。",
+          kind: "damage",
+          actorId: "a",
+          hud: { qiById: { b0: -20 } },
+        },
+        { id: 3, text: "", kind: "exchange" },
+        {
+          id: 4,
+          text: "劫道匪徒一刀砍来。",
+          kind: "hurt",
+          actorId: "b0",
+          hud: { qiById: { a: -20 } },
+        },
+      ],
+    };
+    const { host, root } = render(<CombatView state={start} onAction={() => undefined} />);
+    act(() => root.render(<CombatView state={afterRound} onAction={() => undefined} />));
+    // 仅开战行可见：终态 160/60 反向回放后应为 180/80
+    expect(host.querySelector("[data-testid=combat-self]")?.textContent).toContain("180/200");
+    expect(host.querySelector("[data-testid=combat-foe-b0]")?.textContent).toContain("80/120");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LINE_REVEAL_MS);
+    });
+    // 玩家命中显现：敌掉、己未掉
+    expect(host.querySelector("[data-testid=combat-self]")?.textContent).toContain("180/200");
+    expect(host.querySelector("[data-testid=combat-foe-b0]")?.textContent).toContain("60/120");
+    expect(host.querySelector("[data-testid=combat-self]")?.classList.contains("active")).toBe(
+      true,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EXCHANGE_REVEAL_MS);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LINE_REVEAL_MS);
+    });
+    expect(host.querySelector("[data-testid=combat-self]")?.textContent).toContain("160/200");
+    expect(host.querySelector("[data-testid=combat-foe-b0]")?.classList.contains("active")).toBe(
+      true,
+    );
     vi.useRealTimers();
   });
 

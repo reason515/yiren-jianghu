@@ -617,6 +617,7 @@
 | V2.16 观察 NPC 多行仪容 | ✅ 完成 | — | 按用户反馈（DC-036）：`observe` NPC 服务端拼装外形+武功水平+衣着/兵器（`buildNpcObserveLines`）；返回 `lines` 客户端串行入见闻；无装备不写空衣甲；关键 NPC 补 `equipment`；物品仍单行；协议 §7 与 mobile-ui 同步 |
 | V2.17 场景舆图入口 + 本域/天下 Tab | ✅ 完成 | — | 「此刻可往」旁舆图入口；GET /map 按当前 area 过滤并返回 maps/world.json 天下图；MapSheet 默认本域、ChoiceRow 切天下；收尾规则强化为 alwaysApply yjh-task-wrapup.mdc |
 | V2.18 自动战 + 真·1vN（DC-037/038） | ✅ 完成 | — | 手动 PVE：自动普攻节拍 + 绝招/回气/逃跑；同场多敌引擎/协议/UI；野狗+瘦狗群战；收起≠放弃；武侠战报轮换与 perform-flash |
+| V2.19 战斗读感（DC-050） | ✅ 完成 | — | HUD 随战报回放；攻防 exchange 停顿+行动方高亮；命中夹逼/伤害浮动/弱打强软帽/busy=2 |
 | G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 | 武功双轨学艺（DC-039） | ✅ 完成 | — | 收费请教（村武馆按次扣银+精+潜能）+ 门派拜师落库 master/sect；TeachSheet 当面请教；废除远程万能请教；迁移 0013；建角赠银 10 |

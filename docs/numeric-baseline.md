@@ -45,8 +45,8 @@
 |---|---|---|---|
 | 有效等级 | `query_skill`：基本/2+特殊（`feature/skill.c`） | 同式；GUI 激发（DC-041） | 对齐 xkx；无人物 level 阶梯加成 |
 | 命中 | `skill_power` 分段立方（桌面大数） | **小数值** 战力≈有效等级（`levelScale=20` 压缩）+ A/(A+B) | 保留判定结构，输出落在百～千 |
-| 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架伤 ×`parryDamageFactor`(0.3) | 对齐 combatd；去掉独立「未命中」态 |
-| 伤害 / 气血 | 成人段大血条 | 气血压半（qiBase=50, qiPerCon=8）+ 伤害系数略降 | 手机 4–8 回合短打 |
+| 躲闪/招架 | 三态 0/1/2 | 先躲后架；招架伤 ×`parryDamageFactor`(0.3)；概率夹逼 `hitChanceFloor=0.15`/`hitChanceCeil=0.85`（DC-050） | 对齐 combatd；强弱差大仍有意外 |
+| 伤害 / 气血 | 成人段大血条 | 气血压半（qiBase=50, qiPerCon=8）+ 伤害系数略降；`damageVariance=0.3`；弱打强 `underdogDamageFloor=0.25`（DC-050） | 手机短打 + 悬念；借 xkx 半随机/经验压伤结构 |
 | 逃跑 | flee 判定 | `fleeBaseChance=0.7` | PvE 逃生友好 |
 | 后天四维 | `attribute.c`：force/10→con 等 | 查询叠算：`force/10→con`、`dodge/10→dex`、`unarmed/10→str`、`knowledge/10→int`；面板 `cur=base+加成`（DC-047） | 练功见根骨；不写库升级 |
 | 装备进战 | 武器/护甲 stats | 已装备 `item.stats` 叠攻防/躲闪/招架（DC-047） | catalog 已纳入须接线 |
@@ -54,8 +54,9 @@
 | 加力 jiali | enforce + damage.h | 档位 0–3；`jialiDmgPerLevel=4` / `jialiNeiliPerLevel=5`（DC-048） | 短局决策；耗内换伤 |
 | 伤势双轨 | damage.c eff_qi | `woundFactor=0.35` 压 `effQi`；heal≤eff；`cure_qi`/疗伤抬 eff（DC-048） | 疗伤≠回气 |
 | 运功子集 | force heal/shield | 内容化绝招：疗伤（cure_）+ 护体 buff（DC-048） | 非完整 exert 树 |
-| 忙乱 busy | action.c | `performBusyTurns=1`；忙乱禁普攻（DC-049） | 移动端回合锁 |
+| 忙乱 busy | action.c | `performBusyTurns=2`；忙乱禁普攻（DC-049/050） | 放完绝招要挨打 |
 | 演示毒 | condition 子集 | `demoPoisonTurns=0`（默认关）；开启后伤害绝招附带（DC-049） | 至多一种演示 |
+| 战报/HUD 时序 | 分段 combat_msg | 血条随显现行回放；玩家↔敌 `exchange` 停顿（DC-050） | 扣血与文案对齐；一攻一防读感 |
 
 ## 2.4 挂机（afk）
 
@@ -93,6 +94,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-11 | 战斗读感 DC-050：命中夹逼/浮动 0.3/弱打强软帽/busy=2；HUD 回放+exchange | mechanics + CombatView | 扣血对齐文案；攻防对位；缓解稳赢稳输 |
 | 2026-08-10 | 机制迁移 A–D：后天四维/装备/dodge/jiali/伤势/busy 对照列补齐 | DC-047–049 | 接线验收后统一回写，避免半成品口径 |
 | 2026-08-10 | 小数值 P0–P2：门槛²×2、战力压缩、软顶 100/120、气血压半、中期怪分档 | mechanics 调参 | 防后期爆炸、手机短打 |
 | 2026-08-10 | 生效源改为 `mechanics.yaml`；公式 DSL + 清理死字段 | DC-046 | review/运行时同一文件；旧 params.json 退役 |

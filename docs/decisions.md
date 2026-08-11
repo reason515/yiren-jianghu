@@ -68,6 +68,7 @@
 | DC-047 | 2026-08 | 后天四维 + 装备进战 + 招式 dodge | ①后天四维为查询叠算（非升级写库）：force/10→con、dodge/10→dex、unarmed/10→str、knowledge/10→int；面板 `cur`=`base`+加成，vitals/战斗吃后天。②已装备 `item.stats` 叠加攻防（及 dodge/parry）。③招式 `dodge` 加成攻方命中侧有效等级。不做经络/年龄/hit_ob | 对齐 pkuxkx attribute.c 体感；catalog 已纳入装备与 dodge 修正须接线 | numeric-baseline、protocol、game-core attrs/combatant/combat、characterService、combatantFactory | ✅ |
 | DC-048 | 2026-08 | 加力 + 伤势双轨 + 运功子集 | ①加力档位 0–3：普攻耗内换伤（yaml 系数）。②伤势：伤害按比例压 `effQi`，回气/heal 不超过 eff；`cure_qi` 抬 eff。③运功子集：疗伤（抬 eff）+ 护体 buff（临时防御）；内容化绝招，非完整 exert 树（不违 DC-041） | 短局战斗决策；借 pkuxkx enforce/damage/force 语义裁剪 | numeric-baseline、protocol、combat/perform/vitals、content performs/items | ✅ |
 | DC-049 | 2026-08 | 回合 busy + 命中钩子 + 演示毒 | ①绝招/运功后 `busyTurns` 回合内禁普攻（可回气/逃跑/疗伤类）。②dodge/parry/hit 事件带 `hook` 标记供战报闲笔。③至多一种演示毒（回合开始扣气）。不做秒级心跳、完整 condition 目录 | 节奏与呈现；移动端回合锁 | numeric-baseline、combat.ts、CombatView/叙事 | ✅ |
+| DC-050 | 2026-08 | 战斗读感：HUD 回放 + 攻防交换 + 悬念软化 | ①客户端血条按已显现战报行回放，禁止终态抢跑。②回合内玩家动作块与敌还手之间插入 `exchange` 停顿 + 行动方高亮。③命中率夹逼（floor/ceil）、伤害浮动加大、弱打强 sqrt 软帽、`performBusyTurns=2`。不引入秒级双心跳/暴击/反震 | 对照 xkx「一招闭环」读感与悬念杠杆；修扣血错位、对砍感、稳赢稳输 | numeric-baseline、mechanics.yaml、combat.ts、CombatView/combatReplay、yjh-combat-presentation、sibling-borrowings | ✅ |
 
 # 3. 被替代决策（变更历史）
 

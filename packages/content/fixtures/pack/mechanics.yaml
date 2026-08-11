@@ -13,7 +13,11 @@ coeffs:
     weaponDmgPerLevel: 0.4
     forceDmgPerLevel: 0.3
     defenseReduce: 0.5
-    damageVariance: 0.1
+    # DC-050：加大浮动，接近 xkx「半随机」气质的简化版
+    damageVariance: 0.3
+    hitChanceFloor: 0.15
+    hitChanceCeil: 0.85
+    underdogDamageFloor: 0.25
     recoverNeiliPerTurn: 12
     fleeBaseChance: 0.7
     parryDamageFactor: 0.3
@@ -24,7 +28,8 @@ coeffs:
     jialiDmgPerLevel: 4
     jialiNeiliPerLevel: 5
     woundFactor: 0.35
-    performBusyTurns: 1
+    # DC-050：绝招后忙乱 2 回合，放完要挨打
+    performBusyTurns: 2
     demoPoisonTurns: 0
     demoPoisonDmg: 3
   afk:

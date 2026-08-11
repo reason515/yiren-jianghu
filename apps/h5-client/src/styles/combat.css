@@ -27,6 +27,13 @@
   grid-template-columns: minmax(4em, 30%) 1fr auto;
   align-items: center;
   gap: 6px 8px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  transition: background 0.25s ease;
+}
+.combat-foe.active {
+  background: color-mix(in srgb, var(--cinnabar) 12%, transparent);
 }
 .combat-foe.down {
   opacity: 0.45;
@@ -64,6 +71,13 @@
   grid-template-columns: auto 1fr 1fr;
   gap: 6px 8px;
   align-items: center;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  transition: background 0.25s ease;
+}
+.combat-self.active {
+  background: color-mix(in srgb, var(--jade-bright) 14%, transparent);
 }
 .combat-vital {
   display: grid;
@@ -148,7 +162,8 @@
   letter-spacing: 1px;
   font-size: 14px;
 }
-.combat-line.spacer {
+.combat-line.spacer,
+.combat-line.exchange {
   min-height: 0.85em;
   margin: 0;
   padding: 0;
@@ -156,6 +171,9 @@
   opacity: 0;
   pointer-events: none;
   user-select: none;
+}
+.combat-line.exchange {
+  min-height: 1.15em;
 }
 .cm-hit {
   color: var(--jade-bright);

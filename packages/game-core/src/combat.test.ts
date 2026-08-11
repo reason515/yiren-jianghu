@@ -8,11 +8,13 @@ import {
   applyHealQi,
   attackOnly,
   attackOrRecover,
+  clampHitChance,
   createBattleState,
   computeAttackDamage,
   pickAutoTarget,
   resolveAttack,
   runBattle,
+  underdogDamageFactor,
   type BattleInput,
   type Combatant,
   type MoveInfo,
@@ -164,6 +166,56 @@ describe("命中判定与伤害（纯函数，DC-041 skillPower 模型）", () =
       resolveAttack(DEFAULT_PARAMS, evenFighter("a"), evenFighter("b"), stubRng([0.99, 0.99, 0.5]))
         .hook,
     ).toBe("after_hit");
+  });
+
+  it("命中率夹逼：极强攻方仍可能被闪（DC-050）", () => {
+    expect(clampHitChance(0.01, DEFAULT_PARAMS)).toBe(0.15);
+    expect(clampHitChance(0.99, DEFAULT_PARAMS)).toBe(0.85);
+    expect(clampHitChance(0.5, DEFAULT_PARAMS)).toBe(0.5);
+
+    const strong = evenFighter("a");
+    strong.stats.attackSkillLevel = 200;
+    const weak = evenFighter("b");
+    // 夹逼后闪避率=floor；rng=0.1 < 0.15 → 仍闪
+    expect(resolveAttack(DEFAULT_PARAMS, strong, weak, stubRng([0.1])).type).toBe("dodge");
+    // rng=0.2 ≥ 0.15 → 不闪，再过招架
+    expect(resolveAttack(DEFAULT_PARAMS, strong, weak, stubRng([0.2, 0.99, 0.5])).type).toBe(
+      "damage",
+    );
+  });
+
+  it("弱打强伤害软帽：劣势仍刮到伤但不为 0（DC-050）", () => {
+    expect(underdogDamageFactor(100, 100, DEFAULT_PARAMS)).toBe(1);
+    expect(underdogDamageFactor(25, 100, DEFAULT_PARAMS)).toBeCloseTo(0.5, 5);
+    expect(underdogDamageFactor(1, 100, DEFAULT_PARAMS)).toBe(0.25);
+
+    const underdog = evenFighter("a");
+    underdog.stats = {
+      ...underdog.stats,
+      attack: 40,
+      attackSkillLevel: 0,
+      weaponLevel: 0,
+      forceLevel: 0,
+    };
+    const tank = evenFighter("b");
+    tank.stats = {
+      ...tank.stats,
+      defense: 0,
+      dodgeSkillLevel: 80,
+      parrySkillLevel: 80,
+    };
+    const peer = {
+      ...tank,
+      stats: { ...tank.stats, dodgeSkillLevel: 0, parrySkillLevel: 0 },
+    };
+    const equalAtk = {
+      ...underdog,
+      stats: { ...underdog.stats, attackSkillLevel: 80 },
+    };
+    const full = computeAttackDamage(DEFAULT_PARAMS, equalAtk, peer, stubRng([0.5]));
+    const soft = computeAttackDamage(DEFAULT_PARAMS, underdog, tank, stubRng([0.5]));
+    expect(soft).toBeGreaterThanOrEqual(1);
+    expect(soft).toBeLessThan(full);
   });
 
   it("伤势压低 effQi，回气不超过伤势上限（DC-048）", () => {

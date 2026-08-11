@@ -139,6 +139,24 @@ describe("toCombatState", () => {
     expect(state.log[spacerAt]?.text).toBe("");
     expect(combatLineClassName("spacer")).toBe(" spacer");
   });
+
+  it("玩家动作与敌还手之间插入 exchange，并挂上 HUD 增量", () => {
+    const state = toCombatState({
+      ...RESPONSE,
+      events: [
+        { seq: 0, type: "battle_start", data: {} },
+        { seq: 1, type: "turn_start", data: { turn: 1 } },
+        { seq: 2, type: "damage", actor: "a", data: { targetId: "b", damage: 8 } },
+        { seq: 3, type: "dodge", actor: "b", data: { targetId: "a" } },
+      ],
+    });
+    const exchangeAt = state.log.findIndex((line) => line.kind === "exchange");
+    expect(exchangeAt).toBeGreaterThan(0);
+    expect(combatLineClassName("exchange")).toBe(" exchange");
+    const hit = state.log.find((line) => line.kind === "damage");
+    expect(hit?.actorId).toBe("a");
+    expect(hit?.hud).toEqual({ qiById: { b: -8 } });
+  });
 });
 
 describe("battleEventLine 关键字着色与兽性", () => {

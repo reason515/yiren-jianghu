@@ -172,8 +172,26 @@ export interface BattleResult {
 
 // ---------- 命中判定与伤害（纯函数，可单测） ----------
 
+/** 闪避/招架概率夹逼（DC-050）：强弱差大时仍保留意外。 */
+export function clampHitChance(raw: number, p: GameParams): number {
+  const floor = p.combat.hitChanceFloor ?? 0.15;
+  const ceil = p.combat.hitChanceCeil ?? 0.85;
+  return Math.min(ceil, Math.max(floor, raw));
+}
+
 /**
- * 伤害基数 + 招式加成 + 加力 + 浮动（DC-041 / DC-048）。
+ * 弱打强伤害软帽（DC-050）：攻方战力低于守方时按 sqrt(ratio) 衰减，不低于 underdogDamageFloor。
+ * 简化 pkuxkx 经验差压伤，避免 while+random 难测。
+ */
+export function underdogDamageFactor(ap: number, defPower: number, p: GameParams): number {
+  const floor = p.combat.underdogDamageFloor ?? 0.25;
+  if (defPower <= 0 || ap >= defPower) return 1;
+  const ratio = ap / defPower;
+  return Math.max(floor, Math.sqrt(ratio));
+}
+
+/**
+ * 伤害基数 + 招式加成 + 加力 + 弱方软帽 + 浮动（DC-041 / DC-048 / DC-050）。
  * move 提供时：先按 `(100+move.damage)/100` 放大基数，再叠加 `内功等级×move.force/100` 的发力加成。
  * jiali>0 时额外加伤并在调用方扣内力。
  */
@@ -205,6 +223,27 @@ export function computeAttackDamage(
       forceLevel: atk.stats.forceLevel,
     });
   }
+  const atkAttrs = { str: atk.stats.str, dex: atk.stats.dex };
+  const defAttrs = { str: def.stats.str, dex: def.stats.dex };
+  const attackLevel = atk.stats.attackSkillLevel + Math.max(0, move?.dodge ?? 0);
+  const ap = skillPower(attackLevel, atk.stats.combatExp, atkAttrs, "attack", p, mechanics);
+  const dp = skillPower(
+    def.stats.dodgeSkillLevel,
+    def.stats.combatExp,
+    defAttrs,
+    "defense",
+    p,
+    mechanics,
+  );
+  const pp = skillPower(
+    def.stats.parrySkillLevel,
+    def.stats.combatExp,
+    defAttrs,
+    "defense",
+    p,
+    mechanics,
+  );
+  base *= underdogDamageFactor(ap, Math.max(dp, pp), p);
   const variance = 1 + (rng() * 2 - 1) * p.combat.damageVariance;
   return Math.max(1, Math.round(base * variance));
 }
@@ -245,9 +284,9 @@ export type AttackOutcome =
   | { type: "damage"; damage: number; moveId?: string; moveName?: string; hook: "after_hit" };
 
 /**
- * 命中判定（DC-041 / DC-047）：
+ * 命中判定（DC-041 / DC-047 / DC-050）：
  * 1. ap = 攻方 skillPower(attackSkillLevel + move.dodge)；dp = 守方 skillPower(dodgeSkillLevel)；
- * 2. 未闪避则招架；3. 均未触发则正常命中。
+ * 2. 闪避/招架概率夹逼后再骰；3. 均未触发则正常命中。
  */
 export function resolveAttack(
   p: GameParams,
@@ -271,7 +310,8 @@ export function resolveAttack(
     p,
     mechanics,
   );
-  if (ap + dp > 0 && chance(rng, dp / (ap + dp))) {
+  const dodgeRaw = ap + dp > 0 ? dp / (ap + dp) : 0.5;
+  if (chance(rng, clampHitChance(dodgeRaw, p))) {
     return {
       type: "dodge",
       hook: "after_dodge",
@@ -286,7 +326,8 @@ export function resolveAttack(
     p,
     mechanics,
   );
-  if (ap + pp > 0 && chance(rng, pp / (ap + pp))) {
+  const parryRaw = ap + pp > 0 ? pp / (ap + pp) : 0.5;
+  if (chance(rng, clampHitChance(parryRaw, p))) {
     const full = computeAttackDamage(p, atk, def, rng, move, mechanics, jiali, defenseBuff);
     return {
       type: "parry",

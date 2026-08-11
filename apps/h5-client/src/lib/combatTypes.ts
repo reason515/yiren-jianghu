@@ -2,9 +2,11 @@
  * PVE 战斗传输适配：服务端的 state/events 是唯一事实，客户端只转换为展示状态和受控意图。
  * 支持同场多敌（DC-038）与自动普攻意图（DC-037）。
  * 战报文案遵循 yjh-wuxia-copywriting；关键字着色见 combatNarrative。
+ * HUD 随显现行回放见 combatReplay（DC-050）。
  */
 
 import { narrateBattleEvent, type NarrativeCombatant } from "./combatNarrative.js";
+import { hudDeltaFromEvent } from "./combatReplay.js";
 
 /** 句内关键字着色（非整行）。 */
 export type CombatMark = "hit" | "hurt" | "dodge" | "parry" | "perform" | "tense" | "recover";
@@ -14,11 +16,21 @@ export interface CombatSegment {
   mark?: CombatMark;
 }
 
+/** 单行对 HUD 的气血/内力增量（显现时生效；终态由服务端权威）。 */
+export interface CombatHudDelta {
+  qiById?: Record<string, number>;
+  neiliById?: Record<string, number>;
+}
+
 export interface CombatLine {
   id: number;
   text: string;
   segments?: CombatSegment[];
   kind?: CombatLineKind;
+  /** 事件行动方（攻防高亮）；交换 spacer 无 */
+  actorId?: string;
+  /** 本行对应的 HUD 增量，供逐行回放 */
+  hud?: CombatHudDelta;
 }
 
 /** 行级语义：仅开战/胜负等氛围行保留轻量整行气质；击中/闪避改走 segments。 */
@@ -34,7 +46,9 @@ export type CombatLineKind =
   | "danger"
   | "down"
   | "victory"
-  | "spacer";
+  | "spacer"
+  /** 玩家动作块与敌方还手之间的攻防交换停顿（DC-050） */
+  | "exchange";
 
 /** 整行 class 仅保留开场/收束气质；命中类颜色改走 `.cm-*` 关键字。 */
 export function combatLineClassName(kind?: CombatLineKind): string {
@@ -47,6 +61,8 @@ export function combatLineClassName(kind?: CombatLineKind): string {
       return " down-line";
     case "spacer":
       return " spacer";
+    case "exchange":
+      return " exchange";
     default:
       return "";
   }
@@ -214,7 +230,23 @@ export function battleEventLine(
   });
 }
 
-/** 回合交界插入空行：每个新 `turn_start`（非首回合）前加 spacer。 */
+const EXCHANGE_EVENT_TYPES = new Set([
+  "damage",
+  "dodge",
+  "parry",
+  "perform",
+  "recover",
+  "flee",
+  "busy",
+  "attack_failed",
+  "perform_failed",
+]);
+
+function isPlayerActor(actor: string | undefined): boolean {
+  return !actor || actor === "a";
+}
+
+/** 回合交界 spacer + 玩家/敌方动作块之间的 exchange 停顿（DC-050）。 */
 export function eventsToCombatLines(
   events: ServerCombatEvent[],
   playerName: string,
@@ -225,6 +257,8 @@ export function eventsToCombatLines(
 ): CombatLine[] {
   const lines: CombatLine[] = [];
   let turnSeen = false;
+  let playerBlockDone = false;
+  let exchangeSpacerDone = false;
   for (const raw of events) {
     const event = resolvePerformLabel(raw, performs);
     if (event.type === "turn_start") {
@@ -232,9 +266,30 @@ export function eventsToCombatLines(
         lines.push({ id: -Math.abs(event.seq || 1), text: "", kind: "spacer", segments: [] });
       }
       turnSeen = true;
+      playerBlockDone = false;
+      exchangeSpacerDone = false;
+    }
+    if (EXCHANGE_EVENT_TYPES.has(event.type) && !isPlayerActor(event.actor)) {
+      if (playerBlockDone && !exchangeSpacerDone) {
+        lines.push({
+          id: -(100_000 + Math.abs(event.seq || 1)),
+          text: "",
+          kind: "exchange",
+          segments: [],
+        });
+        exchangeSpacerDone = true;
+      }
     }
     const line = battleEventLine(event, playerName, enemyName, names, combatantOf);
-    if (line) lines.push(line);
+    if (line) {
+      if (event.actor) line.actorId = event.actor;
+      const hud = hudDeltaFromEvent(event);
+      if (hud) line.hud = hud;
+      lines.push(line);
+      if (EXCHANGE_EVENT_TYPES.has(event.type) && isPlayerActor(event.actor)) {
+        playerBlockDone = true;
+      }
+    }
   }
   return lines;
 }

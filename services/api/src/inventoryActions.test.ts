@@ -29,6 +29,14 @@ const PACK = {
       stackable: true,
       usable: { effect: "feed", amount: 30 },
     },
+    {
+      id: "clear_water",
+      name: "清水",
+      kind: "food",
+      value: 1,
+      stackable: true,
+      usable: { effect: "quench", amount: 30 },
+    },
     { id: "herbs", name: "药草", kind: "misc", value: 1, stackable: true },
   ],
   skills: [],
@@ -262,6 +270,7 @@ function boot() {
     },
     { id: "it_yao", character_id: "char_1", item_def_id: "jinchuang_yao", quantity: 2, slot: null },
     { id: "it_food", character_id: "char_1", item_def_id: "dry_food", quantity: 1, slot: null },
+    { id: "it_water", character_id: "char_1", item_def_id: "clear_water", quantity: 1, slot: null },
     { id: "it_herbs", character_id: "char_1", item_def_id: "herbs", quantity: 1, slot: null },
   );
   const scene = createSceneService(db, buildContentIndex(PACK));
@@ -345,6 +354,14 @@ describe("sceneService.useItem", () => {
     await expect(scene.useItem("acc_1", "it_nope")).rejects.toMatchObject({
       code: "item_not_found",
     });
+  });
+
+  it("清水补饮水（上限钳制）", async () => {
+    const { scene, state } = boot();
+    await scene.useItem("acc_1", "it_water");
+    // maxWater = 100 + 15*5 = 175；100 + 30 = 130
+    expect(state.characters[0]?.water).toBe(130);
+    expect(state.items.find((i) => i.id === "it_water")).toBeUndefined();
   });
 });
 

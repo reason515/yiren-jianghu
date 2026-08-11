@@ -15,12 +15,14 @@ type HealRow = {
   neili: number;
   food: number;
   water: number;
+  eff_qi: number;
+  eff_jing: number;
   attrs: string | Record<string, unknown> | null;
   last_heal_at: string | Date | null;
 };
 
 /**
- * V2.12 / DC-044：按距上次结算的时间差恢复气精等，并消耗食水。
+ * V2.12 / DC-044 / DC-051：按距上次结算的时间差恢复气精等，并消耗食水。
  * 在 getScene / move / act / getCharacter / resume 入口调用；1 分钟内不结算。
  * last_heal_at 为空时只初始化时钟（不补发离线恢复），避免新建角色永久跳过结算。
  */
@@ -30,7 +32,7 @@ export async function settleCharacterVitals(
   accountId: string,
 ): Promise<VitalsState | null> {
   const rows = await database.query<HealRow>(
-    "SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at FROM characters WHERE account_id = $1 AND status = 'active'",
+    "SELECT id, qi, jing, jingli, neili, food, water, eff_qi, eff_jing, attrs, last_heal_at FROM characters WHERE account_id = $1 AND status = 'active'",
     [accountId],
   );
   const row = rows.rows[0];
@@ -43,8 +45,8 @@ export async function settleCharacterVitals(
     neili: row.neili,
     food: row.food,
     water: row.water,
-    effQi: row.qi,
-    effJing: row.jing,
+    effQi: Number(row.eff_qi) || row.qi,
+    effJing: Number(row.eff_jing) || row.jing,
   };
 
   if (!row.last_heal_at) {
@@ -67,17 +69,28 @@ export async function settleCharacterVitals(
   const forceLevel = forceRows.rows
     .filter((skill) => content.getSkillCategory(skill.skill_id) === "force")
     .reduce((acc, skill) => Math.max(acc, skill.level), 0);
-  const maxVitals = computeMaxVitals(content.params, {
+  const attrs = {
     str: num("str"),
     int: num("int"),
     con: num("con"),
     dex: num("dex"),
     forceLevel,
-  });
-  const next = applyRegen(current, maxVitals, deltaMinutes, content.params);
+  };
+  const maxVitals = computeMaxVitals(content.params, attrs);
+  const next = applyRegen(current, maxVitals, deltaMinutes, content.params, attrs);
   await database.query(
-    "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, last_heal_at = now() WHERE id = $7",
-    [next.qi, next.jing, next.jingli, next.neili, next.food, next.water, row.id],
+    "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8, last_heal_at = now() WHERE id = $9",
+    [
+      next.qi,
+      next.jing,
+      next.jingli,
+      next.neili,
+      next.food,
+      next.water,
+      next.effQi,
+      next.effJing,
+      row.id,
+    ],
   );
   return next;
 }

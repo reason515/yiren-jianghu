@@ -130,6 +130,8 @@ function mockDb() {
       neili?: number;
       food?: number;
       water?: number;
+      eff_qi?: number;
+      eff_jing?: number;
       attrs?: string;
       last_heal_at?: string | null;
     }>,
@@ -182,7 +184,7 @@ function mockDb() {
             .map((s) => ({ account_id: s.account_id, expires_at: s.expires_at })) as unknown as T[],
         };
       }
-      if (text.includes("SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at")) {
+      if (text.includes("eff_qi, eff_jing, attrs, last_heal_at")) {
         return {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
@@ -194,6 +196,8 @@ function mockDb() {
               neili: c.neili ?? 0,
               food: c.food ?? 300,
               water: c.water ?? 300,
+              eff_qi: c.eff_qi ?? c.qi ?? 100,
+              eff_jing: c.eff_jing ?? c.jing ?? 100,
               attrs: c.attrs ?? '{"str":20,"int":20,"con":20,"dex":20}',
               last_heal_at:
                 c.last_heal_at === undefined ? new Date().toISOString() : c.last_heal_at,
@@ -202,10 +206,10 @@ function mockDb() {
       }
       if (
         text.includes(
-          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6",
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8",
         )
       ) {
-        const character = state.characters.find((c) => c.id === params[6]);
+        const character = state.characters.find((c) => c.id === params[8]);
         if (character) {
           character.qi = Number(params[0]);
           character.jing = Number(params[1]);
@@ -213,6 +217,8 @@ function mockDb() {
           character.neili = Number(params[3]);
           character.food = Number(params[4]);
           character.water = Number(params[5]);
+          character.eff_qi = Number(params[6]);
+          character.eff_jing = Number(params[7]);
           character.last_heal_at = new Date().toISOString();
         }
         return { rows: [] as unknown as T[] };
@@ -545,19 +551,21 @@ describe("sceneService.act", () => {
     });
   });
 
-  it("自然恢复：距上次结算 10 分钟后交互，qi/jing 按比例回升、食水下降（V2.12/DC-044）", async () => {
+  it("自然恢复：距上次结算 10 分钟后交互，qi/jing 按 xkx 绝对值回升、食水下降（DC-051）", async () => {
     const { scene, state } = await boot();
     const character = state.characters[0]!;
     character.qi = 0;
     character.jing = 0;
+    character.eff_qi = 210;
+    character.eff_jing = 210;
     character.food = 300;
     character.water = 300;
     character.attrs = '{"str":20,"int":20,"con":20,"dex":20}';
     character.last_heal_at = new Date(Date.now() - 10 * 60000).toISOString();
     await scene.getScene("acc_1");
-    // maxQi=210：floor(210*0.03*10)=63；maxJing=210：floor(210*0.025*10)=52
-    expect(character.qi).toBe(63);
-    expect(character.jing).toBe(52);
+    // con=20：每拍气 6、精 11；10 分钟 ≈63.16 拍 → 满上限 210
+    expect(character.qi).toBe(210);
+    expect(character.jing).toBe(210);
     expect(character.food).toBe(292);
     expect(character.water).toBe(288);
   });

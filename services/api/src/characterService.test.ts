@@ -27,6 +27,8 @@ type CharacterRow = {
   neili?: number;
   food?: number;
   water?: number;
+  eff_qi?: number;
+  eff_jing?: number;
   last_heal_at?: string | null;
   skill_enable?: Record<string, string> | null;
 };
@@ -52,7 +54,7 @@ function mockDb() {
             .map((skill) => ({ skill_id: skill.skill_id, level: skill.level })) as unknown as T[],
         };
       }
-      if (text.includes("SELECT id, qi, jing, jingli, neili, food, water, attrs, last_heal_at")) {
+      if (text.includes("eff_qi, eff_jing, attrs, last_heal_at")) {
         return {
           rows: state.characters
             .filter(
@@ -66,6 +68,8 @@ function mockDb() {
               neili: character.neili ?? 0,
               food: character.food ?? 300,
               water: character.water ?? 300,
+              eff_qi: character.eff_qi ?? character.qi ?? 100,
+              eff_jing: character.eff_jing ?? character.jing ?? 100,
               attrs: character.attrs,
               last_heal_at: character.last_heal_at ?? new Date().toISOString(),
             })) as unknown as T[],
@@ -73,10 +77,10 @@ function mockDb() {
       }
       if (
         text.includes(
-          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6",
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8",
         )
       ) {
-        const character = state.characters.find((row) => row.id === params[6]);
+        const character = state.characters.find((row) => row.id === params[8]);
         if (character) {
           character.qi = Number(params[0]);
           character.jing = Number(params[1]);
@@ -84,6 +88,8 @@ function mockDb() {
           character.neili = Number(params[3]);
           character.food = Number(params[4]);
           character.water = Number(params[5]);
+          character.eff_qi = Number(params[6]);
+          character.eff_jing = Number(params[7]);
           character.last_heal_at = new Date().toISOString();
         }
         return { rows: [] as unknown as T[] };

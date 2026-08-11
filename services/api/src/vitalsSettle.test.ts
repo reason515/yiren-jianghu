@@ -3,7 +3,7 @@ import { DEFAULT_PARAMS } from "@yjh/game-core";
 import type { Db, DbRow } from "./db.js";
 import { settleCharacterVitals } from "./vitalsSettle.js";
 
-describe("settleCharacterVitals（DC-044）", () => {
+describe("settleCharacterVitals（DC-044 / DC-051）", () => {
   it("last_heal_at 为空时只初始化时钟，不改资源", async () => {
     const character = {
       id: "c1",
@@ -15,6 +15,8 @@ describe("settleCharacterVitals（DC-044）", () => {
       neili: 0,
       food: 300,
       water: 300,
+      eff_qi: 210,
+      eff_jing: 210,
       attrs: { str: 20, int: 20, con: 20, dex: 20 },
       last_heal_at: null as string | null,
     };
@@ -40,7 +42,7 @@ describe("settleCharacterVitals（DC-044）", () => {
     expect(character.last_heal_at).toBeTruthy();
   });
 
-  it("满 10 分钟结算：气精回升、食水下降", async () => {
+  it("满 10 分钟结算：气精按 xkx 绝对值回满、食水下降", async () => {
     const character = {
       id: "c1",
       account_id: "a1",
@@ -51,6 +53,8 @@ describe("settleCharacterVitals（DC-044）", () => {
       neili: 0,
       food: 300,
       water: 300,
+      eff_qi: 210,
+      eff_jing: 210,
       attrs: { str: 20, int: 20, con: 20, dex: 20 },
       last_heal_at: new Date(Date.now() - 10 * 60000).toISOString(),
     };
@@ -69,6 +73,8 @@ describe("settleCharacterVitals（DC-044）", () => {
           character.neili = Number(params[3]);
           character.food = Number(params[4]);
           character.water = Number(params[5]);
+          character.eff_qi = Number(params[6]);
+          character.eff_jing = Number(params[7]);
           return { rows: [] as unknown as T[] };
         }
         throw new Error(`unexpected: ${text}`);
@@ -79,7 +85,6 @@ describe("settleCharacterVitals（DC-044）", () => {
       { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
       "a1",
     );
-    // maxQi/Jing=210：floor(210*0.03*10)=63 / floor(210*0.025*10)=52；食水按 0.8/1.2 扣
-    expect(next).toMatchObject({ qi: 63, jing: 52, food: 292, water: 288 });
+    expect(next).toMatchObject({ qi: 210, jing: 210, jingli: 50, food: 292, water: 288 });
   });
 });

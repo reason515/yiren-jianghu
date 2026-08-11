@@ -21,6 +21,14 @@ export interface MaxVitals {
   maxJingli: number;
 }
 
+/** 自然恢复用的四维与内功等级（DC-051：对齐 xkx heal_up 绝对值）。 */
+export interface RegenAttrs {
+  str: number;
+  con: number;
+  dex: number;
+  forceLevel: number;
+}
+
 export function computeMaxVitals(
   p: GameParams,
   input: VitalsInput,
@@ -58,30 +66,77 @@ export function maxWaterCapacity(
   return evalFormulaWithCoeffs(mechanics, p, "maxWater", { dex });
 }
 
+function ticksInWindow(
+  deltaMinutes: number,
+  tickSeconds: number,
+  maxWindowMinutes: number,
+): number {
+  const capped = Math.min(deltaMinutes, maxWindowMinutes);
+  return (60 / tickSeconds) * capped;
+}
+
 /**
- * 自然恢复与食水消耗（V2.12 / DC-044）：速率系数仍在 coeffs.regen。
+ * 自然恢复与食水消耗（V2.12 / DC-044 / DC-051）。
+ * 气/精/精力/内力按 xkx heal_up 绝对值 × 时间窗折算；食水按绝对值消耗。
+ * 饥渴时不回气精（对齐 xkx）；贴有效上限后缓慢抬 eff（疗伤）。
  */
 export function applyRegen(
   current: VitalsState,
   max: MaxVitals,
   deltaMinutes: number,
   p: GameParams,
+  attrs: RegenAttrs,
 ): VitalsState {
   const r = p.regen;
-  const capped = Math.min(deltaMinutes, r.maxWindowMinutes);
-  const gain = (maxValue: number, perMin: number): number => Math.floor(maxValue * perMin * capped);
-  const drain = (perMin: number | undefined): number => Math.floor((perMin ?? 0) * capped);
-  // DC-048：回气不超过有效气血上限（伤势）；effQi≤0 视为未追踪，回退 maxQi。
-  const qiCap = current.effQi > 0 ? Math.min(max.maxQi, current.effQi) : max.maxQi;
-  const jingCap = current.effJing > 0 ? Math.min(max.maxJing, current.effJing) : max.maxJing;
+  const ticks = ticksInWindow(deltaMinutes, r.tickSeconds, r.maxWindowMinutes);
+  const drain = (perMin: number | undefined): number =>
+    Math.floor((perMin ?? 0) * Math.min(deltaMinutes, r.maxWindowMinutes));
+
+  const effQi = current.effQi > 0 ? clampEff(current.effQi, max.maxQi) : max.maxQi;
+  const effJing = current.effJing > 0 ? clampEff(current.effJing, max.maxJing) : max.maxJing;
+
+  const perTickQi = Math.max(
+    r.minVitalPerTick,
+    Math.floor(attrs.con / r.qiConDiv) + Math.floor(max.maxNeili / r.qiNeiliDiv),
+  );
+  const perTickJing = Math.max(
+    r.minVitalPerTick,
+    Math.floor(attrs.con / r.jingConDiv) + Math.floor(max.maxJingli / r.jingJingliDiv),
+  );
+  const perTickJingli = Math.max(0, Math.floor((attrs.str + attrs.dex) / r.jingliAttrDiv));
+  const perTickNeili =
+    max.maxNeili > 0 ? Math.max(0, Math.floor(attrs.forceLevel / r.neiliForceDiv)) : 0;
+
+  const hungry = current.food < 1 || current.water < 1;
+  let nextQi = current.qi;
+  let nextJing = current.jing;
+  let nextEffQi = effQi;
+  let nextEffJing = effJing;
+
+  if (!hungry) {
+    nextQi = Math.min(effQi, current.qi + Math.floor(perTickQi * ticks));
+    nextJing = Math.min(effJing, current.jing + Math.floor(perTickJing * ticks));
+    const wound = Math.floor(r.woundCurePerTick * ticks);
+    if (nextQi >= nextEffQi && nextEffQi < max.maxQi) {
+      nextEffQi = Math.min(max.maxQi, nextEffQi + wound);
+      nextQi = Math.min(nextEffQi, nextQi);
+    }
+    if (nextJing >= nextEffJing && nextEffJing < max.maxJing) {
+      nextEffJing = Math.min(max.maxJing, nextEffJing + wound);
+      nextJing = Math.min(nextEffJing, nextJing);
+    }
+  }
+
   return {
     ...current,
-    qi: Math.min(qiCap, current.qi + gain(max.maxQi, r.qiPerMin)),
-    jing: Math.min(jingCap, current.jing + gain(max.maxJing, r.jingPerMin)),
-    jingli: Math.min(max.maxJingli, current.jingli + gain(max.maxJingli, r.jingliPerMin)),
-    neili: Math.min(max.maxNeili, current.neili + gain(max.maxNeili, r.neiliPerMin)),
+    qi: nextQi,
+    jing: nextJing,
+    jingli: Math.min(max.maxJingli, current.jingli + Math.floor(perTickJingli * ticks)),
+    neili: Math.min(max.maxNeili, current.neili + Math.floor(perTickNeili * ticks)),
     food: Math.max(0, current.food - drain(r.foodPerMin)),
     water: Math.max(0, current.water - drain(r.waterPerMin)),
+    effQi: nextEffQi,
+    effJing: nextEffJing,
   };
 }
 

@@ -40,6 +40,7 @@
 | **FloatingPerfBar**（战斗悬浮绝招，战斗中屏底） | CombatView `.combat-float-bar` | 已落地：自动战悬浮动作条（绝招/回气/逃跑），进行中可收起 Sheet（DC-037） |
 | **s_combatd 战斗文案结构**（guard_msg 击间闲笔、人/兽/鸟 race、分级 damage_msg） | `combatNarrative.ts` | 只借结构神韵：击间盯破绽/移步、兽扑咬抓、伤势分档；句子原创；关键字着色非整行 |
 | **do_attack 一招闭环读感**（出招→躲架→伤→描述） | CombatView HUD 回放 + `exchange` 停顿（DC-050） | 借「一招打完再换边」的呈现节奏；**不借**秒级双 heart_beat |
+| **heal_up 自然恢复绝对值**（damage.c：`con/3+max_neili/10`，约 9.5s 一拍） | `applyRegen` + `params.regen`（DC-051） | 借拍间隔与绝对值公式；仍用 `last_heal_at` 入口结算，不跑秒级心跳 |
 | **伤害半随机 + 经验差压伤结构**（damage.h） | `damageVariance=0.3` + `underdogDamageFactor`（DC-050） | 借波动与弱打强软帽结构；用确定性系数替代 while+random |
 | **GrindBanner**（挂机状态条 + 停止原因） | 已有 | 对照：停止原因「知道了」关闭模式（本项目已类似） |
 | **GuideTip**（轻量引导提示） | 缺（E14.11） | 简单组件：text + onDismiss，配首日引导流程 |

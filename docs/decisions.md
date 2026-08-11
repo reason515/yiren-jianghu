@@ -69,6 +69,7 @@
 | DC-048 | 2026-08 | 加力 + 伤势双轨 + 运功子集 | ①加力档位 0–3：普攻耗内换伤（yaml 系数）。②伤势：伤害按比例压 `effQi`，回气/heal 不超过 eff；`cure_qi` 抬 eff。③运功子集：疗伤（抬 eff）+ 护体 buff（临时防御）；内容化绝招，非完整 exert 树（不违 DC-041） | 短局战斗决策；借 pkuxkx enforce/damage/force 语义裁剪 | numeric-baseline、protocol、combat/perform/vitals、content performs/items | ✅ |
 | DC-049 | 2026-08 | 回合 busy + 命中钩子 + 演示毒 | ①绝招/运功后 `busyTurns` 回合内禁普攻（可回气/逃跑/疗伤类）。②dodge/parry/hit 事件带 `hook` 标记供战报闲笔。③至多一种演示毒（回合开始扣气）。不做秒级心跳、完整 condition 目录 | 节奏与呈现；移动端回合锁 | numeric-baseline、combat.ts、CombatView/叙事 | ✅ |
 | DC-050 | 2026-08 | 战斗读感：HUD 回放 + 攻防交换 + 悬念软化 | ①客户端血条按已显现战报行回放，禁止终态抢跑。②回合内玩家动作块与敌还手之间插入 `exchange` 停顿 + 行动方高亮。③命中率夹逼（floor/ceil）、伤害浮动加大、弱打强 sqrt 软帽、`performBusyTurns=2`。不引入秒级双心跳/暴击/反震 | 对照 xkx「一招闭环」读感与悬念杠杆；修扣血错位、对砍感、稳赢稳输 | numeric-baseline、mechanics.yaml、combat.ts、CombatView/combatReplay、yjh-combat-presentation、sibling-borrowings | ✅ |
+| DC-051 | 2026-08 | 自然恢复对齐 xkx heal_up 绝对值 | ①废弃上限比例 `*PerMin`；改为每拍 `con/3+maxNeili/10`（精同构 +maxJingli）、精力 `(str+dex)/4`、内力 `forceLevel/2`，×`(60/tickSeconds)`×分钟（`tickSeconds=9.5`）。②饥渴不回气精。③贴 eff 后缓慢抬伤势上限。④`settleCharacterVitals` 读写 `eff_qi`/`eff_jing`（修非空血无法回升）。场外 exert recover / 歇脚另案 | 实测比例回速约为 MUD 1/5～1/10；对齐桌面站桩回血手感 | mechanics.yaml、schema、vitals.ts、vitalsSettle、numeric-baseline、protocol.md | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -84,6 +85,7 @@
 | DC-035「不借 enable」与门类最高级进战斗 | DC-041 | GUI 激发 + 有效等级；命中改 skill_power；招式/绝招学会制 |
 | DC-020 战斗线性命中/伤害简化口径（对照列）中「生效列仍为线性」 | DC-041 | 生效列改为 skill_power + 招式系数；params 旧线性系数保留作伤害基底 |
 | DC-032「食水不自动恢复 / 暂不实现饥饿」 | DC-044 | 同 tick 按绝对值消耗 food/water；恢复入口扩展至读档与顶栏轮询 |
+| DC-032/044「气精按上限比例 *PerMin 恢复」 | DC-051 | 改为 xkx heal_up 绝对值（con/内力分母 + 9.5s 拍）；饥渴阻回气精；读写 eff |
 | DC-020「公式形态留代码、只改参数表数字」 | DC-046 | 系数与公式表达式均进 `mechanics.yaml`；控制流仍留代码；旧 `params.json` 退役 |
 
 # 4. 一致性检查

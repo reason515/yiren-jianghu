@@ -2,6 +2,7 @@
 # 小数值取向（2026-08-10）：历练门槛平方、战力压到千内、气血短打、技能软顶 100/120。
 # 已接线机制（A–D / DC-047–049）：后天四维、装备进战、招式 dodge、加力、伤势、busy、演示毒。
 # DC-050：命中夹逼、伤害浮动、弱打强软帽、performBusyTurns=2。
+# DC-051：自然恢复改 xkx heal_up 绝对值（与 pack 同口径；本包仅坏引用）。
 # 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:
@@ -76,10 +77,15 @@ coeffs:
   economy:
     maxCashflowPerDay: 300
   regen:
-    qiPerMin: 0.03
-    jingPerMin: 0.025
-    jingliPerMin: 0.03
-    neiliPerMin: 0.015
+    tickSeconds: 9.5
+    qiConDiv: 3
+    qiNeiliDiv: 10
+    jingConDiv: 3
+    jingJingliDiv: 10
+    jingliAttrDiv: 4
+    neiliForceDiv: 2
+    minVitalPerTick: 3
+    woundCurePerTick: 1
     foodPerMin: 0.8
     waterPerMin: 1.2
     maxWindowMinutes: 30

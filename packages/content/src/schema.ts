@@ -58,19 +58,31 @@ export const paramsSchema = z.object({
     /** 在线相对离线收益倍率。 */
     onlineRewardMult: z.number().min(1).max(5).default(1.8),
   }),
-  /** 自然恢复/消耗（V2.12 + DC-044，参照 pkuxkx heart_beat）：
-   * qi/jing/jingli/neili 每分钟按上限比例恢复；food/water 按绝对值消耗；
+  /** 自然恢复/消耗（V2.12 + DC-044 + DC-051，对齐 xkx heal_up 绝对值）：
+   * 气/精/精力/内力按「每拍点数 × (60/tickSeconds) × 分钟」恢复；food/water 按绝对值消耗；
    * 场景/角色/会话入口按距上次结算的时间差结算，单次封顶 maxWindowMinutes 防离线累积。 */
   regen: z
     .object({
-      qiPerMin: z.number().min(0).max(1).default(0.02),
-      jingPerMin: z.number().min(0).max(1).default(0.015),
-      jingliPerMin: z.number().min(0).max(1).default(0.02),
-      neiliPerMin: z.number().min(0).max(1).default(0.01),
+      /** xkx/pkuxkx heal_up 平均间隔（tick=5+random(10) → 9.5 秒）。 */
+      tickSeconds: z.number().min(1).max(60).default(9.5),
+      /** 气：con/qiConDiv + maxNeili/qiNeiliDiv（每拍）。 */
+      qiConDiv: z.number().int().positive().default(3),
+      qiNeiliDiv: z.number().int().positive().default(10),
+      /** 精：con/jingConDiv + maxJingli/jingJingliDiv（每拍）。 */
+      jingConDiv: z.number().int().positive().default(3),
+      jingJingliDiv: z.number().int().positive().default(10),
+      /** 精力：(str+dex)/jingliAttrDiv（每拍）。 */
+      jingliAttrDiv: z.number().int().positive().default(4),
+      /** 内力：forceLevel/neiliForceDiv（每拍；无内功上限则不回）。 */
+      neiliForceDiv: z.number().int().positive().default(2),
+      /** 气/精每拍下限（pkuxkx query_*_recover 保底）。 */
+      minVitalPerTick: z.number().int().nonnegative().default(3),
+      /** 气/精已贴 eff 时每拍抬有效上限（疗伤）。 */
+      woundCurePerTick: z.number().int().nonnegative().default(1),
       /** 饱腹每分钟消耗点数（绝对值，非比例）。 */
-      foodPerMin: z.number().min(0).default(1),
+      foodPerMin: z.number().min(0).default(0.8),
       /** 饮水每分钟消耗点数（绝对值，非比例）。 */
-      waterPerMin: z.number().min(0).default(1.5),
+      waterPerMin: z.number().min(0).default(1.2),
       maxWindowMinutes: z.number().int().min(1).max(1440).default(30),
     })
     .default({}),

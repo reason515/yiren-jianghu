@@ -37,7 +37,8 @@
 | max_neili | `SKILL_D(force)->query_max_neili`（内功自定义） | `内功等级 × neiliPerLevel(10)` | 首版统一系数，内功自定义留作扩展 |
 | max_jingli | `force_skill * jingli_times` | `jingliBase=100 + 内功等级×3` | 保留内功驱动；基础值保证新角色可用 |
 | 年龄衰减 | 60 岁后气血衰减（attribute.c） | 首版无年龄阶段 | 移动端节奏（DC-020 注释）；后续引入 |
-| 食物/饮水 | `max_food_capacity()` 按 con | `foodBase=200 + con×10`；水同式按 dex | 简化线性；封测调 |
+| 食物/饮水 | `max_food_capacity()` 按 con | `foodBase=100 + con×5`；水同式按 dex | 简化线性；封测调 |
+| 自然恢复 | `heal_up`：约 9.5s 一拍，`con/3+max_neili/10`（精同构） | **绝对值**（DC-051）：同构分母 + `tickSeconds=9.5`；饥渴不回气精；贴 eff 后 `woundCurePerTick=1` 抬伤势 | 废弃上限比例；对齐 MUD 站桩回血；读写 `eff_*` |
 
 ## 2.3 战斗（combat）
 
@@ -94,6 +95,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-11 | 自然恢复 DC-051：xkx 绝对值（tickSeconds=9.5、con/内力分母）；修 eff 读写 | mechanics + vitalsSettle | 对齐 MUD 站桩回血；非空血可回升 |
 | 2026-08-11 | 战斗读感 DC-050：命中夹逼/浮动 0.3/弱打强软帽/busy=2；HUD 回放+exchange | mechanics + CombatView | 扣血对齐文案；攻防对位；缓解稳赢稳输 |
 | 2026-08-10 | 机制迁移 A–D：后天四维/装备/dodge/jiali/伤势/busy 对照列补齐 | DC-047–049 | 接线验收后统一回写，避免半成品口径 |
 | 2026-08-10 | 小数值 P0–P2：门槛²×2、战力压缩、软顶 100/120、气血压半、中期怪分档 | mechanics 调参 | 防后期爆炸、手机短打 |

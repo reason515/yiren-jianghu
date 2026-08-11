@@ -239,7 +239,7 @@ describe("battleEventLine 关键字着色与兽性", () => {
       beastOf,
     );
     expect(line).not.toBeNull();
-    expect(line?.text).toMatch(/盯|破绽|脚步|低吼|扑|移/);
+    expect(line?.text).toMatch(/盯|破绽|脚步|低吼|扑|移|嗅|刨|弓|呲|绕|压/);
     expect(
       battleEventLine({ seq: 9, type: "turn_start", data: { turn: 3 } }, "沈青崖", "野狗"),
     ).toBe(null);

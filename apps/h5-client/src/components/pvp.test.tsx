@@ -98,7 +98,7 @@ describe("PvpReplayView（战报回放）", () => {
     );
     const lines = host.querySelectorAll(".combat-line");
     expect(lines.length).toBeGreaterThanOrEqual(2);
-    expect(host.textContent).toContain("横在眼前");
+    expect(host.textContent).toMatch(/横在眼前|拦路而立|对上了/);
   });
 
   it("归档战报（无事件）给出提示而非空白", () => {

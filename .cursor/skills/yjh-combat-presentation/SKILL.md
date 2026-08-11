@@ -36,34 +36,45 @@ description: 《一人江湖》(yiren-jianghu) 战斗过程呈现规范——战
 | 论剑回放   | `apps/h5-client/src/components/PvpReplayView.tsx`                       | 必须走同一 `battleEventLine` + segments                  |
 | 数据       | NPC `nature`（content schema）；Combatant `nature`+`stats` 进会话 state | 兽鸟文案与境界估算                                       |
 
-测试：`apps/h5-client/src/lib/combatTypes.test.ts`、`combatReplay.test.ts`（关键字 mark、兽性动词、turn_start 闲笔、HUD 回放、exchange）。
+测试：`apps/h5-client/src/lib/combatNarrative.test.ts`、`combatTypes.test.ts`、`combatReplay.test.ts`（闭环句、兽招架禁肘、人攻兽闪禁衣角、去重、关键字 mark、HUD 回放、exchange）。
 
-## 六条呈现原则
+## 呈现原则
 
 1. **关键字着色，非整行染色**  
    只给「命中 / 闪避 / 招架 / 咬中 / 扑上 / 绝招名」等词上色（`CombatMark` + `.cm-*`）。开场/胜负行可保留轻量整行气质（`start` / `victory`）。禁止再给整行 `.hit` / `.hurt` / `.hl`。
 
-2. **击间要有闲笔**  
-   不能只有互殴。`turn_start` 间歇注入：盯破绽、移步、绕圈、兽性低伏/低吼。密度约半数偶数回合，避免刷屏。
+2. **一句一招闭环（攻防自洽）**  
+   每条 `damage` / `dodge` / `parry` 必须自洽：`[攻方起手动词] → [守方结果：中/闪/架]`。  
+   禁止依赖「读上一行才知道谁在进攻」。不新增 `attack_windup` 服务端事件——起手嵌在结局句内。
 
-3. **境界必须看得出差别**  
+3. **击间要有闲笔**  
+   不能只有互殴。`turn_start` 间歇注入：盯破绽、移步、绕圈、兽性低伏/低吼。密度约半数偶数回合，避免刷屏。  
+   闲笔起句不得与 dodge 模板撞车（禁共用「侧身半寸」等）。
+
+4. **境界必须看得出差别**  
    `combatTier(stats)`：`attack + forceLevel + weaponLevel` → low / mid / high。
    - low：蛮力、乱抡、喘气护胸
    - mid：招法、脚步、找破绽
    - high：气机、点穴脉门、招势未尽杀机先至  
      低阶文案禁止「剑气纵横」类气象词。
 
-4. **种族决定动词系统**  
-   NPC / Combatant `nature: human | beast | bird`（缺省 human；名字可 `inferNature` 兜底）。
+5. **种族与兽种决定动词系统**  
+   NPC / Combatant `nature: human | beast | bird`（缺省 human；名字可 `inferNature` 兜底）。  
+   beast 内用 `inferBeastKind(name)` → `canine`（狗狼狐）/ `serpentine`（蛇蟒）/ `generic`（虎熊鼠等），**不扩 schema nature 枚举**。
    - human：出招 / 架势 / 内息
-   - beast：扑、咬、抓、撕、低吼、呲牙（禁「使出一招」）
-   - bird：扑翅、啄、锐鸣、盘旋
+   - beast·canine：扑、咬、抓、撕、低吼、呲牙；招架用肩颈/爪/身躯（**禁肘/虎口/腕/架势/衣角**）
+   - beast·serpentine：缠、咬、吐信、鳞、七寸（禁「出招/架势」）
+   - bird：扑翅、啄、锐鸣、盘旋；招架用翅骨/翼/爪  
+     **`parry` / `dodge` 必须同时看攻方与守方 nature**（人攻兽闪禁「衣角」；兽守禁「以肘硬接」）。
 
-5. **伤势分档，数值不进文案**  
+6. **伤势分档，数值不进文案**  
    用事件里的 `damage`（相对 `maxQi`）估 `light|mid|heavy`，换模板；**文案中不出现点数**。UI 血条负责数字。
 
-6. **HUD 随显现行回放（DC-050）**  
+7. **HUD 随显现行回放（DC-050）**  
    血条不得绑服务端整回合终态；必须按已显现战报行的 `hud` 增量回放。打中句出现时目标才掉血，敌还手句出现时己方才掉血。回合内玩家动作块与敌还手之间插入 `exchange` 停顿；当前行动方可轻量高亮。
+
+8. **模板池与去重**  
+   同 outcome × nature（× BeastKind）组合池 ≥5 条；`pickVariant` 用稳定哈希 + 会话短记忆（最近 N 条同 pool 不用同一下标）；`battle_start` 清空记忆。
 
 ## 节奏与排版（一屏多读、HUD 常驻）
 
@@ -87,15 +98,15 @@ description: 《一人江湖》(yiren-jianghu) 战斗过程呈现规范——战
 
 ## 事件 → 叙事对照
 
-| 事件 `type`                                 | 呈现要点                                        |
-| ------------------------------------------- | ----------------------------------------------- |
-| `battle_start`                              | 人/兽/鸟开场调性不同；多敌写围攻腥风或杀意      |
-| `damage`                                    | 攻方 nature + tier + band；关键字 mark=hit/hurt |
-| `dodge` / `miss`                            | 闪避关键字；兽扑空、爪抓空                      |
-| `parry`                                     | 招架/架住关键字                                 |
-| `perform`                                   | 绝招**名**单独 `mark=perform`                   |
-| `turn_start`                                | 偶数回合闲笔；奇数可 null                       |
-| `foe_down` / `victory` / `recover` / `flee` | 兽倒地用哀嚎/爪静；人用栽尘土                   |
+| 事件 `type`                                 | 呈现要点                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------- |
+| `battle_start`                              | 人/兽/鸟开场调性不同；多敌写围攻腥风或杀意                                |
+| `damage`                                    | 攻守双 nature + BeastKind + tier + band；一句含起手；关键字 mark=hit/hurt |
+| `dodge` / `miss`                            | 攻守双 nature；闭环起手+躲开；兽闪禁衣角；兽扑空、爪抓空                  |
+| `parry`                                     | **必须看守方 nature**；兽/鸟/蛇词库；禁对兽写肘/虎口/架势                 |
+| `perform`                                   | 绝招**名**单独 `mark=perform`                                             |
+| `turn_start`                                | 偶数回合闲笔；奇数可 null                                                 |
+| `foe_down` / `victory` / `recover` / `flee` | 兽倒地用哀嚎/爪静；人用栽尘土                                             |
 
 第二人称：玩家侧用「你」。
 
@@ -122,22 +133,30 @@ description: 《一人江湖》(yiren-jianghu) 战斗过程呈现规范——战
 - [ ] 结束后所得/离去是否同屏可见（全屏布局）？
 - [ ] 有无击间闲笔？是否过密刷屏？
 - [ ] 低/中/高阶读起来是否像不同水平的人？
-- [ ] 狗狼鼠是否在咬/抓/扑，而不是「出招」？
+- [ ] 狗狼鼠是否在咬/抓/扑，而不是「出招」？蛇是否用缠/鳞/信？
+- [ ] damage/dodge/parry 是否一句自洽（含攻方起手）？
+- [ ] 兽守招架是否禁肘/虎口/架势？人攻兽闪是否禁衣角？
 - [ ] 文案有无伤害数字、冷却、BUFF 等说明书词？
 - [ ] PVE 与 PVP 是否仍共用 `battleEventLine`？
 - [ ] 字号行距与节拍是否仍利于阅读？
 - [ ] 句子是否原创（未搬 xkx/金庸原句）？
+- [ ] 同场连续同类型战报是否明显复读（去重是否生效）？
 
 ## 反模式（禁止）
 
 - 整行变绿/变红当「命中反馈」
 - **终态血条抢跑**（API 一返回就把整回合净伤写上 HUD）
 - 只有攻击结果、没有盯视移步
+- **结局句缺攻方起手**，要靠上一行才知道谁在进攻
 - 玩家与敌方动作块无间隔、像两边同时对砍
 - 野狗「使出一记掌法」
+- **野狗「以肘硬接」/「横开架势」**（parry 不看守方 nature）
+- **人攻兽闪写「衣角」**（dodge 只看攻方 nature）
 - 新手对打写「天地为之一静」
 - PVE / PVP 两套叙事分叉
 - 把伤害点数写进战报正文
+- 闲笔与 dodge 共用同一起句（如「侧身半寸」）
+- 池子仅 2–3 条 + 纯 `seq % n` 导致同句反复
 
 ## 与其它 skill 的协作
 

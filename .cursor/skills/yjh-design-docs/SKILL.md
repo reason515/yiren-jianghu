@@ -23,7 +23,8 @@ description: 《一人江湖》(yiren-jianghu) 设计文档工作流规范——
 
 1. 在 `docs/decisions.md` 登记（先给新编号）；
 2. 更新受影响文档中的引用（写「（DC-xxx）」）；
-3. 跑一致性校验（见 §4）。
+3. **若决策含机制/数值生效口径**：同一任务按 `.cursor/rules/yjh-mechanics-sync.mdc` 更新 `mechanics.yaml`（pack+broken-pack）、schema 默认值、`numeric-baseline`（及必要时 protocol/catalog）；
+4. 跑一致性校验（见 §4）。
 
 **本项目已隐含的决策**（charter/计划中已定）建议回填为 DC-001 起的编号：H5 优先、服务端权威、无原始指令、单角色可重开、战术模板受控、离线挂机、赛季双轨榜、纯文本论坛、前期无支付、内容包驱动等。
 

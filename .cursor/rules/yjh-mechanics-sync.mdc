@@ -1,0 +1,35 @@
+---
+description: 机制/数值变更必须同步 mechanics.yaml、schema 默认值与相关文档（DC-046/050 纪律）
+globs: packages/content/**/mechanics.yaml,packages/content/src/schema.ts,packages/content/src/mechanics.ts,packages/game-core/src/combat*.ts,packages/game-core/src/params.ts,packages/game-core/src/skillPower.ts,packages/game-core/src/vitals.ts,packages/game-core/src/attrs.ts,packages/game-core/src/perform.ts,docs/numeric-baseline.md,docs/decisions.md,docs/protocol.md
+alwaysApply: false
+---
+
+# 机制变更同步（强制）
+
+凡改动**战斗/成长/恢复/挂机/经济等生效数值或判定规则**（含只改 `game-core` 控制流里的系数读取），**同一任务内**必须同步下列落点，禁止「先改代码、文档以后再说」。
+
+## 必同步清单
+
+| 变更类型 | 必须更新 |
+| --- | --- |
+| 系数数字 / 新 coeffs 字段 | `fixtures/pack/mechanics.yaml` **与** `fixtures/broken-pack/mechanics.yaml`；头注释点明相关 DC |
+| Schema / 校验 | `packages/content/src/schema.ts` 的 `paramsSchema`（**zod default = 现行基线**，与 yaml 一致）；必要时 `REQUIRED_FORMULA_IDS`、`validate.test.ts` |
+| 生效口径对照 | `docs/numeric-baseline.md` §对应节 + §4 变更记录 |
+| 设计取舍 | `docs/decisions.md` 新 DC 或修订摘要（走 `yjh-design-docs`） |
+| API/事件语义变化 | `docs/protocol.md` + `pnpm test:docs` |
+| pkuxkx 借鉴边界变化 | `docs/pkuxkx-content-catalog.md` |
+| 计划内机制任务 | `docs/design-and-development-plan.md` 执行记录 |
+
+呈现层（战报 HUD/文案）≠ 机制：只改客户端回放时不要假装改了 yaml；若兼改命中/伤害/busy 等，两边都要动。
+
+## 收尾自检（提交前）
+
+- [ ] pack 与 broken-pack 的同名字段值一致（broken 仅坏引用，不坏系数口径）
+- [ ] schema default 未停留在旧基线（如仍 `damageVariance: 0.1` 而 yaml 已是 `0.3`）
+- [ ] `pnpm content:validate` 与机制相关单测通过
+
+## 反模式
+
+- 只改 `combat.ts` 硬编码、不进 `mechanics.yaml`
+- 只改 pack、忘 broken-pack / schema default
+- 改了 busy/命中/浮动却不写 `numeric-baseline` 与 DC

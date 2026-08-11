@@ -11,5 +11,6 @@ alwaysApply: false
 1. 先 read `.cursor/skills/yjh-content-pack/SKILL.md`
 2. 含玩家可见文案时同步 read `.cursor/skills/yjh-wuxia-copywriting/SKILL.md`
 3. 涉及房间 `grid`/出口/地图布局时加读 `.cursor/skills/yjh-map-design/SKILL.md`
-4. 进入仓库前确认 `docs/pkuxkx-content-catalog.md` 权利登记
-5. 改完跑 `pnpm content:validate`；Schema 变更同步校验器测试
+4. **改 `mechanics.yaml` / 战斗数值系数**：遵守 `.cursor/rules/yjh-mechanics-sync.mdc`（pack+broken-pack、schema 默认值、numeric-baseline、DC）
+5. 进入仓库前确认 `docs/pkuxkx-content-catalog.md` 权利登记
+6. 改完跑 `pnpm content:validate`；Schema 变更同步校验器测试

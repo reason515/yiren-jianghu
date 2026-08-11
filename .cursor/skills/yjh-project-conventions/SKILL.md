@@ -197,15 +197,16 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 
 ## 任务启动必读（按任务类型加载，勿凭记忆；即使本会话已读过也需重新 read）
 
-| 任务类型                                         | 第一步必读 skill                                                                                |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| 写/改内容包（房间/NPC/物品/任务/剧情/绝招/数值） | `yjh-content-pack`；含玩家文案时**同步** `yjh-wuxia-copywriting`；涉及地图时加 `yjh-map-design` |
-| 写/改任何玩家可见文案                            | `yjh-wuxia-copywriting`（本任务第一步）                                                         |
-| 战斗过程呈现（战报/着色/闲笔/人兽/节奏）         | `yjh-combat-presentation`；同步 `yjh-wuxia-copywriting`                                         |
-| 设计/变更机制或数值决策                          | `yjh-design-docs`（决策登记）                                                                   |
-| 前端/界面/交互                                   | `yjh-mobile-ui`                                                                                 |
-| 区域地图/世界地图/场景方位图                     | `yjh-map-design`                                                                                |
-| 通用开发/测试/部署                               | 本 skill（`yjh-project-conventions`）                                                           |
+| 任务类型                                         | 第一步必读 skill                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| 写/改内容包（房间/NPC/物品/任务/剧情/绝招/数值） | `yjh-content-pack`；含玩家文案时**同步** `yjh-wuxia-copywriting`；涉及地图时加 `yjh-map-design`   |
+| 写/改任何玩家可见文案                            | `yjh-wuxia-copywriting`（本任务第一步）                                                           |
+| 战斗过程呈现（战报/着色/闲笔/人兽/节奏）         | `yjh-combat-presentation`；同步 `yjh-wuxia-copywriting`                                           |
+| 设计/变更机制或数值决策                          | `yjh-design-docs`（决策登记）；**同步** `.cursor/rules/yjh-mechanics-sync.mdc`（yaml + baseline） |
+| 改 `mechanics.yaml` / 战斗·成长·挂机系数         | `yjh-content-pack` + `yjh-mechanics-sync` 清单；改判定控制流另读 `yjh-project-conventions`        |
+| 前端/界面/交互                                   | `yjh-mobile-ui`                                                                                   |
+| 区域地图/世界地图/场景方位图                     | `yjh-map-design`                                                                                  |
+| 通用开发/测试/部署                               | 本 skill（`yjh-project-conventions`）                                                             |
 
 ## 下一步参考
 

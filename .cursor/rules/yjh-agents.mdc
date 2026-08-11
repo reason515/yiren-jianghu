@@ -25,6 +25,7 @@ alwaysApply: true
 
 - 涉及玩家文案：**第一步必须 read `yjh-wuxia-copywriting`**；每次触发重新加载，禁止用「已在上下文中」替代。
 - 改战斗过程呈现（战报/着色/闲笔/人兽/节奏）：**第一步 read `yjh-combat-presentation`**，并同步 `yjh-wuxia-copywriting`。
+- **机制/数值变更**（命中、伤害、busy、成长、恢复、挂机系数等）：同一任务内按 `.cursor/rules/yjh-mechanics-sync.mdc` 同步 `mechanics.yaml`（pack+broken-pack）、`schema` 默认值、`numeric-baseline`、必要时 DC/`protocol`；禁止只改代码不改 yaml/文档。
 - 内容任务启动前，按 `yjh-project-conventions` 的「任务启动必读」表确认要加载的 skill。
 - 内容进仓库前登记 pkuxkx 权利状态，见 `docs/pkuxkx-content-catalog.md`。
 - 提交前门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；改 API/事件同步 `docs/protocol.md`（`pnpm test:docs`）。

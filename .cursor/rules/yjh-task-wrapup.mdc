@@ -13,6 +13,7 @@ alwaysApply: true
 
 - 新模式/坑点 → 对应 `.cursor/skills/*/SKILL.md` 或 `docs/design-system.md`
 - 战斗呈现新原则/反模式/节奏基线 → `yjh-combat-presentation`
+- **机制/数值变更** → 按 `yjh-mechanics-sync.mdc`：yaml（pack+broken-pack）+ schema 默认值 + `numeric-baseline` + 必要时 DC/`protocol`/`catalog`（漏同步不得收尾）
 - 外部借鉴 → `docs/sibling-borrowings.md`
 - 计划内任务 → `docs/design-and-development-plan.md` 执行记录
 - 改过 `.cursor/` / `.pi/` markdown → `pnpm format`，保证 `pnpm test:docs-design` 不破

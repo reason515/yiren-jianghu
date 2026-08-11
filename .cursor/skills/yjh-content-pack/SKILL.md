@@ -97,6 +97,7 @@ node packages/content/bin/yjh-content.mjs <cmd> <dir>   # 显式目录（相对 
 3. 校验器做结构、引用完整性与 **mechanics 公式编译**；**不做**平衡性检查；数值/公式合理性靠改 `mechanics.yaml`。
 4. fixtures 有两套：`pack/`（有效）与 `broken-pack/`（故意坏引用，验证拒绝）。CI 的 content:validate 用默认 fixtures，别把 broken-pack 设为默认。
 5. **新增 coeffs 段或公式 id 必须同步**：① `paramsSchema` / `REQUIRED_FORMULA_IDS` ② `fixtures/pack/mechanics.yaml` ③ `fixtures/broken-pack/mechanics.yaml` ④ `DEFAULT_PARAMS`（由 yaml 同源 `defaultCompiledMechanics`）⑤ `validate.test.ts` basePack coeffs；漏一处 CI/单测必红。
+   5b. **机制/数值变更完整同步（强制，见 `.cursor/rules/yjh-mechanics-sync.mdc`）**：改命中/伤害/busy/成长/恢复/挂机等生效规则时，同一任务内还须：`schema` 的 **zod default = 现行基线**（与 yaml 一致）、`docs/numeric-baseline.md` 对照节 + 变更记录、有取舍则登记 DC、API 语义变则 `protocol.md`。禁止只改 `game-core` 或只改一侧 yaml。
 6. **战术模板/挂机作业/PVP 快照是玩家运行时数据，不是内容包**——它们属于 `game-core/tactic.ts`、`afk.ts`、`pvp.ts`；内容包只管 房间/NPC/物品/技能/绝招/任务/主线/机制表。别把玩家数据塞进内容包。
 7. **地图布局数据（grid 坐标/出口方向/via 绕行/世界图 geo）按 `yjh-map-design` 规范设计**，D/E 阶段随内容包落地（rooms 加 grid 或新增 maps 集合），校验并入 validator；逻辑导航（连通性）在 `game-core/map.ts`（C10），两者共享出口真相。
 8. **玩家可见文案必须遵循 `yjh-wuxia-copywriting`**（绝招描述/房间/NPC 对话/任务 briefing），已登记为内容制作标准流程的一部分。

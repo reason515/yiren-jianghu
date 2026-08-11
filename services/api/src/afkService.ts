@@ -106,7 +106,7 @@ const GAIN_KEYS = ["exp", "potential", "silver"] as const;
 
 function gainsView(g: Partial<Record<(typeof GAIN_KEYS)[number], number>>): AfkGainsView {
   const out: AfkGainsView = { exp: 0, potential: 0, silver: 0 };
-  for (const k of GAIN_KEYS) out[k] = g[k] ?? 0;
+  for (const k of GAIN_KEYS) out[k] = Math.floor(g[k] ?? 0);
   return out;
 }
 

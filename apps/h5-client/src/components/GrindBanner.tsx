@@ -36,8 +36,11 @@ export function GrindBanner({
             <div className="grind-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <span className="grind-gains">
-            历练 {Math.floor(gains.exp)} · 潜能 {Math.floor(gains.potential)} · 银{" "}
-            {Math.floor(gains.silver)}
+            <span className="gain-exp">历练 {Math.floor(gains.exp)}</span>
+            <span className="gain-sep"> · </span>
+            <span className="gain-pot">潜能 {Math.floor(gains.potential)}</span>
+            <span className="gain-sep"> · </span>
+            <span className="gain-silver">银 {Math.floor(gains.silver)}</span>
           </span>
         </div>
         <div className="grind-banner-actions">

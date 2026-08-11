@@ -114,6 +114,22 @@
   color: var(--paper-dim);
   font-family: var(--font-digit), var(--font-body);
 }
+.gain-exp {
+  color: var(--stat-exp);
+  font-weight: 600;
+}
+.gain-pot {
+  color: var(--stat-potential);
+  font-weight: 600;
+}
+.gain-silver {
+  color: var(--gold);
+  font-weight: 600;
+}
+.gain-sep {
+  color: var(--paper-faint);
+  font-weight: 400;
+}
 .afk-running-actions,
 .grind-banner-actions {
   display: flex;
@@ -168,8 +184,9 @@
   margin: 0;
 }
 .afk-report-gains {
-  color: var(--jade-bright);
+  color: var(--paper-dim);
   font-size: 14px;
+  font-family: var(--font-digit), var(--font-body);
 }
 .afk-report-duration {
   color: var(--paper-faint);

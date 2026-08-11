@@ -646,6 +646,40 @@ describe("afkService.status / reports", () => {
     // 无叙事字段 → 按 kind/status 回退生成
     expect(list[1]?.narrative).toBe("你收住架势，江湖路长，改日再练。");
   });
+
+  it("reports：收益小数向下取整为整数", async () => {
+    const { afk, state } = boot();
+    state.jobs.push({
+      id: "job_frac",
+      character_id: "char_1",
+      kind: "grind",
+      presence: "offline",
+      status: "completed",
+      phase: "done",
+      template_id: null,
+      template_snapshot: "{}",
+      config: "{}",
+      day: "2026-08-07",
+      hours_today: 0,
+      started_at: T0,
+      scheduled_end_at: "2026-08-07T01:00:00.000Z",
+      last_tick_at: T0,
+      last_heartbeat_at: T0,
+      journal_seq: 0,
+      stop_reason: null,
+      report: JSON.stringify({
+        jobId: "job_frac",
+        kind: "grind",
+        status: "completed",
+        ticks: 1,
+        durationMs: 3_600_000,
+        gains: { exp: 36.999999, potential: 18.5, silver: 8.123 },
+      }),
+      updated_at: T0,
+    });
+    const list = await afk.reports("acc_1");
+    expect(list[0]?.gains).toEqual({ exp: 36, potential: 18, silver: 8 });
+  });
 });
 
 describe("afkService.resume（心跳恢复）", () => {

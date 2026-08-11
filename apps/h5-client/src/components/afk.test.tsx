@@ -286,6 +286,21 @@ describe("AfkReportView（战报）", () => {
     expect(host.textContent).toContain("衣摆沾了露水");
     expect(host.textContent).toContain("历练 +120");
     expect(host.textContent).toContain("行止已竟");
+    expect(host.querySelector(".gain-exp")).toBeTruthy();
+    expect(host.querySelector(".gain-pot")).toBeTruthy();
+    expect(host.querySelector(".gain-silver")).toBeTruthy();
+  });
+
+  it("收益取整到整数，不展示小数尾巴", () => {
+    const fractional: Report = {
+      ...REPORT,
+      gains: { exp: 36.999999999, potential: 18.5, silver: 8.123456789 },
+    };
+    const { host } = render(<AfkReportView open report={fractional} onClose={() => undefined} />);
+    expect(host.textContent).toContain("历练 +36");
+    expect(host.textContent).toContain("潜能 +18");
+    expect(host.textContent).toContain("银两 +8");
+    expect(host.textContent).not.toMatch(/\d+\.\d+/);
   });
 
   it("失败战报显示原因", () => {

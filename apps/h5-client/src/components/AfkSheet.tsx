@@ -144,8 +144,11 @@ export function AfkSheet({
               />
             </div>
             <p className="afk-progress-gains">
-              已获 · 历练 {Math.floor(gains.exp)} · 潜能 {Math.floor(gains.potential)} · 银两{" "}
-              {Math.floor(gains.silver)}
+              已获 · <span className="gain-exp">历练 {Math.floor(gains.exp)}</span>
+              <span className="gain-sep"> · </span>
+              <span className="gain-pot">潜能 {Math.floor(gains.potential)}</span>
+              <span className="gain-sep"> · </span>
+              <span className="gain-silver">银两 {Math.floor(gains.silver)}</span>
             </p>
           </div>
           <div className="afk-running-actions">

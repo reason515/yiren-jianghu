@@ -356,31 +356,30 @@ describe("F3 全链路旅程", () => {
     expect(reward.rewards).toMatchObject({ exp: 30, potential: 8, silver: 5 });
   });
 
-  it("6. 挂机：start(study) → status → F2 结算（精耗 + 技能成长）→ stop → reports", async () => {
+  it("6. 挂机：start(practice) → status → F2 结算（气耗 + 技能成长）→ stop → reports", async () => {
     const start = await app.inject({
       method: "POST",
       url: "/afk/start",
       headers: auth(tokenA),
-      payload: { kind: "study", durationMinutes: 30, config: { skillId: "basic_sword" } },
+      payload: { kind: "practice", durationMinutes: 30, config: { skillId: "basic_sword" } },
     });
     expect(start.statusCode).toBe(200);
-    expect((start.json() as { kind: string }).kind).toBe("study");
+    expect((start.json() as { kind: string }).kind).toBe("practice");
 
     const status = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
     expect(status.statusCode).toBe(200);
     expect((status.json() as { status: string }).status).toBe("running");
 
-    // F2：模拟 worker 结算（now 前移 20 分钟 → 约 4 次参悟），验证修炼收益落库
-    // studyJingBase=40 后，10 分钟仅 ~2 次×42≈84，不足以形成「显著精耗」信号
-    // SQL 造数：回精（回精/休息机制随 food/rest 域落地后移除）
-    await pool.query("UPDATE characters SET jing = 500 WHERE id = $1", [characterA]);
+    // F2：模拟 worker 结算（now 前移 20 分钟 → 约 4 次练功），验证修炼收益落库
+    // SQL 造数：回气（回气/休息机制随 food/rest 域落地后移除）
+    await pool.query("UPDATE characters SET qi = 500 WHERE id = $1", [characterA]);
     const resumeBefore = await app.inject({
       method: "GET",
       url: "/session/resume",
       headers: auth(tokenA),
     });
-    const jingBefore = (resumeBefore.json() as { character: { vitals: { jing: number } } })
-      .character.vitals.jing;
+    const qiBefore = (resumeBefore.json() as { character: { vitals: { qi: number } } }).character
+      .vitals.qi;
     const skillsBefore = (await app
       .inject({ method: "GET", url: "/skills", headers: auth(tokenA) })
       .then((r) => r.json())) as Array<{ id: string; level: number; practicePoints: number }>;
@@ -388,15 +387,15 @@ describe("F3 全链路旅程", () => {
     const sumBefore = swordBefore.level + swordBefore.practicePoints;
     await settleDueJobs({ pool, content: pack, now: Date.now() + 20 * 60_000 });
 
-    // 结算信号：精显著消耗（修炼次数=时长×每小时次数 × 参悟耗精）
+    // 结算信号：气显著消耗（修炼次数=时长×每小时次数 × 练功耗气）
     const resumeAfter = await app.inject({
       method: "GET",
       url: "/session/resume",
       headers: auth(tokenA),
     });
-    const jingAfter = (resumeAfter.json() as { character: { vitals: { jing: number } } }).character
-      .vitals.jing;
-    expect(jingAfter).toBeLessThan(jingBefore - 100);
+    const qiAfter = (resumeAfter.json() as { character: { vitals: { qi: number } } }).character
+      .vitals.qi;
+    expect(qiAfter).toBeLessThan(qiBefore - 40);
     // 技能进度不倒退（成长细节由 settlement 单测覆盖）
     const skillsAfter = (await app
       .inject({ method: "GET", url: "/skills", headers: auth(tokenA) })

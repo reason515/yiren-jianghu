@@ -244,11 +244,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
             ? (JSON.parse(row.config) as Record<string, unknown>)
             : row.config;
       } else if (input.kind === "quest") {
-        templateSnapshot = {
-          version: 1,
-          rules: [],
-          defaultAction: { type: "attack" },
-        };
+        throw new AfkError("template_required", "行侠挂机须先备下一套战术");
       }
 
       if (input.kind === "quest") {

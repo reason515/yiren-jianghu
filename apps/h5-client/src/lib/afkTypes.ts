@@ -58,7 +58,7 @@ export type AfkStartConfig =
   | {
       kind: "quest";
       presence: AfkPresence;
-      templateId?: string;
+      templateId: string;
       durationMinutes: number;
       config: { questId: string };
     }

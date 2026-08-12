@@ -104,7 +104,7 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "练功")!
         .click(),
     );
@@ -144,7 +144,7 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
@@ -184,12 +184,12 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
     expect(host.textContent).toContain("先去应下一桩悬赏");
-    expect(host.textContent).toContain("稳守路数");
+    expect(host.textContent).toContain("须先备下一套战术");
     expect(host.querySelector<HTMLButtonElement>(".btn.primary")?.disabled).toBe(true);
   });
 
@@ -209,7 +209,7 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "练功")!
         .click(),
     );
@@ -259,13 +259,11 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "在线")!
         .click(),
     );
-    expect([...host.querySelectorAll(".seg-btn")].some((b) => b.textContent === "练功")).toBe(
-      false,
-    );
+    expect([...host.querySelectorAll("button")].some((b) => b.textContent === "练功")).toBe(false);
     expect(host.textContent).toContain("一刻");
   });
 });

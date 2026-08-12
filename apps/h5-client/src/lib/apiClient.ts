@@ -123,7 +123,41 @@ export interface ApiClient {
       jingPerRound?: number;
     }>
   >;
-  getTemplates(): Promise<Array<{ id: string; name: string }>>;
+  getTemplates(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      config: {
+        version: number;
+        rules: Array<{
+          id: string;
+          conditions: Array<{ id: string; type: string; value: number; skillId?: string }>;
+          action: { type: string; performId?: string };
+        }>;
+        defaultAction: { type: string; performId?: string };
+      };
+      isDefaultPvp: boolean;
+      updatedAt: string;
+    }>
+  >;
+  createTemplate(input: { name: string; config: unknown; isDefaultPvp?: boolean }): Promise<{
+    id: string;
+    name: string;
+    config: unknown;
+    isDefaultPvp: boolean;
+    updatedAt: string;
+  }>;
+  updateTemplate(
+    id: string,
+    input: { name: string; config: unknown; isDefaultPvp?: boolean },
+  ): Promise<{
+    id: string;
+    name: string;
+    config: unknown;
+    isDefaultPvp: boolean;
+    updatedAt: string;
+  }>;
+  removeTemplate(id: string): Promise<{ ok: true }>;
   getForumSections(): Promise<ForumSection[]>;
   getForumPosts(sectionId?: string): Promise<ForumPost[]>;
   getForumPost(postId: string): Promise<{ post: ForumPost; comments: ForumComment[] } | null>;
@@ -216,6 +250,9 @@ export function createApiClient(baseUrl: string, tokenStore: { get(): string | n
     getAfkReports: () => get("/afk/reports"),
     getAfkGrindJobs: () => get("/afk/grind-jobs"),
     getTemplates: () => get("/templates"),
+    createTemplate: (input) => post("/templates", input),
+    updateTemplate: (id, input) => put(`/templates/${id}`, input),
+    removeTemplate: (id) => req(`/templates/${id}`, { method: "DELETE" }),
     getForumSections: () => get("/forum/sections"),
     getForumPosts: (sectionId) =>
       get(sectionId ? `/forum/posts?sectionId=${sectionId}` : "/forum/posts"),

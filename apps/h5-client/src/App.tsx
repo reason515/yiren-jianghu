@@ -35,6 +35,7 @@ import { MapSheet } from "./components/MapSheet.js";
 import { LeaderboardView } from "./components/LeaderboardView.js";
 import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
 import { GuideTip } from "./components/GuideTip.js";
+import { TacticEditor } from "./components/TacticEditor.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import {
   toCharacterView,
@@ -59,6 +60,11 @@ import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./l
 import type { ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
 import type { LeaderboardData } from "./lib/leaderboardTypes.js";
 import type { MapData } from "./lib/mapTypes.js";
+import {
+  createRuleId,
+  type TacticActionDraft,
+  type TacticTemplateDraft,
+} from "./lib/tacticTypes.js";
 import {
   initialReconnectState,
   onConnectSuccess,
@@ -103,6 +109,68 @@ function isActiveCombat(
   return "status" in value && value.status === "ongoing";
 }
 
+type ApiTacticTemplate = {
+  id: string;
+  name: string;
+  config: {
+    version: number;
+    rules: Array<{
+      id: string;
+      conditions: Array<{ id: string; type: string; value: number; skillId?: string }>;
+      action: { type: string; performId?: string };
+    }>;
+    defaultAction: { type: string; performId?: string };
+  };
+  isDefaultPvp: boolean;
+  updatedAt: string;
+};
+
+function toDraftAction(action: { type: string; performId?: string }): TacticActionDraft {
+  if (action.type === "perform") return { kind: "perform", performId: action.performId ?? "" };
+  if (action.type === "recover") return { kind: "recover" };
+  if (action.type === "flee") return { kind: "flee" };
+  return { kind: "attack" };
+}
+
+function toDraftTemplate(t: ApiTacticTemplate): TacticTemplateDraft {
+  return {
+    id: t.id,
+    version: t.config.version ?? 1,
+    name: t.name,
+    rules: (t.config.rules ?? []).map((r) => ({
+      id: r.id,
+      conditions: (r.conditions ?? []).map((c) => ({
+        id: c.id,
+        type: c.type as never,
+        value: c.value,
+        ...(c.skillId ? { skillId: c.skillId } : {}),
+      })),
+      action: toDraftAction(r.action),
+    })),
+    defaultAction: toDraftAction(t.config.defaultAction ?? { type: "attack" }),
+    isDefaultPvp: t.isDefaultPvp,
+  };
+}
+
+function toApiTemplateConfig(t: TacticTemplateDraft): ApiTacticTemplate["config"] {
+  const toApiAction = (a: TacticActionDraft): { type: string; performId?: string } =>
+    a.kind === "perform" ? { type: "perform", performId: a.performId } : { type: a.kind };
+  return {
+    version: t.version,
+    rules: t.rules.map((r) => ({
+      id: r.id,
+      conditions: r.conditions.map((c) => ({
+        id: c.id,
+        type: c.type,
+        value: c.value,
+        ...(c.skillId ? { skillId: c.skillId } : {}),
+      })),
+      action: toApiAction(r.action),
+    })),
+    defaultAction: toApiAction(t.defaultAction),
+  };
+}
+
 export function App(): JSX.Element {
   const [token, setToken] = useState<string | null>(loadToken());
   const [booting, setBooting] = useState<boolean>(true);
@@ -145,8 +213,13 @@ export function App(): JSX.Element {
   const [afkSkills, setAfkSkills] = useState<AfkSkillOption[]>([]);
   const [afkQuests, setAfkQuests] = useState<AfkQuestOption[]>([]);
   const [afkTemplates, setAfkTemplates] = useState<AfkTemplateOption[]>([]);
+  const [tacticTemplates, setTacticTemplates] = useState<TacticTemplateDraft[]>([]);
+  const [tacticActiveId, setTacticActiveId] = useState<string | null>(null);
+  const [tacticOpen, setTacticOpen] = useState(false);
   const [afkGrindJobs, setAfkGrindJobs] = useState<AfkGrindOption[]>([]);
   const [afkPending, setAfkPending] = useState(false);
+  const [afkLatestLine, setAfkLatestLine] = useState("");
+  const [afkPulseToken, setAfkPulseToken] = useState(0);
   const [afkReport, setAfkReport] = useState<AfkReportData | null>(null);
   const [afkReportOpen, setAfkReportOpen] = useState(false);
   const [pvpSeason, setPvpSeason] = useState<PvpSeason | null>(null);
@@ -305,10 +378,18 @@ export function App(): JSX.Element {
         }
         for (const line of view.journalLines) addJournal(line);
         if (view.journalLines.length > 0) {
+          setAfkLatestLine(view.journalLines[view.journalLines.length - 1] ?? "");
+          setAfkPulseToken((n) => n + 1);
+        }
+        if (view.journalLines.length > 0) {
           void refreshCharacter().catch(() => undefined);
         }
         setAfkSkills(toAfkSkillOptions(skills));
-        setAfkTemplates(templates.map((template) => ({ id: template.id, name: template.name })));
+        const templateRows = templates as ApiTacticTemplate[];
+        setAfkTemplates(templateRows.map((template) => ({ id: template.id, name: template.name })));
+        const drafts = templateRows.map(toDraftTemplate);
+        setTacticTemplates(drafts);
+        setTacticActiveId((prev) => prev ?? drafts[0]?.id ?? null);
         setAfkQuests(toAfkQuestOptions(toQuestPanelData(quests).quests));
         setAfkGrindJobs(grindJobs);
         const unread = reports.find((report) => pendingReportIds.includes(report.jobId));
@@ -548,6 +629,61 @@ export function App(): JSX.Element {
   const openAfk = (): void => {
     setPanel("afk");
     void refreshAfk();
+  };
+
+  const loadTactics = useCallback(async (): Promise<void> => {
+    const rows = (await api.getTemplates()) as ApiTacticTemplate[];
+    const drafts = rows.map(toDraftTemplate);
+    setTacticTemplates(drafts);
+    setTacticActiveId((prev) => prev ?? drafts[0]?.id ?? null);
+    setAfkTemplates(rows.map((template) => ({ id: template.id, name: template.name })));
+  }, [api]);
+
+  const openTacticEditor = (): void => {
+    setTacticOpen(true);
+    void loadTactics().catch(notify);
+  };
+
+  const onTacticChange = (template: TacticTemplateDraft): void => {
+    setTacticTemplates((prev) => prev.map((x) => (x.id === template.id ? template : x)));
+    void api
+      .updateTemplate(template.id, {
+        name: template.name,
+        config: toApiTemplateConfig(template),
+        isDefaultPvp: template.isDefaultPvp,
+      })
+      .then(() => loadTactics())
+      .catch(notify);
+  };
+
+  const onTacticAdd = (): void => {
+    const name = `新战术${tacticTemplates.length + 1}`;
+    const draft: TacticTemplateDraft = {
+      id: "__pending__",
+      version: 1,
+      name,
+      rules: [{ id: createRuleId(), conditions: [], action: { kind: "attack" } }],
+      defaultAction: { kind: "attack" },
+      isDefaultPvp: false,
+    };
+    void api
+      .createTemplate({
+        name,
+        config: toApiTemplateConfig(draft),
+        isDefaultPvp: false,
+      })
+      .then((created) => {
+        setTacticActiveId(created.id);
+        return loadTactics();
+      })
+      .catch(notify);
+  };
+
+  const onTacticDelete = (id: string): void => {
+    void api
+      .removeTemplate(id)
+      .then(() => loadTactics())
+      .catch(notify);
   };
 
   const refreshPvp = useCallback(async (): Promise<void> => {
@@ -1210,8 +1346,13 @@ export function App(): JSX.Element {
     setAfkSkills([]);
     setAfkQuests([]);
     setAfkTemplates([]);
+    setTacticTemplates([]);
+    setTacticActiveId(null);
+    setTacticOpen(false);
     setAfkGrindJobs([]);
     setAfkPending(false);
+    setAfkLatestLine("");
+    setAfkPulseToken(0);
     setAfkReport(null);
     setAfkReportOpen(false);
     setPvpSeason(null);
@@ -1324,6 +1465,8 @@ export function App(): JSX.Element {
             progress={afkStatus.progress}
             gains={afkStatus.gains}
             paused={afkStatus.paused}
+            latestLine={afkLatestLine}
+            pulseToken={afkPulseToken}
             onStop={afkStatus.active ? onAfkStop : undefined}
             onResume={afkStatus.paused ? onAfkResume : undefined}
           />
@@ -1414,9 +1557,22 @@ export function App(): JSX.Element {
           onStart={onAfkStart}
           onStop={onAfkStop}
           onResume={onAfkResume}
+          onOpenTactic={openTacticEditor}
           onClose={() => setPanel("none")}
         />
       )}
+
+      <Sheet open={tacticOpen} title="战术谱" onClose={() => setTacticOpen(false)}>
+        <TacticEditor
+          templates={tacticTemplates}
+          activeId={tacticActiveId}
+          performs={(characterView?.performs ?? []).map((p) => ({ id: p.id, name: p.name }))}
+          onSelect={setTacticActiveId}
+          onChange={onTacticChange}
+          onAddTemplate={onTacticAdd}
+          onDeleteTemplate={onTacticDelete}
+        />
+      </Sheet>
 
       <AfkReportView
         open={afkReportOpen}

@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 
 /**
  * 挂机状态条：运行中显示进度与累计收益；暂停显示断线原因。
@@ -10,6 +10,8 @@ export interface GrindBannerProps {
   progress?: number;
   gains?: { exp: number; potential: number; silver: number };
   paused?: boolean;
+  latestLine?: string;
+  pulseToken?: number;
   onStop?: () => void;
   onResume?: () => void;
 }
@@ -21,17 +23,32 @@ export function GrindBanner({
   progress = 0,
   gains = { exp: 0, potential: 0, silver: 0 },
   paused = false,
+  latestLine,
+  pulseToken = 0,
   onStop,
   onResume,
 }: GrindBannerProps): JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    if (!pulseToken) return;
+    setPulse(true);
+    const id = window.setTimeout(() => setPulse(false), 420);
+    return () => window.clearTimeout(id);
+  }, [pulseToken]);
 
   if (active) {
     const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+    const actionLine = latestLine?.trim() ? latestLine : message;
     return (
-      <div className={`grind-banner active${paused ? " paused" : ""}`} data-testid="grind-banner">
+      <div
+        className={`grind-banner active${paused ? " paused" : ""}${pulse ? " pulse" : ""}`}
+        data-testid="grind-banner"
+      >
         <div className="grind-banner-main">
-          <span className="grind-message">{message}</span>
+          <span className="grind-message">{actionLine}</span>
+          {latestLine?.trim() ? <span className="grind-sub">{message}</span> : null}
           <div className="grind-progress-track" aria-hidden>
             <div className="grind-progress-fill" style={{ width: `${pct}%` }} />
           </div>

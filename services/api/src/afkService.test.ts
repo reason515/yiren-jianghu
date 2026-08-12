@@ -411,23 +411,15 @@ describe("afkService.start", () => {
     expect(view.scheduledEndAt).not.toBe(view.startedAt);
   });
 
-  it("行侠挂机：有模板则固化快照；无模板走默认稳守", async () => {
+  it("行侠挂机：必填模板并固化快照；缺模板 → template_required", async () => {
     const { afk, state } = boot();
     state.templates.push({
       id: "tpl_1",
       character_id: "char_1",
       config: JSON.stringify({ version: 1, rules: [], defaultAction: { type: "attack" } }),
     });
-    const fallback = await afk.start("acc_1", {
-      kind: "quest",
-      durationMinutes: 30,
-      config: { questId: "q_hunt" },
-    });
-    expect(fallback.kind).toBe("quest");
-    expect(JSON.parse(state.jobs[0]!.template_snapshot)).toEqual({
-      version: 1,
-      rules: [],
-      defaultAction: { type: "attack" },
+    await expect(afk.start("acc_1", { kind: "quest", durationMinutes: 30 })).rejects.toMatchObject({
+      code: "template_required",
     });
 
     state.jobs = [];

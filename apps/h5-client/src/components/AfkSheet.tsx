@@ -1,6 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
-import { ChoiceRow } from "./base/ChoiceRow.js";
 import type {
   AfkGrindOption,
   AfkPresence,
@@ -29,6 +28,7 @@ export interface AfkSheetProps {
   onStart: (config: AfkStartConfig) => void;
   onStop: () => void;
   onResume?: () => void;
+  onOpenTactic?: () => void;
   onClose: () => void;
 }
 
@@ -57,6 +57,7 @@ export function AfkSheet({
   onStart,
   onStop,
   onResume,
+  onOpenTactic,
   onClose,
 }: AfkSheetProps): JSX.Element | null {
   const [presence, setPresence] = useState<AfkPresence>("offline");
@@ -99,7 +100,7 @@ export function AfkSheet({
     mode === "practice"
       ? Boolean(skillId)
       : mode === "quest"
-        ? Boolean(questId)
+        ? Boolean(questId && templateId)
         : Boolean(grindJobId);
 
   const start = (): void => {
@@ -114,11 +115,11 @@ export function AfkSheet({
       onStart({ kind: "dazuo", presence: "offline", durationMinutes: duration, config: {} });
     } else if (mode === "tuna") {
       onStart({ kind: "tuna", presence: "offline", durationMinutes: duration, config: {} });
-    } else if (mode === "quest" && questId) {
+    } else if (mode === "quest" && questId && templateId) {
       onStart({
         kind: "quest",
         presence,
-        ...(templateId ? { templateId } : {}),
+        templateId,
         durationMinutes: duration,
         config: { questId },
       });
@@ -134,7 +135,7 @@ export function AfkSheet({
 
   const lead =
     presence === "online"
-      ? "在线行止轮回更密、所得更丰；须时时守着，断线即暂歇。"
+      ? "人在阵前，步步有回响；须守着，断线即暂歇。"
       : mode === "practice"
         ? "勤练不辍，招式自会熟极而化。"
         : mode === "dazuo"
@@ -182,35 +183,74 @@ export function AfkSheet({
         <div className="afk-form">
           <div className="field">
             <span className="field-label">方式</span>
-            <ChoiceRow
-              label="在线或离线"
-              options={[
-                { value: "offline", label: "离线", disabled: pending },
-                { value: "online", label: "在线", disabled: pending },
-              ]}
-              value={presence}
-              onChange={setPresence}
-            />
+            <div className="scene-tabs" role="tablist" aria-label="在线或离线">
+              <button
+                type="button"
+                className={presence === "offline" ? "on" : ""}
+                disabled={pending}
+                onClick={() => setPresence("offline")}
+              >
+                离线
+              </button>
+              <button
+                type="button"
+                className={presence === "online" ? "on" : ""}
+                disabled={pending}
+                onClick={() => setPresence("online")}
+              >
+                在线
+              </button>
+            </div>
           </div>
 
           <div className="field">
             <span className="field-label">行止</span>
-            <ChoiceRow
-              label="行止法门"
-              options={[
-                { value: "grind", label: "生计", disabled: pending },
-                ...(presence === "offline"
-                  ? [
-                      { value: "practice" as const, label: "练功", disabled: pending },
-                      { value: "dazuo" as const, label: "打坐", disabled: pending },
-                      { value: "tuna" as const, label: "吐纳", disabled: pending },
-                    ]
-                  : []),
-                { value: "quest", label: "行侠", disabled: pending },
-              ]}
-              value={mode}
-              onChange={setMode}
-            />
+            <div className="scene-tabs" role="tablist" aria-label="行止法门">
+              <button
+                type="button"
+                className={mode === "grind" ? "on" : ""}
+                disabled={pending}
+                onClick={() => setMode("grind")}
+              >
+                生计
+              </button>
+              {presence === "offline" ? (
+                <>
+                  <button
+                    type="button"
+                    className={mode === "practice" ? "on" : ""}
+                    disabled={pending}
+                    onClick={() => setMode("practice")}
+                  >
+                    练功
+                  </button>
+                  <button
+                    type="button"
+                    className={mode === "dazuo" ? "on" : ""}
+                    disabled={pending}
+                    onClick={() => setMode("dazuo")}
+                  >
+                    打坐
+                  </button>
+                  <button
+                    type="button"
+                    className={mode === "tuna" ? "on" : ""}
+                    disabled={pending}
+                    onClick={() => setMode("tuna")}
+                  >
+                    吐纳
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                className={mode === "quest" ? "on" : ""}
+                disabled={pending}
+                onClick={() => setMode("quest")}
+              >
+                行侠
+              </button>
+            </div>
           </div>
 
           {mode === "practice" ? (
@@ -278,7 +318,19 @@ export function AfkSheet({
                     ))}
                   </div>
                 ) : (
-                  <p className="afk-empty">尚无战术谱，启程时将按稳守路数应敌。</p>
+                  <div className="afk-template-empty">
+                    <p className="afk-empty">尚无战术谱，须先备下一套战术。</p>
+                    {onOpenTactic ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={pending}
+                        onClick={onOpenTactic}
+                      >
+                        备一套战术
+                      </button>
+                    ) : null}
+                  </div>
                 )}
               </div>
             </>

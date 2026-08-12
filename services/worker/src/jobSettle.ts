@@ -1,9 +1,11 @@
 import type { Pool } from "pg";
 import {
   advanceOnlineGrind,
+  afkAttemptsPerHour,
   buildGraph,
   buildReport,
   cancelJob,
+  circuitStepsTotal,
   initialGrindCircuitState,
   processTick,
   type AfkJobState,
@@ -13,7 +15,7 @@ import {
   type SkillMap,
 } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
-import { attemptsForHours, settleStudy } from "./settlement.js";
+import { attemptsForHours, settleDazuo, settlePractice, settleTuna } from "./settlement.js";
 import { settleQuestBattle } from "./questSettlement.js";
 import { settleGrind } from "./grindSettlement.js";
 
@@ -21,7 +23,7 @@ import { settleGrind } from "./grindSettlement.js";
  * DC-043 挂机结算：离线按时长推进；在线短轮回 + 心跳 pause；status/stop/worker 分模式。
  */
 export type AfkPresence = "online" | "offline";
-export type SettleMode = "worker" | "status" | "stop";
+export type SettleMode = "worker" | "status" | "stop" | "start";
 
 export interface SqlClient {
   query<T extends { [key: string]: unknown }>(
@@ -632,7 +634,15 @@ async function settleGrindOnlineOnce(
   }
 
   journalLines.push(step.journalLine);
-  let nextConfig = appendJournal(writeCircuitConfig(config, step.state), [step.journalLine]);
+  let roundSteps = typeof config.roundSteps === "number" ? config.roundSteps : 0;
+  if (step.state.phase === "circuit" && !step.harvested) {
+    roundSteps += 1;
+  } else if (step.harvested) {
+    roundSteps = 0;
+  }
+  let nextConfig = appendJournal({ ...writeCircuitConfig(config, step.state), roundSteps }, [
+    step.journalLine,
+  ]);
   nextConfig = { ...nextConfig, gains: totalGains };
 
   if (exhausted) {
@@ -782,14 +792,71 @@ async function settleGrindOnce(
   return "settled";
 }
 
-async function settleStudyJob(
+async function applyPartialCircuitReward(
+  client: SqlClient,
+  job: JobRow,
+  content: ContentPack,
+  config: Record<string, unknown>,
+  priorGains: ReturnType<typeof gains>,
+  rewardMult: number,
+): Promise<{ config: Record<string, unknown>; gains: ReturnType<typeof gains> }> {
+  const jobId = typeof config.jobId === "string" ? config.jobId : "";
+  const def = (content.grindJobs ?? []).find((entry) => entry.id === jobId);
+  const roundSteps = typeof config.roundSteps === "number" ? config.roundSteps : 0;
+  if (!def?.roundGain || roundSteps <= 0) {
+    return { config, gains: priorGains };
+  }
+  const circuit = grindCircuitDefOf(def);
+  if (!circuit) return { config, gains: priorGains };
+  const total = circuitStepsTotal(circuit);
+  const fraction = Math.min(1, roundSteps / total);
+  if (fraction <= 0) return { config, gains: priorGains };
+
+  const charRows = await client.query<{ jing: number }>(
+    "SELECT jing FROM characters WHERE id = $1",
+    [job.character_id],
+  );
+  const jing = charRows.rows[0]?.jing ?? 0;
+  const jingNeed = Math.max(0, Math.ceil((def.jingPerRound ?? 0) * fraction));
+  if (jingNeed > 0 && jing <= 0) return { config, gains: priorGains };
+
+  const raw = {
+    exp: def.roundGain.exp * fraction * rewardMult,
+    potential: def.roundGain.potential * fraction * rewardMult,
+    silver: def.roundGain.silver * fraction * rewardMult,
+  };
+  const jingSpent = Math.min(jing, jingNeed);
+  const { applied, nextCarry } = splitApplied(parseCarry(config.carry), {
+    exp: raw.exp,
+    potential: raw.potential,
+    silver: raw.silver,
+    jing: jingSpent,
+  });
+  const totalGains = gains({
+    exp: priorGains.exp + raw.exp,
+    potential: priorGains.potential + raw.potential,
+    silver: priorGains.silver + raw.silver,
+  });
+  if (applied.exp || applied.potential || applied.silver || applied.jing) {
+    await client.query(
+      "UPDATE characters SET jing = jing - $1, exp = exp + $2, potential = potential + $3, silver = silver + $4 WHERE id = $5",
+      [applied.jing, applied.exp, applied.potential, applied.silver, job.character_id],
+    );
+  }
+  return {
+    config: { ...config, gains: totalGains, carry: nextCarry, roundSteps: 0 },
+    gains: totalGains,
+  };
+}
+
+async function settlePracticeJob(
   client: SqlClient,
   job: JobRow,
   content: ContentPack,
   now: number,
   deltaHours: number,
 ): Promise<"settled" | "completed"> {
-  const config = parse<{ skillId?: string }>(job.config);
+  const config = parse<{ skillId?: string; cultivation?: Record<string, unknown> }>(job.config);
   const skillId = config.skillId ?? "";
   const skillDef = content.skills.find((skill) => skill.id === skillId);
   if (!skillDef) {
@@ -799,20 +866,19 @@ async function settleStudyJob(
       now,
       deltaHours,
       hourlyGain: gains(),
-      failure: "修炼目标缺失",
+      failure: "练功目标缺失",
     });
     return finishTerminalJob(client, job, now, {
       status: "failed",
       phase: outcome.job.phase,
-      reason: outcome.job.stopReason ?? "修炼目标缺失",
+      reason: outcome.job.stopReason ?? "练功目标缺失",
       config: config as Record<string, unknown>,
       gains: gains(),
     });
   }
-  const charRows = await client.query<{ jing: number }>(
-    "SELECT jing FROM characters WHERE id = $1",
-    [job.character_id],
-  );
+  const charRows = await client.query<{ qi: number }>("SELECT qi FROM characters WHERE id = $1", [
+    job.character_id,
+  ]);
   const skillRows = await client.query<{
     skill_id: string;
     level: number;
@@ -823,14 +889,17 @@ async function settleStudyJob(
   const skillMap: SkillMap = {};
   for (const row of skillRows.rows)
     skillMap[row.skill_id] = { level: row.level, practicePoints: row.practice_points };
-  const settled = settleStudy({
+
+  const kind = job.kind === "study" ? "study" : "practice";
+  const settled = settlePractice({
     params: content.params,
-    jing: charRows.rows[0]?.jing ?? 0,
+    qi: charRows.rows[0]?.qi ?? 0,
     skillId,
     skills: skillMap,
     maxLevel: skillDef.maxLevel,
-    attempts: attemptsForHours(deltaHours, content.params.afk.studyAttemptsPerHour),
+    attempts: attemptsForHours(deltaHours, afkAttemptsPerHour(content.params, kind)),
   });
+
   const outcome = processTick({
     job: stateOf(job, now),
     params: content.params,
@@ -838,8 +907,9 @@ async function settleStudyJob(
     deltaHours,
     hourlyGain: gains(),
   });
-  await client.query("UPDATE characters SET jing = jing - $1 WHERE id = $2", [
-    toDbInt(settled.jingSpent),
+
+  await client.query("UPDATE characters SET qi = qi - $1 WHERE id = $2", [
+    toDbInt(settled.qiSpent),
     job.character_id,
   ]);
   const progress = settled.skills[skillId];
@@ -849,16 +919,192 @@ async function settleStudyJob(
       [job.character_id, skillId, progress.level, progress.practicePoints],
     );
   }
+
+  const cultivation = {
+    skillId,
+    attempts: settled.attempts,
+    levelsGained: settled.levelsGained,
+    practicePoints: progress?.practicePoints ?? 0,
+  };
+  const nextConfig = { ...config, cultivation };
+
   const done = outcome.status !== "running";
   const report = done ? buildReport(outcome.job, now) : null;
   await client.query(
-    "UPDATE afk_jobs SET status = $1, phase = $2, day = $3, hours_today = $4, last_tick_at = $5, report = $6, stop_reason = $7, updated_at = now() WHERE id = $8",
+    "UPDATE afk_jobs SET status = $1, phase = $2, day = $3, hours_today = $4, last_tick_at = $5, config = $6, report = $7, stop_reason = $8, updated_at = now() WHERE id = $9",
     [
       outcome.job.status,
       outcome.job.phase,
       outcome.job.day,
       outcome.job.hoursToday,
       new Date(now).toISOString(),
+      JSON.stringify(nextConfig),
+      report
+        ? JSON.stringify({ ...report, narrative: narrativeFor(job.kind, outcome.job.status) })
+        : null,
+      outcome.job.stopReason ?? null,
+      job.id,
+    ],
+  );
+  return done ? "completed" : "settled";
+}
+
+async function settleDazuoJob(
+  client: SqlClient,
+  job: JobRow,
+  content: ContentPack,
+  now: number,
+  deltaHours: number,
+): Promise<"settled" | "completed"> {
+  const config = parse<Record<string, unknown>>(job.config);
+  const charRows = await client.query<{
+    qi: number;
+    neili: number;
+    jingli: number;
+  }>("SELECT qi, neili, jingli FROM characters WHERE id = $1", [job.character_id]);
+  const character = charRows.rows[0];
+  if (!character) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "行止之人已不在此地",
+      config,
+      gains: gains(),
+    });
+  }
+  const forceRow = await client.query<{ level: number }>(
+    "SELECT level FROM character_skills WHERE character_id = $1 AND skill_id = 'basic_force'",
+    [job.character_id],
+  );
+  const forceLevel = forceRow.rows[0]?.level ?? 0;
+  const maxNeili = content.params.vitals.neiliPerLevel * Math.max(1, forceLevel);
+
+  const settled = settleDazuo({
+    params: content.params,
+    qi: character.qi,
+    neili: character.neili,
+    maxNeili,
+    forceLevel,
+    attempts: attemptsForHours(deltaHours, afkAttemptsPerHour(content.params, "dazuo")),
+  });
+
+  const outcome = processTick({
+    job: stateOf(job, now),
+    params: content.params,
+    now,
+    deltaHours,
+    hourlyGain: gains(),
+  });
+
+  await client.query("UPDATE characters SET qi = qi - $1, neili = $2 WHERE id = $3", [
+    toDbInt(settled.qiSpent),
+    settled.neili,
+    job.character_id,
+  ]);
+
+  const nextConfig = {
+    ...config,
+    cultivation: {
+      neiliGained: settled.neiliGained,
+      maxNeiliUp: settled.maxNeiliUp,
+      attempts: settled.attempts,
+    },
+  };
+
+  const done = outcome.status !== "running";
+  const report = done ? buildReport(outcome.job, now) : null;
+  await client.query(
+    "UPDATE afk_jobs SET status = $1, phase = $2, day = $3, hours_today = $4, last_tick_at = $5, config = $6, report = $7, stop_reason = $8, updated_at = now() WHERE id = $9",
+    [
+      outcome.job.status,
+      outcome.job.phase,
+      outcome.job.day,
+      outcome.job.hoursToday,
+      new Date(now).toISOString(),
+      JSON.stringify(nextConfig),
+      report
+        ? JSON.stringify({ ...report, narrative: narrativeFor(job.kind, outcome.job.status) })
+        : null,
+      outcome.job.stopReason ?? null,
+      job.id,
+    ],
+  );
+  return done ? "completed" : "settled";
+}
+
+async function settleTunaJob(
+  client: SqlClient,
+  job: JobRow,
+  content: ContentPack,
+  now: number,
+  deltaHours: number,
+): Promise<"settled" | "completed"> {
+  const config = parse<Record<string, unknown>>(job.config);
+  const charRows = await client.query<{ jing: number; jingli: number }>(
+    "SELECT jing, jingli FROM characters WHERE id = $1",
+    [job.character_id],
+  );
+  const character = charRows.rows[0];
+  if (!character) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "行止之人已不在此地",
+      config,
+      gains: gains(),
+    });
+  }
+  const forceRow = await client.query<{ level: number }>(
+    "SELECT level FROM character_skills WHERE character_id = $1 AND skill_id = 'basic_force'",
+    [job.character_id],
+  );
+  const forceLevel = forceRow.rows[0]?.level ?? 0;
+  const maxJingli =
+    content.params.vitals.jingliBase + forceLevel * content.params.vitals.jingliPerLevel;
+
+  const settled = settleTuna({
+    params: content.params,
+    jing: character.jing,
+    jingli: character.jingli,
+    maxJingli,
+    forceLevel,
+    attempts: attemptsForHours(deltaHours, afkAttemptsPerHour(content.params, "tuna")),
+  });
+
+  const outcome = processTick({
+    job: stateOf(job, now),
+    params: content.params,
+    now,
+    deltaHours,
+    hourlyGain: gains(),
+  });
+
+  await client.query("UPDATE characters SET jing = jing - $1, jingli = $2 WHERE id = $3", [
+    toDbInt(settled.jingSpent),
+    settled.jingli,
+    job.character_id,
+  ]);
+
+  const nextConfig = {
+    ...config,
+    cultivation: {
+      jingliGained: settled.jingliGained,
+      maxJingliUp: settled.maxJingliUp,
+      attempts: settled.attempts,
+    },
+  };
+
+  const done = outcome.status !== "running";
+  const report = done ? buildReport(outcome.job, now) : null;
+  await client.query(
+    "UPDATE afk_jobs SET status = $1, phase = $2, day = $3, hours_today = $4, last_tick_at = $5, config = $6, report = $7, stop_reason = $8, updated_at = now() WHERE id = $9",
+    [
+      outcome.job.status,
+      outcome.job.phase,
+      outcome.job.day,
+      outcome.job.hoursToday,
+      new Date(now).toISOString(),
+      JSON.stringify(nextConfig),
       report
         ? JSON.stringify({ ...report, narrative: narrativeFor(job.kind, outcome.job.status) })
         : null,
@@ -883,7 +1129,10 @@ async function settleOnlineLoop(
   const journalLines: string[] = [];
   let current = job;
   let result: SettleJobResult["result"] = "skipped";
-  const tickSec = content.params.afk.onlineTickSec ?? 60;
+  const tickSec =
+    current.kind === "quest"
+      ? (content.params.afk.questOnlineTickSec ?? 30)
+      : (content.params.afk.onlineTickSec ?? 15);
   const mult = content.params.afk.onlineRewardMult ?? 1.8;
   const tickHours = tickSec / 3600;
   let ticks = 0;
@@ -969,8 +1218,12 @@ async function settleOfflineDelta(
       job.journal_seq,
       false,
     );
-  } else if (job.kind === "study") {
-    step = await settleStudyJob(client, job, content, now, deltaHours);
+  } else if (job.kind === "study" || job.kind === "practice") {
+    step = await settlePracticeJob(client, job, content, now, deltaHours);
+  } else if (job.kind === "dazuo") {
+    step = await settleDazuoJob(client, job, content, now, deltaHours);
+  } else if (job.kind === "tuna") {
+    step = await settleTunaJob(client, job, content, now, deltaHours);
   } else {
     return { job, journalLines: [], result: "skipped" };
   }
@@ -1004,7 +1257,7 @@ export async function settleJobNow(
     if (mode === "worker") {
       return { job, journalLines: [], result: "skipped" };
     }
-    if (mode === "status" || mode === "stop") {
+    if (mode === "status" || mode === "stop" || mode === "start") {
       return settleOnlineLoop(client, job, content, now);
     }
   }
@@ -1019,18 +1272,41 @@ export async function stopJobNow(
   now: number,
 ): Promise<{ report: AfkReport & { narrative: string }; gains: ReturnType<typeof gains> }> {
   const settled = await settleJobNow(client, job, content, now, "stop");
-  const current = settled.job;
+  let current = settled.job;
 
   if (current.status === "running") {
     const config = parse<Record<string, unknown>>(current.config);
-    const currentGains = gains(config.gains as ReturnType<typeof gains>);
+    const priorGains = gains(config.gains as ReturnType<typeof gains>);
+    if (
+      current.presence === "online" &&
+      current.kind === "grind" &&
+      typeof config.roundSteps === "number" &&
+      config.roundSteps > 0
+    ) {
+      const mult = content.params.afk.onlineRewardMult ?? 1.8;
+      const partial = await applyPartialCircuitReward(
+        client,
+        current,
+        content,
+        config,
+        priorGains,
+        mult,
+      );
+      await client.query("UPDATE afk_jobs SET config = $1 WHERE id = $2", [
+        JSON.stringify(partial.config),
+        current.id,
+      ]);
+      current = { ...current, config: partial.config };
+    }
+    const currentConfig = parse<Record<string, unknown>>(current.config);
+    const currentGains = gains(currentConfig.gains as ReturnType<typeof gains>);
     const cancelled = cancelJob(stateOf(current, now, currentGains), now, "手动停止");
     const report = buildReport(cancelled, now);
     await client.query(
       "UPDATE afk_jobs SET status = 'cancelled', phase = $1, config = $2, last_tick_at = $3, report = $4, stop_reason = $5, updated_at = now() WHERE id = $6",
       [
         cancelled.phase,
-        JSON.stringify({ ...config, gains: currentGains }),
+        JSON.stringify({ ...currentConfig, gains: currentGains }),
         new Date(now).toISOString(),
         JSON.stringify({ ...report, narrative: narrativeFor(current.kind, "cancelled") }),
         "手动停止",
@@ -1076,7 +1352,14 @@ export async function settleDueJobs(opts: {
   );
   for (const job of jobs.rows) {
     summary.scanned += 1;
-    if (job.kind !== "study" && job.kind !== "quest" && job.kind !== "grind") {
+    if (
+      job.kind !== "study" &&
+      job.kind !== "practice" &&
+      job.kind !== "dazuo" &&
+      job.kind !== "tuna" &&
+      job.kind !== "quest" &&
+      job.kind !== "grind"
+    ) {
       summary.skipped += 1;
       continue;
     }

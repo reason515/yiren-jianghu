@@ -84,9 +84,9 @@ export interface AfkGrindJobView {
   maxExp: number;
   hourlyGain: AfkGainsView;
   jingPerHour: number;
-  hubRoomId?: string;
   roundGain?: AfkGainsView;
   jingPerRound?: number;
+  hubRoomId?: string;
 }
 
 export interface AfkService {
@@ -182,11 +182,27 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
 
       const presence: AfkPresence = input.presence === "online" ? "online" : "offline";
-      if (input.kind !== "study" && input.kind !== "quest" && input.kind !== "grind") {
+      if (
+        input.kind !== "study" &&
+        input.kind !== "practice" &&
+        input.kind !== "dazuo" &&
+        input.kind !== "tuna" &&
+        input.kind !== "quest" &&
+        input.kind !== "grind"
+      ) {
         throw new AfkError("invalid_kind", "不识得的挂机法门");
       }
-      if (presence === "online" && input.kind === "study") {
+      if (
+        presence === "online" &&
+        (input.kind === "study" ||
+          input.kind === "practice" ||
+          input.kind === "dazuo" ||
+          input.kind === "tuna")
+      ) {
         throw new AfkError("invalid_kind", "修炼暂只支持离线行止");
+      }
+      if (input.kind === "study") {
+        throw new AfkError("invalid_kind", "参悟已并入练功，请改选练功法门");
       }
 
       const minutes = input.durationMinutes ?? (presence === "online" ? 30 : maxMinutes);
@@ -197,10 +213,10 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       }
 
       const config = input.config ?? {};
-      if (input.kind === "study") {
+      if (input.kind === "practice") {
         const skillId = typeof config.skillId === "string" ? config.skillId : "";
         if (!skillId || !skillsById.has(skillId)) {
-          throw new AfkError("invalid_config", "修炼挂机须指定一门已知武功");
+          throw new AfkError("invalid_config", "练功挂机须指定一门已知武功");
         }
       }
 
@@ -228,7 +244,11 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
             ? (JSON.parse(row.config) as Record<string, unknown>)
             : row.config;
       } else if (input.kind === "quest") {
-        throw new AfkError("template_required", "行侠挂机须先备下一套战术");
+        templateSnapshot = {
+          version: 1,
+          rules: [],
+          defaultAction: { type: "attack" },
+        };
       }
 
       if (input.kind === "quest") {
@@ -260,7 +280,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       const job = createJob({
         id: randomUUID(),
         characterId: ch.id,
-        kind: input.kind,
+        kind: input.kind as AfkJobKind,
         now,
         params: content.params,
       });
@@ -290,43 +310,75 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         }
       }
 
-      await db.query(
-        `INSERT INTO afk_jobs (
+      const view = await withTx(db, async (tx) => {
+        await tx.query(
+          `INSERT INTO afk_jobs (
           id, character_id, kind, presence, status, phase, template_id, template_snapshot, config,
           day, hours_today, started_at, scheduled_end_at, last_tick_at, last_heartbeat_at, journal_seq
         ) VALUES ($1,$2,$3,$4,'running','init',$5,$6,$7,$8,0,$9,$10,$9,$9,0)`,
-        [
-          job.id,
-          ch.id,
-          job.kind,
-          presence,
-          templateId,
-          JSON.stringify(templateSnapshot),
-          JSON.stringify(startConfig),
-          job.day,
-          startedIso,
-          endIso,
-        ],
-      );
+          [
+            job.id,
+            ch.id,
+            job.kind,
+            presence,
+            templateId,
+            JSON.stringify(templateSnapshot),
+            JSON.stringify(startConfig),
+            job.day,
+            startedIso,
+            endIso,
+          ],
+        );
+        const locked = await tx.query<AfkJobDbRow>(
+          `SELECT ${JOB_COLS}, report FROM afk_jobs WHERE id = $1 FOR UPDATE`,
+          [job.id],
+        );
+        const current = locked.rows[0];
+        if (!current) throw new AfkError("not_running", "行止未能起势");
+        let journalLines: string[] = [];
+        let after = current;
+        if (presence === "online") {
+          const settled = await settleJobNow(tx, current, content, now, "start");
+          journalLines = settled.journalLines;
+          const refreshed = await tx.query<AfkJobDbRow>(
+            `SELECT ${JOB_COLS}, report FROM afk_jobs WHERE id = $1`,
+            [job.id],
+          );
+          after = refreshed.rows[0] ?? after;
+          if (journalLines.length > 0 && after.status === "running") {
+            await tx.query("UPDATE afk_jobs SET journal_seq = journal_seq + $1 WHERE id = $2", [
+              journalLines.length,
+              after.id,
+            ]);
+          }
+        }
+        const loc = await tx.query<{ room_path: string }>(
+          "SELECT room_path FROM characters WHERE id = $1",
+          [ch.id],
+        );
+        return toView(after, {
+          now,
+          journalLines,
+          roomId: loc.rows[0]?.room_path,
+        });
+      });
 
       return {
         id: job.id,
-        kind: job.kind,
-        presence,
-        status: "running",
-        phase: typeof startConfig.phase === "string" ? startConfig.phase : "init",
+        kind: view.kind,
+        presence: view.presence,
+        status: view.status,
+        phase: view.phase,
         startedAt: startedIso,
         scheduledEndAt: endIso,
-        gains: gainsView({}),
-        progress: 0,
-        elapsedMs: 0,
-        totalMs: minutes * 60_000,
-        journalLines: [],
-        config: startConfig,
-        roomId: ch.room_path,
-        ...(typeof startConfig.phase === "string"
-          ? { grindPhase: String(startConfig.phase), rounds: 0 }
-          : {}),
+        gains: view.gains,
+        progress: view.progress,
+        elapsedMs: view.elapsedMs,
+        totalMs: view.totalMs,
+        journalLines: view.journalLines,
+        config: view.config,
+        ...(view.roomId ? { roomId: view.roomId } : {}),
+        ...(view.grindPhase ? { grindPhase: view.grindPhase, rounds: view.rounds ?? 0 } : {}),
       };
     },
 

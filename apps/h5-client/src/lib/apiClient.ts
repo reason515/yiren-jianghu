@@ -119,6 +119,8 @@ export interface ApiClient {
       maxExp: number;
       hourlyGain: { exp: number; potential: number; silver: number };
       jingPerHour: number;
+      roundGain?: { exp: number; potential: number; silver: number };
+      jingPerRound?: number;
     }>
   >;
   getTemplates(): Promise<Array<{ id: string; name: string }>>;

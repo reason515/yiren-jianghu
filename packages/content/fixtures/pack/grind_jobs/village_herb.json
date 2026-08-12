@@ -23,8 +23,8 @@
     "village_creek",
     "village_herb_slope"
   ],
-  "roundGain": { "exp": 3, "potential": 2, "silver": 1 },
-  "jingPerRound": 2,
+  "roundGain": { "exp": 1, "potential": 1, "silver": 1 },
+  "jingPerRound": 1,
   "moveLines": [
     "你背起药篓，穿过武馆院门往北坡去。",
     "拳风未散的院落掠过，坡上已见药草影。",

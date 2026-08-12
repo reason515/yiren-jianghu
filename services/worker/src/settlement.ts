@@ -1,49 +1,149 @@
-import { studyOnce, type GameParams, type SkillMap } from "@yjh/game-core";
+import {
+  exerciseOnce,
+  practiceOnce,
+  respirateOnce,
+  type GameParams,
+  type SkillMap,
+} from "@yjh/game-core";
 
 /**
  * F2 修炼挂机结算（纯函数，worker 与测试共用）。
- * 挂机收益 = 逐次参悟（studyOnce）：每 attempts 次尝试消耗精、积累练习点/升级；
- * 精不足或满级则提前停止。exp/potential/silver 三件套归零（修炼只涨武功）。
  */
 
-export interface StudySettlementInput {
+export interface PracticeSettlementInput {
   params: GameParams;
-  /** 结算开始时角色的精。 */
-  jing: number;
+  qi: number;
   skillId: string;
   skills: SkillMap;
   maxLevel: number;
-  /** 本次可尝试次数（时长 × 每小时次数）。 */
   attempts: number;
 }
 
-export interface StudySettlementResult {
+export interface PracticeSettlementResult {
   skills: SkillMap;
-  jingSpent: number;
+  qiSpent: number;
   attempts: number;
   levelsGained: number;
 }
 
-export function settleStudy(input: StudySettlementInput): StudySettlementResult {
-  let jing = input.jing;
+/** 练功挂机：逐次 practiceOnce，耗气涨武功。 */
+export function settlePractice(input: PracticeSettlementInput): PracticeSettlementResult {
+  let qi = input.qi;
   let skills = input.skills;
   let attempts = 0;
   let levelsGained = 0;
   for (let i = 0; i < input.attempts; i++) {
-    const r = studyOnce({
+    const r = practiceOnce({
       params: input.params,
-      jing,
+      qi,
       skillId: input.skillId,
       skills,
       maxLevel: input.maxLevel,
     });
-    if (!r.ok) break; // 精不足或已满级
+    if (!r.ok) break;
     skills = r.skills;
-    jing -= r.jingSpent;
+    qi -= r.qiSpent;
     attempts += 1;
     if (r.leveled) levelsGained += 1;
   }
-  return { skills, jingSpent: input.jing - jing, attempts, levelsGained };
+  return { skills, qiSpent: input.qi - qi, attempts, levelsGained };
+}
+
+/** @deprecated 兼容旧 study 作业；内部走 practiceOnce。 */
+export function settleStudy(input: PracticeSettlementInput): PracticeSettlementResult {
+  return settlePractice(input);
+}
+
+export interface DazuoSettlementInput {
+  params: GameParams;
+  qi: number;
+  neili: number;
+  maxNeili: number;
+  forceLevel: number;
+  attempts: number;
+}
+
+export interface DazuoSettlementResult {
+  qiSpent: number;
+  neiliGained: number;
+  maxNeiliUp: number;
+  neili: number;
+  maxNeili: number;
+  attempts: number;
+}
+
+export function settleDazuo(input: DazuoSettlementInput): DazuoSettlementResult {
+  let qi = input.qi;
+  let neili = input.neili;
+  let maxNeili = input.maxNeili;
+  let qiSpent = 0;
+  let neiliGained = 0;
+  let maxNeiliUp = 0;
+  let attempts = 0;
+  for (let i = 0; i < input.attempts; i++) {
+    const r = exerciseOnce({
+      params: input.params,
+      qi,
+      neili,
+      maxNeili,
+      forceLevel: input.forceLevel,
+    });
+    if (!r.ok) break;
+    qi -= r.qiSpent;
+    neili = r.neili;
+    maxNeili = r.maxNeili;
+    qiSpent += r.qiSpent;
+    neiliGained += r.neiliGained;
+    maxNeiliUp += r.maxNeiliUp;
+    attempts += 1;
+  }
+  return { qiSpent, neiliGained, maxNeiliUp, neili, maxNeili, attempts };
+}
+
+export interface TunaSettlementInput {
+  params: GameParams;
+  jing: number;
+  jingli: number;
+  maxJingli: number;
+  forceLevel: number;
+  attempts: number;
+}
+
+export interface TunaSettlementResult {
+  jingSpent: number;
+  jingliGained: number;
+  maxJingliUp: number;
+  jingli: number;
+  maxJingli: number;
+  attempts: number;
+}
+
+export function settleTuna(input: TunaSettlementInput): TunaSettlementResult {
+  let jing = input.jing;
+  let jingli = input.jingli;
+  let maxJingli = input.maxJingli;
+  let jingSpent = 0;
+  let jingliGained = 0;
+  let maxJingliUp = 0;
+  let attempts = 0;
+  for (let i = 0; i < input.attempts; i++) {
+    const r = respirateOnce({
+      params: input.params,
+      jing,
+      jingli,
+      maxJingli,
+      forceLevel: input.forceLevel,
+    });
+    if (!r.ok) break;
+    jing -= r.jingSpent;
+    jingli = r.jingli;
+    maxJingli = r.maxJingli;
+    jingSpent += r.jingSpent;
+    jingliGained += r.jingliGained;
+    maxJingliUp += r.maxJingliUp;
+    attempts += 1;
+  }
+  return { jingSpent, jingliGained, maxJingliUp, jingli, maxJingli, attempts };
 }
 
 /** 结算次数 = 时长（小时）× 每小时次数，封顶防失控。 */

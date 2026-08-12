@@ -17,8 +17,8 @@
     "village_creek",
     "village_herb_slope"
   ],
-  "roundGain": { "exp": 4, "potential": 2, "silver": 1 },
-  "jingPerRound": 2,
+  "roundGain": { "exp": 1, "potential": 1, "silver": 1 },
+  "jingPerRound": 1,
   "moveLines": [
     "你挑起扁担，脚步沉稳，往下一处走去。",
     "村巷不长，你很快到了该去的地方。",

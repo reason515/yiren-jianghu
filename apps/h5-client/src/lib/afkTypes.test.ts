@@ -24,7 +24,7 @@ describe("挂机数据适配", () => {
     vi.setSystemTime(new Date("2026-08-07T00:00:00.000Z"));
     const view = toAfkStatusView({
       id: "job_1",
-      kind: "study",
+      kind: "practice",
       presence: "offline",
       status: "running",
       phase: "init",
@@ -40,7 +40,7 @@ describe("挂机数据适配", () => {
     expect(view).toMatchObject({
       active: true,
       paused: false,
-      message: "离线静心参悟 · 约余 2 时辰",
+      message: "离线练功途中 · 约余 1 时辰",
       progress: 0,
     });
     vi.useRealTimers();
@@ -108,7 +108,7 @@ describe("挂机数据适配", () => {
     expect(view).toMatchObject({
       active: true,
       lockExits: true,
-      message: "在线生计途中 · 第 2 圈 · 约余 0.5 时辰",
+      message: "在线生计途中 · 第 2 圈 · 约余 0.3 时辰",
       roomId: "village_general",
       rounds: 1,
     });

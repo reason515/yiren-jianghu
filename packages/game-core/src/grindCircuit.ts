@@ -203,3 +203,16 @@ export function advanceOnlineGrind(
     harvested: false,
   };
 }
+
+/** 从枢纽出发跑完一圈所需的步数（含干活 tick），用于按比例发奖。 */
+export function circuitStepsTotal(def: GrindCircuitDef): number {
+  const route = def.route;
+  if (route.length < 2) return 1;
+  const workSet = new Set(def.workRooms);
+  let steps = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    steps += 1;
+    if (workSet.has(route[i + 1]!)) steps += 1;
+  }
+  return Math.max(1, steps);
+}

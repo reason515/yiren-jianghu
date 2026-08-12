@@ -393,34 +393,44 @@ function boot() {
 }
 
 describe("afkService.start", () => {
-  it("修炼挂机：写入 running 作业并返回视图", async () => {
+  it("练功挂机：写入 running 作业并返回视图", async () => {
     const { afk, state } = boot();
     const view = await afk.start("acc_1", {
-      kind: "study",
+      kind: "practice",
       config: { skillId: "basic_sword" },
       durationMinutes: 60,
     });
-    expect(view).toMatchObject({ kind: "study", status: "running", phase: "init" });
+    expect(view).toMatchObject({ kind: "practice", status: "running", phase: "init" });
     expect(state.jobs).toHaveLength(1);
     expect(state.jobs[0]).toMatchObject({
       character_id: "char_1",
-      kind: "study",
+      kind: "practice",
       status: "running",
     });
     expect(JSON.parse(state.jobs[0]!.config)).toMatchObject({ skillId: "basic_sword" });
     expect(view.scheduledEndAt).not.toBe(view.startedAt);
   });
 
-  it("行侠挂机：必填模板并固化快照；缺模板 → template_required", async () => {
+  it("行侠挂机：有模板则固化快照；无模板走默认稳守", async () => {
     const { afk, state } = boot();
     state.templates.push({
       id: "tpl_1",
       character_id: "char_1",
       config: JSON.stringify({ version: 1, rules: [], defaultAction: { type: "attack" } }),
     });
-    await expect(afk.start("acc_1", { kind: "quest", durationMinutes: 30 })).rejects.toMatchObject({
-      code: "template_required",
+    const fallback = await afk.start("acc_1", {
+      kind: "quest",
+      durationMinutes: 30,
+      config: { questId: "q_hunt" },
     });
+    expect(fallback.kind).toBe("quest");
+    expect(JSON.parse(state.jobs[0]!.template_snapshot)).toEqual({
+      version: 1,
+      rules: [],
+      defaultAction: { type: "attack" },
+    });
+
+    state.jobs = [];
 
     const view = await afk.start("acc_1", {
       kind: "quest",
@@ -467,17 +477,25 @@ describe("afkService.start", () => {
       code: "invalid_kind",
     });
     await expect(
-      afk.start("acc_1", { kind: "study", durationMinutes: 0, config: { skillId: "basic_sword" } }),
+      afk.start("acc_1", {
+        kind: "practice",
+        durationMinutes: 0,
+        config: { skillId: "basic_sword" },
+      }),
     ).rejects.toMatchObject({ code: "invalid_duration" });
     await expect(
       afk.start("acc_1", {
-        kind: "study",
+        kind: "practice",
         durationMinutes: 9999,
         config: { skillId: "basic_sword" },
       }),
     ).rejects.toMatchObject({ code: "invalid_duration" });
     await expect(
-      afk.start("acc_1", { kind: "study", durationMinutes: 30, config: { skillId: "ghost_art" } }),
+      afk.start("acc_1", {
+        kind: "practice",
+        durationMinutes: 30,
+        config: { skillId: "ghost_art" },
+      }),
     ).rejects.toMatchObject({ code: "invalid_config" });
     await expect(
       afk.start("acc_1", { kind: "quest", templateId: "tpl_x", durationMinutes: 30 }),
@@ -488,7 +506,7 @@ describe("afkService.start", () => {
       afk.start("acc_1", { kind: "quest", templateId: "tpl_2", durationMinutes: 30 }),
     ).rejects.toMatchObject({ code: "not_found" });
     await expect(
-      afk.start("acc_x", { kind: "study", config: { skillId: "basic_sword" } }),
+      afk.start("acc_x", { kind: "practice", config: { skillId: "basic_sword" } }),
     ).rejects.toMatchObject({ code: "no_character" });
   });
 
@@ -497,7 +515,7 @@ describe("afkService.start", () => {
     state.jobs.push({
       id: "job_1",
       character_id: "char_1",
-      kind: "study",
+      kind: "practice",
       presence: "offline",
       status: "running",
       phase: "init",
@@ -516,7 +534,7 @@ describe("afkService.start", () => {
       updated_at: T0,
     });
     await expect(
-      afk.start("acc_1", { kind: "study", config: { skillId: "basic_sword" } }),
+      afk.start("acc_1", { kind: "practice", config: { skillId: "basic_sword" } }),
     ).rejects.toMatchObject({ code: "already_running" });
   });
 });
@@ -530,13 +548,13 @@ describe("afkService.stop", () => {
   it("停止运行中作业：置 cancelled、写战报（含 wuxia 叙事）", async () => {
     const { afk, state } = boot();
     await afk.start("acc_1", {
-      kind: "study",
+      kind: "practice",
       config: { skillId: "basic_sword" },
       durationMinutes: 60,
     });
     const report = await afk.stop("acc_1");
     expect(report).toMatchObject({
-      kind: "study",
+      kind: "practice",
       status: "cancelled",
       gains: { exp: 0, potential: 0, silver: 0 },
     });
@@ -612,7 +630,7 @@ describe("afkService.status / reports", () => {
       {
         id: "job_2",
         character_id: "char_1",
-        kind: "study",
+        kind: "practice",
         presence: "offline",
         status: "cancelled",
         phase: "init",
@@ -629,7 +647,7 @@ describe("afkService.status / reports", () => {
         stop_reason: "手动停止",
         report: JSON.stringify({
           jobId: "job_2",
-          kind: "study",
+          kind: "practice",
           status: "cancelled",
           ticks: 0,
           durationMs: 60_000,
@@ -734,10 +752,10 @@ describe("app 集成（afk 路由）", () => {
       method: "POST",
       url: "/afk/start",
       headers: { authorization: `Bearer ${token}` },
-      payload: { kind: "study", durationMinutes: 30, config: { skillId: "basic_sword" } },
+      payload: { kind: "practice", durationMinutes: 30, config: { skillId: "basic_sword" } },
     });
     expect(start.statusCode).toBe(200);
-    expect((start.json() as { kind: string }).kind).toBe("study");
+    expect((start.json() as { kind: string }).kind).toBe("practice");
 
     const status = await app.inject({
       method: "GET",
@@ -751,7 +769,7 @@ describe("app 集成（afk 路由）", () => {
       method: "POST",
       url: "/afk/start",
       headers: { authorization: `Bearer ${token}` },
-      payload: { kind: "study", config: { skillId: "basic_sword" } },
+      payload: { kind: "practice", config: { skillId: "basic_sword" } },
     });
     expect(dup.statusCode).toBe(409);
     expect((dup.json() as { error: { code: string } }).error.code).toBe("already_running");

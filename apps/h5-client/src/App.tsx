@@ -323,12 +323,12 @@ export function App(): JSX.Element {
     [api, refreshScene, refreshCharacter],
   );
 
-  // 在线挂机心跳 + 离线进度刷新（约 18s）
+  // 在线挂机心跳 + 离线进度刷新（约 10s）
   useEffect(() => {
     if (!afkStatus.active || afkStatus.paused) return;
     const timer = window.setInterval(() => {
       void refreshAfk();
-    }, 18_000);
+    }, 10_000);
     return () => window.clearInterval(timer);
   }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
@@ -778,8 +778,14 @@ export function App(): JSX.Element {
       .then((job) => {
         setAfkStatus(toAfkStatusView(job));
         setPanel("none");
-        showToast("气息渐定，行止已安排妥当。");
-        addJournal("气息渐定，行止已安排妥当。");
+        const line =
+          config.presence === "online"
+            ? config.kind === "quest"
+              ? "按定下路数，提剑出门。"
+              : "挽袖上工，脚步已动。"
+            : "行止已定，时光自会替你记账。";
+        showToast(line);
+        addJournal(line);
       })
       .catch(notify)
       .finally(() => setAfkPending(false));

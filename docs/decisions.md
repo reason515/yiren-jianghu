@@ -72,6 +72,7 @@
 | DC-051 | 2026-08 | 自然恢复对齐 xkx heal_up 绝对值 | ①废弃上限比例 `*PerMin`；改为每拍 `con/3+maxNeili/10`（精同构 +maxJingli）、精力 `(str+dex)/4`、内力 `forceLevel/2`，×`(60/tickSeconds)`×分钟（`tickSeconds=9.5`）。②饥渴不回气精。③贴 eff 后缓慢抬伤势上限。④`settleCharacterVitals` 读写 `eff_qi`/`eff_jing`（修非空血无法回升）。场外 exert recover / 歇脚另案 | 实测比例回速约为 MUD 1/5～1/10；对齐桌面站桩回血手感 | mechanics.yaml、schema、vitals.ts、vitalsSettle、numeric-baseline、protocol.md | ✅ |
 | DC-052 | 2026-08 | 场外运功子集（疗伤/回气/回精） | ①`POST /skills/exert`：已学自疗类绝招场外可用（heal / cure_ / heal_jing）；拒 damage/buff、拒战斗中。②无回合冷却，靠消耗与条件。③顶栏+人物簿双入口。④新增 `force_calm_spirit` 回精。歇脚入眠仍另案 | 补 DC-051 场外缺口；不违 DC-041「无完整 exert 树」 | protocol、numeric-baseline、game-core/exert、skillsService、ExertSheet/StatusBar | ✅ |
 | DC-053 | 2026-08 | 战报具名招式 + 兵器分流 + 主语归属 | ①普攻/闪避事件带 `moveName`/`dodgeMoveName`，战报嵌「一招/一式「名」」（非绝招）。②`pickMove` 按攻击槽（sword/unarmed）过滤；身法招式挂 dodge 槽。③首次习得 `oldLevel=-1` 解锁 `minLevel:0`；开战/武学 reconcile 补漏。④战斗 `resolveEnableMap`。⑤叙事禁悬空「闪避开来」、人攻兽闪禁攻方扑空词；佩剑用剑动词 | 对齐 xkx action/`query_dodge_msg` 结构；修「佩剑像空手」「学了招看不到名」「闪避主语错乱」 | protocol、combatNarrative、movePick、enable、combatService、content moves、yjh-combat-presentation | ✅ |
+| DC-054 | 2026-08 | 挂机体验：古制时辰 + 修炼三态 + 在线快 tick | ①古制 1 时辰=2 现实小时；离线档含一刻(15分)。②AFK 修炼分练功/打坐/吐纳；废弃 AFK `study`（人物簿读书仍 `/skills/study`）。③在线 tick 15s、行侠 30s；roundGain 同比缩放；启动即推进一步。④在线未合圈 stop 按比例发奖。⑤Tab 化 AfkSheet；行侠接 TacticEditor | 修短挂零收益、在线像卡死、参悟/练功混淆、战术无法开 | protocol、mechanics.yaml、grind_jobs、game-core/cultivate、worker/jobSettle、afkService、AfkSheet/GrindBanner、numeric-baseline | 🔄 |
 
 # 3. 被替代决策（变更历史）
 

@@ -38,9 +38,17 @@ coeffs:
     maxDurationHours: 8
     dailyDiminishRate: 0.5
     studyAttemptsPerHour: 12
-    onlineTickSec: 60
+    practiceAttemptsPerHour: 12
+    dazuoAttemptsPerHour: 12
+    tunaAttemptsPerHour: 12
+    onlineTickSec: 15
+    questOnlineTickSec: 30
     onlineHeartbeatTimeoutSec: 45
     onlineRewardMult: 1.8
+    exerciseQiBase: 10
+    respirateJingBase: 10
+    cultivateForceDiv: 10
+    cultivateMaxOverflowMult: 2
   vitals:
     # P2：整体约 ×0.5，手机一局短打
     qiBase: 50
@@ -115,6 +123,8 @@ formulas:
   practiceCost: "practiceQiBase + level * practiceQiPerLevel"
   practicePointsNeeded: "level + practicePointsNeededOffset"
   studyCost: "max(1, studyJingBase + level)"
+  exerciseGain: "1 + floor(forceLevel / cultivateForceDiv)"
+  respirateGain: "1 + floor(forceLevel / cultivateForceDiv)"
   maxNeili: "forceLevel * neiliPerLevel"
   maxQi: "qiBase + con * qiPerCon + str * qiPerStr + forceLevel * forceQiPerLevel + floor(forceLevel * neiliPerLevel / neiliToQiDiv)"
   maxJing: "jingBase + int * jingPerInt + forceLevel * forceJingPerLevel + floor(forceLevel * neiliPerLevel / neiliToJingDiv)"

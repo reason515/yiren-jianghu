@@ -33,7 +33,14 @@ export interface AfkSheetProps {
 }
 
 const ONLINE_DURATIONS = [15, 30, 60];
-const OFFLINE_DURATIONS = [60, 120, 240, 480];
+const OFFLINE_DURATIONS = [15, 60, 120, 240, 480];
+
+function durationLabel(minutes: number): string {
+  if (minutes === 15) return "一刻";
+  if (minutes === 30) return "两刻";
+  if (minutes === 60) return "半时辰";
+  return `${minutes / 120} 时辰`;
+}
 
 export function AfkSheet({
   open,
@@ -53,7 +60,7 @@ export function AfkSheet({
   onClose,
 }: AfkSheetProps): JSX.Element | null {
   const [presence, setPresence] = useState<AfkPresence>("offline");
-  const [mode, setMode] = useState<"study" | "quest" | "grind">("grind");
+  const [mode, setMode] = useState<"practice" | "dazuo" | "tuna" | "quest" | "grind">("grind");
   const [skillId, setSkillId] = useState(skills[0]?.id ?? "");
   const [questId, setQuestId] = useState(quests[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
@@ -62,7 +69,8 @@ export function AfkSheet({
   const [duration, setDuration] = useState(durations[0]!);
 
   useEffect(() => {
-    if (presence === "online" && mode === "study") setMode("grind");
+    if (presence === "online" && (mode === "practice" || mode === "dazuo" || mode === "tuna"))
+      setMode("grind");
   }, [presence, mode]);
 
   useEffect(() => {
@@ -88,25 +96,29 @@ export function AfkSheet({
   }, [grindJobId, grindJobs]);
 
   const canStart =
-    mode === "study"
+    mode === "practice"
       ? Boolean(skillId)
       : mode === "quest"
-        ? Boolean(questId && templateId)
+        ? Boolean(questId)
         : Boolean(grindJobId);
 
   const start = (): void => {
-    if (mode === "study") {
+    if (mode === "practice") {
       onStart({
-        kind: "study",
+        kind: "practice",
         presence: "offline",
         durationMinutes: duration,
         config: { skillId },
       });
-    } else if (mode === "quest" && questId && templateId) {
+    } else if (mode === "dazuo") {
+      onStart({ kind: "dazuo", presence: "offline", durationMinutes: duration, config: {} });
+    } else if (mode === "tuna") {
+      onStart({ kind: "tuna", presence: "offline", durationMinutes: duration, config: {} });
+    } else if (mode === "quest" && questId) {
       onStart({
         kind: "quest",
         presence,
-        templateId,
+        ...(templateId ? { templateId } : {}),
         durationMinutes: duration,
         config: { questId },
       });
@@ -123,11 +135,15 @@ export function AfkSheet({
   const lead =
     presence === "online"
       ? "在线行止轮回更密、所得更丰；须时时守着，断线即暂歇。"
-      : mode === "study"
-        ? "收束心神，择一门功夫细细参悟。离线时光虽静，寸进仍由服务端记下。"
-        : mode === "quest"
-          ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
-          : "不需动武，只换些碎银与历练。挂多久结多久，中途停下亦立刻清算。";
+      : mode === "practice"
+        ? "勤练不辍，招式自会熟极而化。"
+        : mode === "dazuo"
+          ? "沉心运气，涓滴真息，终可聚成内力。"
+          : mode === "tuna"
+            ? "吐故纳新，神意归一，精力便有长进。"
+            : mode === "quest"
+              ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
+              : "不需动武，只换些碎银与历练。挂多久结多久，中途停下亦立刻清算。";
 
   return (
     <Sheet open={open} title="行止" onClose={onClose}>
@@ -184,7 +200,11 @@ export function AfkSheet({
               options={[
                 { value: "grind", label: "生计", disabled: pending },
                 ...(presence === "offline"
-                  ? [{ value: "study" as const, label: "修炼", disabled: pending }]
+                  ? [
+                      { value: "practice" as const, label: "练功", disabled: pending },
+                      { value: "dazuo" as const, label: "打坐", disabled: pending },
+                      { value: "tuna" as const, label: "吐纳", disabled: pending },
+                    ]
                   : []),
                 { value: "quest", label: "行侠", disabled: pending },
               ]}
@@ -193,9 +213,9 @@ export function AfkSheet({
             />
           </div>
 
-          {mode === "study" ? (
+          {mode === "practice" ? (
             <div className="field">
-              <span className="field-label">参悟武功</span>
+              <span className="field-label">练功武学</span>
               {skills.length > 0 ? (
                 <div className="chips" role="group" aria-label="参悟武功">
                   {skills.map((skill) => (
@@ -211,9 +231,14 @@ export function AfkSheet({
                   ))}
                 </div>
               ) : (
-                <p className="afk-empty">尚无可参悟的武功，先向师长请教一门本事。</p>
+                <p className="afk-empty">尚无可练的武功，先向师长请教一门本事。</p>
               )}
+              <p className="afk-hint">练功耗气，不耗潜能。</p>
             </div>
+          ) : mode === "dazuo" ? (
+            <p className="afk-hint">打坐以气化力，循序渐进。</p>
+          ) : mode === "tuna" ? (
+            <p className="afk-hint">吐纳以精养神，贵在绵长。</p>
           ) : mode === "quest" ? (
             <>
               <div className="field">
@@ -253,7 +278,7 @@ export function AfkSheet({
                     ))}
                   </div>
                 ) : (
-                  <p className="afk-empty">须先备下一套战术，才能按路数行走江湖。</p>
+                  <p className="afk-empty">尚无战术谱，启程时将按稳守路数应敌。</p>
                 )}
               </div>
             </>
@@ -303,7 +328,7 @@ export function AfkSheet({
                   disabled={pending}
                   onClick={() => setDuration(minutes)}
                 >
-                  {minutes >= 60 ? `${minutes / 60} 时辰` : `${minutes} 分`}
+                  {durationLabel(minutes)}
                 </button>
               ))}
             </div>
@@ -316,11 +341,15 @@ export function AfkSheet({
           >
             {pending
               ? "安排行止中…"
-              : mode === "study"
-                ? "开始参悟"
-                : mode === "quest"
-                  ? "启程行侠"
-                  : "开始生计"}
+              : mode === "practice"
+                ? "开始练功"
+                : mode === "dazuo"
+                  ? "开始打坐"
+                  : mode === "tuna"
+                    ? "开始吐纳"
+                    : mode === "quest"
+                      ? "启程行侠"
+                      : "开始生计"}
           </button>
         </div>
       )}

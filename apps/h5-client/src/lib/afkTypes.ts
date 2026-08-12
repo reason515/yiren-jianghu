@@ -30,21 +30,35 @@ export interface AfkGrindOption {
   maxExp: number;
   hourlyGain: AfkGains;
   jingPerHour: number;
+  roundGain?: AfkGains;
+  jingPerRound?: number;
 }
 
 export type AfkPresence = "online" | "offline";
 
 export type AfkStartConfig =
   | {
-      kind: "study";
+      kind: "practice";
       presence: "offline";
       durationMinutes: number;
       config: { skillId: string };
     }
   | {
+      kind: "dazuo";
+      presence: "offline";
+      durationMinutes: number;
+      config: Record<string, never>;
+    }
+  | {
+      kind: "tuna";
+      presence: "offline";
+      durationMinutes: number;
+      config: Record<string, never>;
+    }
+  | {
       kind: "quest";
       presence: AfkPresence;
-      templateId: string;
+      templateId?: string;
       durationMinutes: number;
       config: { questId: string };
     }
@@ -63,7 +77,7 @@ export interface AfkGains {
 
 export interface AfkJobData {
   id: string;
-  kind: "study" | "quest" | "grind";
+  kind: "practice" | "dazuo" | "tuna" | "study" | "quest" | "grind";
   presence: AfkPresence;
   status: string;
   phase: string;
@@ -136,12 +150,22 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
   }
 
   const end = Date.parse(status.scheduledEndAt);
-  const hours = Number.isFinite(end)
-    ? Math.max(0, Math.round(((end - Date.now()) / 3_600_000) * 10) / 10)
+  const shichen = Number.isFinite(end)
+    ? Math.max(0, Math.round(((end - Date.now()) / 7_200_000) * 10) / 10)
     : null;
-  const suffix = hours === null ? "" : hours > 0 ? ` · 约余 ${hours} 时辰` : " · 正待结算";
+  const suffix = shichen === null ? "" : shichen > 0 ? ` · 约余 ${shichen} 时辰` : " · 正待结算";
   const kindLabel =
-    status.kind === "study" ? "静心参悟" : status.kind === "quest" ? "行侠途中" : "生计途中";
+    status.kind === "practice"
+      ? "练功途中"
+      : status.kind === "dazuo"
+        ? "打坐途中"
+        : status.kind === "tuna"
+          ? "吐纳途中"
+          : status.kind === "study"
+            ? "练功途中"
+            : status.kind === "quest"
+              ? "行侠途中"
+              : "生计途中";
   const presenceLabel = status.presence === "online" ? "在线" : "离线";
   const paused = status.status === "paused";
   const grindPhase = status.grindPhase;

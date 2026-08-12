@@ -86,7 +86,7 @@ describe("GrindBanner（挂机状态条）", () => {
 });
 
 describe("AfkSheet（挂机启动）", () => {
-  it("选武功/时长后只提交服务端支持的修炼意图", () => {
+  it("选武功/时长后提交练功意图", () => {
     let config: unknown = null;
     let stopped = 0;
     const { host } = render(
@@ -105,7 +105,7 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
-        .find((b) => b.textContent === "修炼")!
+        .find((b) => b.textContent === "练功")!
         .click(),
     );
     act(() =>
@@ -115,12 +115,12 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".tactic-chip")]
-        .find((b) => b.textContent === "2 时辰")!
+        .find((b) => b.textContent === "1 时辰")!
         .click(),
     );
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
-      kind: "study",
+      kind: "practice",
       presence: "offline",
       durationMinutes: 120,
       config: { skillId: "dodge" },
@@ -155,7 +155,7 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".tactic-chip")]
-        .find((b) => b.textContent === "2 时辰")!
+        .find((b) => b.textContent === "1 时辰")!
         .click(),
     );
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
@@ -189,7 +189,7 @@ describe("AfkSheet（挂机启动）", () => {
         .click(),
     );
     expect(host.textContent).toContain("先去应下一桩悬赏");
-    expect(host.textContent).toContain("须先备下一套战术");
+    expect(host.textContent).toContain("稳守路数");
     expect(host.querySelector<HTMLButtonElement>(".btn.primary")?.disabled).toBe(true);
   });
 
@@ -210,7 +210,7 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".seg-btn")]
-        .find((b) => b.textContent === "修炼")!
+        .find((b) => b.textContent === "练功")!
         .click(),
     );
     expect(host.textContent).toContain("先向师长请教");
@@ -238,7 +238,7 @@ describe("AfkSheet（挂机启动）", () => {
     expect(config).toEqual({
       kind: "grind",
       presence: "offline",
-      durationMinutes: 60,
+      durationMinutes: 15,
       config: { jobId: "village_chore" },
     });
   });
@@ -263,10 +263,10 @@ describe("AfkSheet（挂机启动）", () => {
         .find((b) => b.textContent === "在线")!
         .click(),
     );
-    expect([...host.querySelectorAll(".seg-btn")].some((b) => b.textContent === "修炼")).toBe(
+    expect([...host.querySelectorAll(".seg-btn")].some((b) => b.textContent === "练功")).toBe(
       false,
     );
-    expect(host.textContent).toContain("15 分");
+    expect(host.textContent).toContain("一刻");
   });
 });
 

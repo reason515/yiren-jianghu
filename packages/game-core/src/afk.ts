@@ -15,7 +15,7 @@ import { diminishMultiplier } from "./params.js";
  */
 
 export type AfkJobStatus = "running" | "paused" | "completed" | "failed" | "cancelled";
-export type AfkJobKind = "quest" | "study" | "grind";
+export type AfkJobKind = "quest" | "study" | "grind" | "practice" | "dazuo" | "tuna";
 
 export interface GainAccum {
   exp: number;

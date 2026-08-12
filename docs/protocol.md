@@ -159,19 +159,21 @@ pvp.report
 
 # 9. 挂机约定（DC-026 / DC-042 / DC-043 / DC-045）
 
-- `POST /afk/start`：`kind` ∈ `study` | `quest` | `grind`；可选 `presence` ∈ `online` | `offline`（缺省 `offline`）。
-  - `study`：仅 `offline`；`config.skillId`；
+- `POST /afk/start`：`kind` ∈ `practice` | `dazuo` | `tuna` | `quest` | `grind`（兼容旧 `study`，返回 `invalid_kind` 并提示改选练功）；可选 `presence` ∈ `online` | `offline`（缺省 `offline`）。
+  - `practice`：仅 `offline`；`config.skillId`；
+  - `dazuo`：仅 `offline`；将气转为内力；
+  - `tuna`：仅 `offline`；将精转为精力；
   - `quest`：已接击杀相位差事 + `templateId`（DC-026）；在线/离线均可；
   - `grind`：`config.jobId` 指向内容包 `grindJobs`；历练达 `maxExp` 时拒绝（`grind_unavailable`）。无战斗、不需战术模板。在线时初始化 `config.phase=goto_hub|circuit`（已在枢纽则直接 circuit）、`routeIndex`/`pendingWork`/`rounds`（DC-045）。
-  - 在线时长建议 15/30/60 分钟；离线仍按 1–8 时辰（受 `maxDurationHours` 约束）。
+  - 在线时长建议 15/30/60 分钟；离线建议一刻/半时辰/一时辰/两时辰/四时辰（1 时辰=2 现实小时，受 `maxDurationHours` 约束）。
 - `GET /afk/status`：无作业返回 `{ active: false }`；有作业返回视图，含 `presence`、`progress`（0–1）、`elapsedMs`/`totalMs`、`gains`（累计）、`journalLines`（自上次游标的新增见闻）；在线生计另含 `roomId`、`grindPhase`（`goto_hub`/`circuit`）、`rounds`（已合圈轮数）。
   - **心跳**：客户端约 15–20s 轮询本接口；在线作业刷新 `last_heartbeat_at`。超时（`params.afk.onlineHeartbeatTimeoutSec`，默认 45s）→ `status=paused`，文案「气息中断，行止暂歇」，**不**降级为离线收益。
   - 读时 settle：离线/在线均按未结时长推进并写回角色资源，便于进度条与累计收益实时可见。
-  - **在线生计跑图（DC-045）**：每 `onlineTickSec` 推进一步（导航/移动/干活）；真实更新 `characters.room_path`；**合完一圈回路**才发 `roundGain × onlineRewardMult` 并扣 `jingPerRound`；客户端应随 status 刷新场景。
+  - **在线生计跑图（DC-045/054）**：每 `onlineTickSec` 推进一步（导航/移动/干活）；真实更新 `characters.room_path`；合圈发 `roundGain × onlineRewardMult` 并扣 `jingPerRound`；手动 stop 未合圈按已跑步数比例结算；客户端应随 status 刷新场景。
 - `POST /afk/resume`：仅 `paused` 作业可续；恢复 `running` 并刷新心跳。
 - `POST /afk/stop`：先 settle 未结时长，再终态（到期 `completed` / 手动 `cancelled`），战报含真实 `gains`。
 - `GET /afk/grind-jobs`：返回当前角色仍可接的生计杂役（已按 `maxExp` 过滤），含每小时收益与耗精；有路线时另含 `hubRoomId`/`roundGain`/`jingPerRound`。
-- 在线收益倍率 `onlineRewardMult`（默认 1.8）、短轮回 `onlineTickSec`（默认 60s）；离线生计仍用 `grindJobs.hourlyGain` 按时长累计（不改房间）。
+- 在线收益倍率 `onlineRewardMult`（默认 1.8）、生计短轮回 `onlineTickSec`（默认 15s）、行侠短轮回 `questOnlineTickSec`（默认 30s）；离线生计仍用 `grindJobs.hourlyGain` 按时长累计（不改房间）。
 - **场景移动锁**：在线挂机 `running` 时 `POST /scene/action { type: "move" }` 拒绝（`afk_busy`，409，「行止未歇，不便擅离」）。
 - Worker 继续扫描到期/到时作业；与 status/stop 共用 `settleJobNow`。
 

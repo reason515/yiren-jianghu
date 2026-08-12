@@ -66,8 +66,10 @@
 | 时长上限 | 无（桌面端客户端挂机） | `maxDurationHours=8` | 移动端单次上限，防绑架（DC-008） |
 | 每日递减 | 无 | `dailyDiminishRate=0.5`（每满 8h 收益减半） | 防无限挂机最优解；封测调斜率 |
 | 生计杂役 | 配药/钓鱼等打工 | `village_chore`：36/18/8 每时；`village_fish`：28/14/10；`village_herb`：32/16/9；耗精 10–12；`maxExp` 2k–5k | DC-042/043 新手无战斗起步 |
-| 在线生计合圈 | 无（钓鱼/配药位移感） | `roundGain`：杂役 4/2/1、垂钓 3/2/1、采药 3/2/1；`jingPerRound` 1–2；合圈 ×`onlineRewardMult` | DC-045 整圈一轮；约 5–6 tick/圈 ≈ 离线时薪折算 |
-| 在线短轮回 | 无 | `onlineTickSec=60` | DC-043/045 在线一步一节拍 |
+| 在线生计合圈 | 无（钓鱼/配药位移感） | `roundGain`：各杂役 **1/1/1**（DC-054 自 4/2/1 缩放）；`jingPerRound` 1；合圈 ×`onlineRewardMult` | 快 tick 小单圈；时薪不变 |
+| 在线短轮回 | 无 | `onlineTickSec=15`；行侠 `questOnlineTickSec=30` | DC-054 在线有动效；启动即推一步 |
+| 练功/打坐/吐纳 | practice/lian、dazuo、tuna（busy） | 离线 AFK：`practice`/`dazuo`/`tuna`；各 12 次/时；打坐 `exerciseGain=1+⌊force/10⌋`、吐纳同式 | DC-054 对齐 xkx；AFK 不用 study |
+| 古制时辰 | 叙事半个时辰 | UI **1 时辰=120 分**；一刻=15 分 | 产品刻度与历法对齐 |
 | 心跳超时 | 无 | `onlineHeartbeatTimeoutSec=45` | 断线 pause，不降级离线收益 |
 | 在线倍率 | 无 | `onlineRewardMult=1.8` | 在线高于离线，鼓励守着玩 |
 
@@ -95,7 +97,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
-| 2026-08-11 | 场外运功 DC-052：`/skills/exert` + heal_jing 绝招 | exert.ts + protocol | 补 DC-051 场外另案；疗伤/回气/回精入口 |
+| 2026-08-12 | DC-054 挂机：onlineTickSec=15、questOnlineTickSec=30、roundGain 1/1/1、修炼三态 | mechanics + grind_jobs | 在线有动效；古制时辰；练功/打坐/吐纳 |
 | 2026-08-11 | 自然恢复 DC-051：xkx 绝对值（tickSeconds=9.5、con/内力分母）；修 eff 读写 | mechanics + vitalsSettle | 对齐 MUD 站桩回血；非空血可回升 |
 | 2026-08-11 | 战斗读感 DC-050：命中夹逼/浮动 0.3/弱打强软帽/busy=2；HUD 回放+exchange | mechanics + CombatView | 扣血对齐文案；攻防对位；缓解稳赢稳输 |
 | 2026-08-10 | 机制迁移 A–D：后天四维/装备/dodge/jiali/伤势/busy 对照列补齐 | DC-047–049 | 接线验收后统一回写，避免半成品口径 |

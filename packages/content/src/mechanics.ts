@@ -16,6 +16,8 @@ export const REQUIRED_FORMULA_IDS = [
   "practiceCost",
   "practicePointsNeeded",
   "studyCost",
+  "exerciseGain",
+  "respirateGain",
   "maxNeili",
   "maxQi",
   "maxJing",

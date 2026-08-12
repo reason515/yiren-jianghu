@@ -823,7 +823,12 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
       try {
         return await afk.start(accountId, {
           kind:
-            body.kind === "study" || body.kind === "quest" || body.kind === "grind"
+            body.kind === "study" ||
+            body.kind === "practice" ||
+            body.kind === "dazuo" ||
+            body.kind === "tuna" ||
+            body.kind === "quest" ||
+            body.kind === "grind"
               ? body.kind
               : "",
           presence: typeof body.presence === "string" ? body.presence : undefined,

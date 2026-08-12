@@ -49,14 +49,24 @@ export const paramsSchema = z.object({
   afk: z.object({
     maxDurationHours: z.number().min(0.5).max(24),
     dailyDiminishRate: z.number().min(0).max(1),
-    /** 修炼挂机每小时的参悟/演练次数（F2 worker 结算频率）。 */
+    /** @deprecated 兼容旧 yaml；优先 practiceAttemptsPerHour */
     studyAttemptsPerHour: z.number().int().min(1).max(60).default(12),
-    /** 在线挂机短轮回秒数（DC-043）。 */
-    onlineTickSec: z.number().int().min(15).max(600).default(60),
+    /** 练功挂机每小时次数（DC-054）。 */
+    practiceAttemptsPerHour: z.number().int().min(1).max(60).default(12),
+    dazuoAttemptsPerHour: z.number().int().min(1).max(60).default(12),
+    tunaAttemptsPerHour: z.number().int().min(1).max(60).default(12),
+    /** 在线生计短轮回秒数（DC-043/054）。 */
+    onlineTickSec: z.number().int().min(15).max(600).default(15),
+    /** 在线行侠战斗 tick 秒数（DC-054）。 */
+    questOnlineTickSec: z.number().int().min(15).max(600).default(30),
     /** 在线心跳超时秒数；超时 pause（断线）。 */
     onlineHeartbeatTimeoutSec: z.number().int().min(20).max(300).default(45),
     /** 在线相对离线收益倍率。 */
     onlineRewardMult: z.number().min(1).max(5).default(1.8),
+    exerciseQiBase: z.number().int().positive().default(10),
+    respirateJingBase: z.number().int().positive().default(10),
+    cultivateForceDiv: z.number().int().positive().default(10),
+    cultivateMaxOverflowMult: z.number().positive().default(2),
   }),
   /** 自然恢复/消耗（V2.12 + DC-044 + DC-051，对齐 xkx heal_up 绝对值）：
    * 气/精/精力/内力按「每拍点数 × (60/tickSeconds) × 分钟」恢复；food/water 按绝对值消耗；

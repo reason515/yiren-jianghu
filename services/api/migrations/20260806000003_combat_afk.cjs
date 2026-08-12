@@ -71,7 +71,7 @@ exports.up = async (pgm) => {
     updated_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
   });
   pgm.addConstraint("afk_jobs", "ck_afk_kind", {
-    check: "kind IN ('quest','study','grind','fishing','peiyao')",
+    check: "kind IN ('quest','study','grind','practice','dazuo','tuna','fishing','peiyao')",
   });
   pgm.addConstraint("afk_jobs", "ck_afk_presence", {
     check: "presence IN ('online','offline')",

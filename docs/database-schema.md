@@ -135,7 +135,7 @@ combat_events：id、session_id（FK CASCADE）、seq、type、payload jsonb、c
 | 列 | 类型 | 说明 |
 |---|---|---|
 | id / character_id | uuid | FK CASCADE |
-| kind | text | quest/study/grind（fishing/peiyao 预留，首版用 grind 统一生计） |
+| kind | text | quest/practice/dazuo/tuna/grind（study 仅兼容旧作业；fishing/peiyao 预留，首版用 grind 统一生计） |
 | presence | text | online/offline（DC-043；缺省 offline） |
 | status | text | running/paused/completed/failed/cancelled |
 | phase | text | 状态机相位（init/hunt/fight/rest…） |

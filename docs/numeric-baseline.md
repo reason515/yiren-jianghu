@@ -19,7 +19,7 @@
 
 | 项目 | pkuxkx（来源） | 本项目生效值 | 调整理由 |
 |---|---|---|---|
-| exp 门槛 | 武功³/10 > 实战经验 无法深造（`feature/skill.c`） | **小数值** `level²×2`（exponent=2, divisor=0.5） | 保留门槛语义，去掉立方爆炸；技能 100 需 2 万历练而非 10 万 |
+| exp 门槛 | 武功³/10 > 实战经验 无法深造（`feature/skill.c`）；0 级可学（`learn.c`） | **小数值** `level²×2`（exponent=2, divisor=0.5）；**目标等级 ≤1 豁免**（DC-055） | 保留门槛语义，去掉立方爆炸；0→1 对齐 pkuxkx 可学，精耗仍 ×2 |
 | 学习精耗 | `150/int`（learn.c）；0 级首学 ×2 | `learnJingCostBase=150` ÷ int；**0 级 ×2**（DC-039） | 沿用 pkuxkx 比例；首学加倍对齐 learn.c |
 | 学费（银两） | 武馆教头：交银充学习次数（jiaotou.c，每两银约 10 次） | **按次扣银**：`learnTuitionBase=2`；NPC `teaches.tuitionSilver` 可覆盖；门派请教强制 0（DC-039） | GUI 无 give 指令；按次报价更直观；机制借鉴教头非村武师 |
 | 潜能上限 | `max_potential = 100+sqrt(exp)/10`（updated.c，已废弃） | 无硬上限 + 有效潜能 = potential − learned_points | 移动端免于"刷潜能上限"挫败；已定修正（DC-017） |
@@ -97,6 +97,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-13 | DC-055 新手村：expGate 目标等级 ≤1 豁免；建角赠铁剑+潜能 10；教学兽 con≈1 / level 0 | mechanics + characterService + NPC | 打通引导→学武→首战；精耗仍 ×2；不改全局公式 |
 | 2026-08-12 | DC-054 挂机：onlineTickSec=15、questOnlineTickSec=30、roundGain 1/1/1、修炼三态 | mechanics + grind_jobs | 在线有动效；古制时辰；练功/打坐/吐纳 |
 | 2026-08-11 | 自然恢复 DC-051：xkx 绝对值（tickSeconds=9.5、con/内力分母）；修 eff 读写 | mechanics + vitalsSettle | 对齐 MUD 站桩回血；非空血可回升 |
 | 2026-08-11 | 战斗读感 DC-050：命中夹逼/浮动 0.3/弱打强软帽/busy=2；HUD 回放+exchange | mechanics + CombatView | 扣血对齐文案；攻防对位；缓解稳赢稳输 |

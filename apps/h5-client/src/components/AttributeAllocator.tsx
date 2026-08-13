@@ -50,7 +50,7 @@ export function AttributeAllocator({
   return (
     <div className="attr-allocator" data-testid="attr-allocator">
       <div className="attr-remaining" data-ok={remaining >= 0}>
-        剩余可分配：{remaining} 点
+        {remaining === 0 ? "点数已满，先减再加" : `剩余可分配：${remaining} 点`}
       </div>
       {ATTR_KEYS.map((key) => {
         const meta = ATTR_META[key];

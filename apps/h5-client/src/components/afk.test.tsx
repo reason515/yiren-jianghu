@@ -284,6 +284,7 @@ describe("AfkReportView（战报）", () => {
     expect(host.textContent).toContain("衣摆沾了露水");
     expect(host.textContent).toContain("历练 +120");
     expect(host.textContent).toContain("行止已竟");
+    expect(host.textContent).toContain("历时 1 时辰");
     expect(host.querySelector(".gain-exp")).toBeTruthy();
     expect(host.querySelector(".gain-pot")).toBeTruthy();
     expect(host.querySelector(".gain-silver")).toBeTruthy();

@@ -1300,7 +1300,7 @@ export async function stopJobNow(
     }
     const currentConfig = parse<Record<string, unknown>>(current.config);
     const currentGains = gains(currentConfig.gains as ReturnType<typeof gains>);
-    const cancelled = cancelJob(stateOf(current, now, currentGains), now, "手动停止");
+    const cancelled = cancelJob(stateOf(current, now, currentGains), now, "你停了手头的活计");
     const report = buildReport(cancelled, now);
     await client.query(
       "UPDATE afk_jobs SET status = 'cancelled', phase = $1, config = $2, last_tick_at = $3, report = $4, stop_reason = $5, updated_at = now() WHERE id = $6",
@@ -1309,7 +1309,7 @@ export async function stopJobNow(
         JSON.stringify({ ...currentConfig, gains: currentGains }),
         new Date(now).toISOString(),
         JSON.stringify({ ...report, narrative: narrativeFor(current.kind, "cancelled") }),
-        "手动停止",
+        "你停了手头的活计",
         current.id,
       ],
     );

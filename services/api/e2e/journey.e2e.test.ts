@@ -215,7 +215,7 @@ describe("F3 全链路旅程", () => {
     expect((back.json() as { id: string }).id).toBe("village_square");
   });
 
-  it("4. 学武：当面请教王师傅；exp=0 → exp_gate；提经验后 learn/practice/study 走通", async () => {
+  it("4. 学武：当面请教王师傅；exp=0 可学 Lv1（DC-055）；再 practice/study", async () => {
     // 从村口北行至武馆当面请教（DC-039）
     await app.inject({
       method: "POST",
@@ -230,25 +230,13 @@ describe("F3 全链路旅程", () => {
       headers: auth(tokenA),
       payload: { skillId: "basic_sword", npcId: "master_wang" },
     });
-    expect(learn0.statusCode).toBe(409);
-    expect((learn0.json() as { error: { code: string } }).error.code).toBe("exp_gate");
+    expect(learn0.statusCode).toBe(200);
+    expect((learn0.json() as { skill: { level: number } }).skill.level).toBe(1);
 
-    // SQL 造数：补经验与潜能（见文件头注释）
+    // SQL 造数：补经验与潜能，供后续练习/参悟与任务门槛（见文件头注释）
     await pool.query("UPDATE characters SET exp = 1000, potential = 100 WHERE id = $1", [
       characterA,
     ]);
-
-    const learn = await app.inject({
-      method: "POST",
-      url: "/skills/learn",
-      headers: auth(tokenA),
-      payload: { skillId: "basic_sword", npcId: "master_wang" },
-    });
-    expect(learn.statusCode).toBe(200);
-    expect(
-      (learn.json() as { skill: { level: number }; spent: { silver: number } }).skill.level,
-    ).toBe(1);
-    expect((learn.json() as { spent: { silver: number } }).spent.silver).toBe(2);
 
     const practice = await app.inject({
       method: "POST",

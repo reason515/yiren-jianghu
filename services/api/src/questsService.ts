@@ -1,4 +1,4 @@
-import type { ContentPack, Quest } from "@yjh/content";
+import { orderStoryByNextChain, type ContentPack, type Quest } from "@yjh/content";
 import type { Db } from "./db.js";
 
 /** 任务域错误（code 进入错误信封）。 */
@@ -190,7 +190,7 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
       const records = await recordsOf(ch.id);
       const quests = content.quests.map((quest) => view(quest, ch.exp, records.get(quest.id)));
       let hasCurrent = false;
-      const story = content.story.map((node) => {
+      const story = orderStoryByNextChain(content.story).map((node) => {
         // 主线足迹只读取任务记录，不因可重复任务回到 available 而抹去已走过的节点。
         const done = node.questId ? records.get(node.questId)?.status === "reported" : false;
         const current = !done && !hasCurrent;

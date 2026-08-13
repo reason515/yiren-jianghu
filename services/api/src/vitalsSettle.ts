@@ -1,4 +1,12 @@
-import { applyRegen, computeMaxVitals, type GameParams, type VitalsState } from "@yjh/game-core";
+import {
+  applyRegen,
+  clampVitals,
+  computeMaxVitals,
+  maxFoodCapacity,
+  maxWaterCapacity,
+  type GameParams,
+  type VitalsState,
+} from "@yjh/game-core";
 import type { Db } from "./db.js";
 
 /** 结算所需的最小内容视图（ContentPack / ContentIndex 均可适配）。 */
@@ -49,14 +57,6 @@ export async function settleCharacterVitals(
     effJing: Number(row.eff_jing) || row.jing,
   };
 
-  if (!row.last_heal_at) {
-    await database.query("UPDATE characters SET last_heal_at = now() WHERE id = $1", [row.id]);
-    return current;
-  }
-
-  const deltaMinutes = (Date.now() - new Date(row.last_heal_at).getTime()) / 60000;
-  if (deltaMinutes < 1) return current;
-
   const rawAttrs = typeof row.attrs === "string" ? JSON.parse(row.attrs) : (row.attrs ?? {});
   const num = (key: string): number => {
     const value = Number((rawAttrs as Record<string, unknown>)[key]);
@@ -77,6 +77,45 @@ export async function settleCharacterVitals(
     forceLevel,
   };
   const maxVitals = computeMaxVitals(content.params, attrs);
+  const foodCap = maxFoodCapacity(content.params, attrs.con);
+  const waterCap = maxWaterCapacity(content.params, attrs.dex);
+
+  if (!row.last_heal_at) {
+    await database.query("UPDATE characters SET last_heal_at = now() WHERE id = $1", [row.id]);
+    return current;
+  }
+
+  const deltaMinutes = (Date.now() - new Date(row.last_heal_at).getTime()) / 60000;
+  if (deltaMinutes < 1) {
+    const clamped = clampVitals(current, maxVitals, foodCap, waterCap);
+    if (
+      clamped.qi !== current.qi ||
+      clamped.jing !== current.jing ||
+      clamped.jingli !== current.jingli ||
+      clamped.neili !== current.neili ||
+      clamped.food !== current.food ||
+      clamped.water !== current.water ||
+      clamped.effQi !== current.effQi ||
+      clamped.effJing !== current.effJing
+    ) {
+      await database.query(
+        "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8 WHERE id = $9",
+        [
+          clamped.qi,
+          clamped.jing,
+          clamped.jingli,
+          clamped.neili,
+          clamped.food,
+          clamped.water,
+          clamped.effQi,
+          clamped.effJing,
+          row.id,
+        ],
+      );
+    }
+    return clamped;
+  }
+
   const next = applyRegen(current, maxVitals, deltaMinutes, content.params, attrs);
   await database.query(
     "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8, last_heal_at = now() WHERE id = $9",

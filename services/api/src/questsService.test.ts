@@ -264,6 +264,31 @@ describe("questsService.getQuests", () => {
   });
 });
 
+describe("questsService.getOverview story 链", () => {
+  it("按 next 链排序，「今」落在根节点而非文件名靠前的入城", async () => {
+    const { db, state } = mockDb();
+    state.characters.push({
+      id: "char_1",
+      account_id: "acc_1",
+      status: "active",
+      exp: 0,
+      potential: 10,
+      silver: 10,
+    });
+    const quests = createQuestsService(db, {
+      ...PACK,
+      story: [
+        { id: "s_arrive_city", title: "入城", text: "", next: [] },
+        { id: "s_begin", title: "初入江湖", questId: "q_hunt", text: "", next: ["s_learn"] },
+        { id: "s_learn", title: "拜师学艺", text: "", next: [] },
+      ],
+    } as typeof PACK);
+    const overview = await quests.getOverview("acc_1");
+    expect(overview?.story.map((n) => n.id)).toEqual(["s_begin", "s_learn", "s_arrive_city"]);
+    expect(overview?.story.find((n) => n.current)?.id).toBe("s_begin");
+  });
+});
+
 describe("questsService.acceptQuest", () => {
   it("接受任务：写入 accepted 并返回任务卡", async () => {
     const { quests, state } = boot();

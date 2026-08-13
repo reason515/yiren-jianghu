@@ -32,6 +32,11 @@ describe("首启引导状态机", () => {
 
   it("每个步骤都有文案；完成判定", () => {
     expect(guideText(1)).toContain("风起青萍");
+    expect(guideText(1)).toContain("老槐");
+    expect(guideText(1)).toContain("村长");
+    expect(guideText(1)).not.toContain("酒旗");
+    expect(guideText(1)).toContain("老槐");
+    expect(guideText(1)).not.toContain("酒旗");
     expect(guideText(2)).toBeTruthy();
     expect(guideText(3)).toBeTruthy();
     expect(guideText(4)).toBeTruthy();

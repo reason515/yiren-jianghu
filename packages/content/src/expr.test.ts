@@ -27,7 +27,8 @@ describe("mechanics fixture（小数值）", () => {
     const m = defaultCompiledMechanics();
     expect(m.formulas.has("expForNextLevel")).toBe(true);
     expect(evalFormula(m, "expForNextLevel", { level: 1 })).toBe(100);
-    // level^2 / 0.5 → 100*2 = 200
+    // DC-055：目标等级 ≤1 豁免；其余 level^2 / 0.5
+    expect(evalFormula(m, "expGateRequired", { level: 1 })).toBe(0);
     expect(evalFormula(m, "expGateRequired", { level: 10 })).toBeCloseTo(200, 5);
     expect(evalFormula(m, "expGateRequired", { level: 50 })).toBeCloseTo(5000, 5);
   });

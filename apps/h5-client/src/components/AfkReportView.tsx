@@ -31,7 +31,7 @@ export function AfkReportView({ open, report, onClose }: AfkReportViewProps): JS
             <span className="gain-silver">银两 +{Math.floor(report.gains.silver)}</span>
           </div>
           <p className="afk-report-duration">
-            历时 {Math.round((report.durationMinutes / 60) * 10) / 10} 时辰。
+            历时 {Math.round((report.durationMinutes / 120) * 10) / 10} 时辰。
           </p>
         </div>
       )}

@@ -42,7 +42,7 @@
 .scene {
   position: relative;
   z-index: 1;
-  padding: 16px 16px calc(76px + var(--safe-b));
+  padding: 16px 16px calc(120px + var(--safe-b));
   display: flex;
   flex-direction: column;
   gap: 14px;

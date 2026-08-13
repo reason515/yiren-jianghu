@@ -76,7 +76,7 @@ describe("AttributeAllocator", () => {
         onChange={() => undefined}
       />,
     );
-    expect(host.textContent).toContain("剩余可分配：0");
+    expect(host.textContent).toContain("点数已满，先减再加");
   });
 });
 

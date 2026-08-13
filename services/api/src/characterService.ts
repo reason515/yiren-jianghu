@@ -82,8 +82,13 @@ export const START_ROOM = "village_start";
 /** 建角赠送并默认穿戴的衣甲（内容包 items/cubu_yi；对齐 xkx 开局布衣）。 */
 export const START_CLOTH_ITEM_ID = "cubu_yi";
 export const START_CLOTH_SLOT = "armor";
+/** 建角赠送并默认佩戴的铁剑（DC-055：学剑有兵器，首战不空手）。 */
+export const START_SWORD_ITEM_ID = "iron_sword";
+export const START_SWORD_SLOT = "weapon";
 /** 建角起步银两（DC-039：保证未打怪也可请教数次）。 */
 export const START_SILVER = 10;
+/** 建角起步潜能（DC-055：0→1 豁免历练后仍需 1 点潜能学第一级）。 */
+export const START_POTENTIAL = 10;
 
 /** 属性分配校验：每项整数 10–30，总和 = 80。返回 null 表示通过。 */
 export function validateAttrs(attrs: {
@@ -137,8 +142,16 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       if (nameTaken.rows[0]) throw new CharacterError("name_taken", "名号已被他人取用");
 
       const created = await db.query<{ id: string }>(
-        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id, silver, last_heal_at) VALUES ($1, $2, $3, $4, $5, $5, $6, now()) RETURNING id",
-        [accountId, name, input.gender, JSON.stringify(input.attrs), START_ROOM, START_SILVER],
+        "INSERT INTO characters (account_id, name, gender, attrs, room_path, safe_room_id, silver, potential, last_heal_at) VALUES ($1, $2, $3, $4, $5, $5, $6, $7, now()) RETURNING id",
+        [
+          accountId,
+          name,
+          input.gender,
+          JSON.stringify(input.attrs),
+          START_ROOM,
+          START_SILVER,
+          START_POTENTIAL,
+        ],
       );
       const characterId = created.rows[0]?.id;
       if (!characterId) throw new CharacterError("character_create_failed", "立名失败");
@@ -148,6 +161,31 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         "INSERT INTO character_items (character_id, item_def_id, quantity, slot) VALUES ($1, $2, 1, $3)",
         [characterId, START_CLOTH_ITEM_ID, START_CLOTH_SLOT],
       );
+      // DC-055：开局铁剑佩于 weapon 槽，学剑后首战有兵器
+      await db.query(
+        "INSERT INTO character_items (character_id, item_def_id, quantity, slot) VALUES ($1, $2, 1, $3)",
+        [characterId, START_SWORD_ITEM_ID, START_SWORD_SLOT],
+      );
+
+      if (content) {
+        const maxVitals = computeMaxVitals(content.params, { ...input.attrs, forceLevel: 0 });
+        const foodCap = maxFoodCapacity(content.params, input.attrs.con);
+        const waterCap = maxWaterCapacity(content.params, input.attrs.dex);
+        await db.query(
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8 WHERE id = $9",
+          [
+            maxVitals.maxQi,
+            maxVitals.maxJing,
+            maxVitals.maxJingli,
+            maxVitals.maxNeili,
+            foodCap,
+            waterCap,
+            maxVitals.maxQi,
+            maxVitals.maxJing,
+            characterId,
+          ],
+        );
+      }
 
       return { characterId };
     },

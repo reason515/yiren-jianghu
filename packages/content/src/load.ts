@@ -3,6 +3,7 @@ import { join, extname } from "node:path";
 import { load as loadYaml } from "js-yaml";
 import { contentPackSchema, type ContentPack, type Params } from "./schema.js";
 import { compileMechanics, type CompiledMechanics, type MechanicsConfig } from "./mechanics.js";
+import { orderStoryByNextChain } from "./storyOrder.js";
 
 /**
  * 内容包加载器（A6 / DC-046）。
@@ -95,6 +96,7 @@ export async function loadContentDir(dir: string): Promise<LoadResult> {
   for (const name of COLLECTIONS) {
     loaded[name] = await loadCollection(dir, name);
   }
+  loaded.story = orderStoryByNextChain(loaded.story as Array<{ id: string; next?: string[] }>);
 
   const worldMap = await readJson(join(dir, "maps", "world.json")).catch(() => undefined);
 

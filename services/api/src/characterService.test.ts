@@ -154,6 +154,7 @@ function mockDb() {
           attrs: String(params[3]),
           room_path: String(params[4]),
           silver: Number(params[5] ?? 10),
+          potential: Number(params[6] ?? 0),
           status: "active",
         });
         return { rows: [{ id }] as unknown as T[] };
@@ -229,12 +230,13 @@ describe("characterService", () => {
     expect(state.characters[0]).toMatchObject({ room_path: "village_start", name: "陆小风" });
     expect(state.items).toEqual([
       { character_id: "char_1", item_def_id: "cubu_yi", quantity: 1, slot: "armor" },
+      { character_id: "char_1", item_def_id: "iron_sword", quantity: 1, slot: "weapon" },
     ]);
     expect(await service.getCharacter("acc_1")).toMatchObject({
       name: "陆小风",
       attrs: { str: { cur: 25, base: 25 } },
-      vitals: { qi: 100, jing: 100, food: 300 },
-      effectivePotential: 0,
+      vitals: { qi: 210, jing: 210, jingli: 50, neili: 0, food: 200, water: 175 },
+      effectivePotential: 10,
     });
   });
 

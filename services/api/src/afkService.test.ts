@@ -636,7 +636,7 @@ describe("afkService.status / reports", () => {
         last_tick_at: T0,
         last_heartbeat_at: T0,
         journal_seq: 0,
-        stop_reason: "手动停止",
+        stop_reason: "你停了手头的活计",
         report: JSON.stringify({
           jobId: "job_2",
           kind: "practice",
@@ -644,7 +644,7 @@ describe("afkService.status / reports", () => {
           ticks: 0,
           durationMs: 60_000,
           gains: { exp: 0, potential: 0, silver: 0 },
-          reason: "手动停止",
+          reason: "你停了手头的活计",
         }),
         updated_at: T0,
       },

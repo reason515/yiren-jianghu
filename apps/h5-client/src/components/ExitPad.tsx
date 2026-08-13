@@ -60,7 +60,9 @@ export function ExitPad({
         data-dir={dir}
         disabled={locked}
         title={locked ? lockedHint : undefined}
-        aria-label={locked ? lockedHint : `向${DIR_LABEL[dir]}往${exit.name ?? exit.roomId}`}
+        aria-label={
+          locked ? lockedHint : `向${DIR_LABEL[dir]}往${exit.name ?? DIR_LABEL[dir] ?? "前方"}`
+        }
         onClick={() => {
           if (!locked) onGo(exit.dir);
         }}
@@ -103,7 +105,9 @@ export function ExitPad({
                 disabled={locked}
                 title={locked ? lockedHint : undefined}
                 aria-label={
-                  locked ? lockedHint : `往${DIR_LABEL[d]}（${exit.name ?? exit.roomId}）`
+                  locked
+                    ? lockedHint
+                    : `往${DIR_LABEL[d]}（${exit.name ?? DIR_LABEL[d] ?? "前方"}）`
                 }
                 onClick={() => {
                   if (!locked) onGo(d);

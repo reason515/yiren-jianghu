@@ -60,6 +60,7 @@ import type { PvpMatchDetail, PvpMatchResult, PvpOpponent, PvpSeason } from "./l
 import type { ForumPost, ForumViewData, ForumViewState } from "./lib/forumTypes.js";
 import type { LeaderboardData } from "./lib/leaderboardTypes.js";
 import type { MapData } from "./lib/mapTypes.js";
+import { bfsRoomPath } from "./lib/mapPath.js";
 import {
   createRuleId,
   type TacticActionDraft,
@@ -316,11 +317,14 @@ export function App(): JSX.Element {
     }
   }, [api]);
 
-  const refreshQuests = useCallback(async (): Promise<void> => {
+  const refreshQuests = useCallback(async (): Promise<QuestPanelData | null> => {
     try {
-      setQuestData(toQuestPanelData(await api.getQuests()));
+      const data = toQuestPanelData(await api.getQuests());
+      setQuestData(data);
+      return data;
     } catch (e) {
       notify(e);
+      return null;
     }
   }, [api]);
 
@@ -574,7 +578,7 @@ export function App(): JSX.Element {
     })().catch(notify);
   };
 
-  const onGo = async (dir: string): Promise<void> => {
+  const onGo = async (dir: string): Promise<SceneRoom | null> => {
     try {
       const next = (await api.move(dir)) as SceneRoom;
       setRoom(next);
@@ -582,8 +586,48 @@ export function App(): JSX.Element {
         { text: next.name, cls: "place" },
       ]);
       await Promise.all([refreshQuests(), refreshVitals()]);
+      return next;
     } catch (e) {
       notify(e);
+      return null;
+    }
+  };
+
+  const navigateToRoom = async (targetId: string): Promise<void> => {
+    let current = room;
+    if (!current) return;
+    if (current.id === targetId) return;
+    const adjacent = current.exits.find((candidate) => candidate.roomId === targetId);
+    if (adjacent) {
+      await onGo(adjacent.dir);
+      return;
+    }
+    let edges = mapData?.edges;
+    if (!edges) {
+      try {
+        const map = await api.getMap();
+        setMapData(map);
+        edges = map.edges;
+      } catch (e) {
+        notify(e);
+        showToast("路途尚远，先循眼前的出口前行。");
+        return;
+      }
+    }
+    const hops = bfsRoomPath(current.id, targetId, edges ?? []);
+    if (!hops || hops.length === 0) {
+      showToast("路途尚远，先循眼前的出口前行。");
+      return;
+    }
+    for (const nextId of hops) {
+      const exit = current.exits.find((candidate) => candidate.roomId === nextId);
+      if (!exit) {
+        showToast("路途尚远，先循眼前的出口前行。");
+        return;
+      }
+      const arrived = await onGo(exit.dir);
+      if (!arrived) return;
+      current = arrived;
     }
   };
 
@@ -867,13 +911,8 @@ export function App(): JSX.Element {
   };
 
   const onMapNavigate = (roomId: string): void => {
-    const exit = room?.exits.find((candidate) => candidate.roomId === roomId);
-    if (!exit) {
-      showToast("路途尚远，先循眼前的出口前行。");
-      return;
-    }
     setPanel("none");
-    void onGo(exit.dir);
+    void navigateToRoom(roomId);
   };
 
   const onSelectWorldArea = (areaId: string): void => {
@@ -1131,13 +1170,8 @@ export function App(): JSX.Element {
   };
 
   const onQuestGoTo = (roomId: string): void => {
-    const exit = room?.exits.find((candidate) => candidate.roomId === roomId);
     setQuestOpen(false);
-    if (!exit) {
-      showToast("路途尚远，先循眼前的出口前行。");
-      return;
-    }
-    void onGo(exit.dir);
+    void navigateToRoom(roomId);
   };
 
   const onQuestAccept = (questId: string): void => {
@@ -1182,7 +1216,16 @@ export function App(): JSX.Element {
     }
     if (action === "quest") {
       setSelectedEntity(null);
-      openQuests();
+      void (async () => {
+        const data = await refreshQuests();
+        const available = data?.quests.filter((quest) => quest.state === "available") ?? [];
+        if (available.length === 1) {
+          onQuestAccept(available[0]!.id);
+          showToast(`你应下了「${available[0]!.name}」。`);
+          return;
+        }
+        setQuestOpen(true);
+      })();
       return;
     }
     if (action === "teach") {
@@ -1267,7 +1310,8 @@ export function App(): JSX.Element {
   };
 
   const onCombatAction = (intent: CombatIntent): void => {
-    if (combatBusyRef.current) return;
+    const escapeOrRecover = intent.action === "flee" || intent.action === "recover";
+    if (combatBusyRef.current && !escapeOrRecover) return;
     combatBusyRef.current = true;
     setCombatBusy(true);
     void (async () => {
@@ -1281,8 +1325,11 @@ export function App(): JSX.Element {
           await Promise.all([refreshScene(), refreshQuests(), refreshVitals()]);
         }
       } catch (e) {
-        // 服务端拒绝绝招时保留当前战局，反馈其权威文案。
-        notify(e);
+        if (intent.action === "flee" && e instanceof ApiError) {
+          showToast(`${e.message} 可运功调息、客栈歇脚，或先去村里打下手。`);
+        } else {
+          notify(e);
+        }
       } finally {
         combatBusyRef.current = false;
         setCombatBusy(false);
@@ -1393,7 +1440,18 @@ export function App(): JSX.Element {
         nextRetryMs={reconnect.nextRetryMs}
         onRetryNow={() => void retryNow()}
       />
-      {guideTipText && <GuideTip text={guideTipText} onDismiss={() => setGuideTipText(null)} />}
+      {guideTipText &&
+        !departure &&
+        !needCreate &&
+        !selectedEntity &&
+        !trade &&
+        !teach &&
+        !(combat && combatOpen) &&
+        !questOpen &&
+        panel === "none" &&
+        !moreOpen &&
+        !exertOpen &&
+        !discardOpen && <GuideTip text={guideTipText} onDismiss={() => setGuideTipText(null)} />}
       {needCreate && (
         <CharacterCreateSheet
           open

@@ -205,17 +205,11 @@ export function CombatView({
               />
             </div>
             <div className="combat-primary-actions">
-              <Chip
-                label="回气"
-                variant="action"
-                disabled={busy}
-                onClick={() => onAction({ action: "recover" })}
-              />
+              <Chip label="回气" variant="action" onClick={() => onAction({ action: "recover" })} />
               <Chip
                 label="逃跑"
                 variant="danger"
                 className="ghost"
-                disabled={busy}
                 onClick={() => onAction({ action: "flee" })}
               />
             </div>

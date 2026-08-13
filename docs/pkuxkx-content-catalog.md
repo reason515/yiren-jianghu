@@ -74,6 +74,7 @@
 | 基础装备 + 消耗品 | `clone/` 物品目录 | 武器/护具基础属性、药与食物、穿脱与负重 | 战斗契约、PVP 快照 | 机制借鉴 | 纳入（DC-047：装备 stats 已进战；cure_qi 疗伤药分流） |
 | 主线任务图 | `adm/daemons/storyd.c`、`eventd.c` | 节点/前置/分支/奖励结构；切片 3–5 节点原创主线 | 内容包 Schema | 结构参考 | 纳入（文本全部原创） |
 | 江湖传闻池 | `adm/daemons/storyd.c` 传闻结构 | `rumors/*.json` + 客栈/渡口 `listen_rumor` | 内容包 Schema | 结构参考 | 纳入（批次 D，文案原创） |
+| 村中鼠患（新手悬赏） | 无（非 pkuxkx 移植） | `village_rat` + `q_clear_rats`：客栈库房弱兽，击杀交差 | 任务、战斗 NPC | 原创 | 纳入（DC-055 审计修笔误；文案原创） |
 
 ## 3.3 内容层（地图结构样本）
 

@@ -81,7 +81,7 @@ export function SceneView({
                 className={tab === "npcs" ? "on" : ""}
                 onClick={() => setTab("npcs")}
               >
-                人物
+                此地人物
                 <span className="scene-tab-count">{room.npcs.length}</span>
               </button>
             )}
@@ -93,7 +93,7 @@ export function SceneView({
                 className={tab === "items" ? "on" : ""}
                 onClick={() => setTab("items")}
               >
-                物品
+                此地物品
                 <span className="scene-tab-count">{room.items.length}</span>
               </button>
             )}
@@ -105,7 +105,7 @@ export function SceneView({
                 className={tab === "actions" ? "on" : ""}
                 onClick={() => setTab("actions")}
               >
-                动作
+                可做之事
                 <span className="scene-tab-count">{room.actions.length}</span>
               </button>
             )}

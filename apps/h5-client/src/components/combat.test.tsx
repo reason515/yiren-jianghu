@@ -88,6 +88,18 @@ describe("CombatView（自动战 + 抓时机）", () => {
     expect(host.querySelector("[data-testid=combat-foe-b1]")?.textContent).toContain("已伏");
   });
 
+  it("busy 时仍可点逃跑/回气（不跟自动普攻 in-flight 绑死）", () => {
+    const commands: Array<{ action: string }> = [];
+    const { host } = render(<CombatView state={STATE} busy onAction={(c) => commands.push(c)} />);
+    const primaryChips = [
+      ...host.querySelectorAll<HTMLButtonElement>("[data-testid=combat-row-primary] .chip"),
+    ];
+    expect(primaryChips.find((c) => c.textContent === "逃跑")!.disabled).toBe(false);
+    expect(primaryChips.find((c) => c.textContent === "回气")!.disabled).toBe(false);
+    act(() => primaryChips.find((c) => c.textContent === "逃跑")!.click());
+    expect(commands).toEqual([{ action: "flee" }]);
+  });
+
   it("绝招未就绪（冷却/消耗）禁用；逃跑为危险动作", () => {
     const { host } = render(<CombatView state={STATE} onAction={() => undefined} />);
     const performChips = [

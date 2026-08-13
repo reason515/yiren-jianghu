@@ -25,6 +25,9 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
         if (text.includes("SELECT id, qi, jing")) {
           return { rows: [character] as unknown as T[] };
         }
+        if (text.includes("SELECT skill_id, level")) {
+          return { rows: [] as unknown as T[] };
+        }
         if (text.includes("UPDATE characters SET last_heal_at = now()")) {
           character.last_heal_at = new Date().toISOString();
           expect(params[0]).toBe("c1");
@@ -86,5 +89,50 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       "a1",
     );
     expect(next).toMatchObject({ qi: 210, jing: 210, jingli: 50, food: 292, water: 288 });
+  });
+
+  it("1 分钟内仍钳制超上限（jingli/食水闪现）", async () => {
+    const character = {
+      id: "c1",
+      account_id: "a1",
+      status: "active",
+      qi: 100,
+      jing: 100,
+      jingli: 100,
+      neili: 0,
+      food: 300,
+      water: 300,
+      eff_qi: 210,
+      eff_jing: 210,
+      attrs: { str: 20, int: 20, con: 20, dex: 15 },
+      last_heal_at: new Date().toISOString(),
+    };
+    const db: Db = {
+      async query<T extends DbRow>(text: string, params: unknown[] = []) {
+        if (text.includes("SELECT id, qi, jing")) {
+          return { rows: [character] as unknown as T[] };
+        }
+        if (text.includes("SELECT skill_id, level")) {
+          return { rows: [] as unknown as T[] };
+        }
+        if (text.includes("UPDATE characters SET qi = $1")) {
+          character.qi = Number(params[0]);
+          character.jing = Number(params[1]);
+          character.jingli = Number(params[2]);
+          character.neili = Number(params[3]);
+          character.food = Number(params[4]);
+          character.water = Number(params[5]);
+          return { rows: [] as unknown as T[] };
+        }
+        throw new Error(`unexpected: ${text}`);
+      },
+    };
+    const next = await settleCharacterVitals(
+      db,
+      { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
+      "a1",
+    );
+    expect(next).toMatchObject({ jingli: 50, food: 200, water: 175 });
+    expect(character.jingli).toBe(50);
   });
 });

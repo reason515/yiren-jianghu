@@ -387,13 +387,6 @@ async function boot(quests?: {
   const { db, state } = mockDb();
   const chars = createCharacterService(db);
   const { characterId } = await chars.createCharacter("acc_1", INPUT);
-  state.character_items.push({
-    id: `ci_${state.character_items.length + 1}`,
-    character_id: characterId,
-    item_def_id: "iron_sword",
-    quantity: 1,
-    slot: null,
-  });
   const scene = createSceneService(db, buildContentIndex(PACK), quests);
   return { db, state, scene, characterId };
 }
@@ -637,7 +630,7 @@ describe("sceneService.getInventory", () => {
     const inv = await scene.getInventory("acc_1");
     expect(inv).toEqual([
       { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
-      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
+      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true },
     ]);
     expect(await scene.getInventory("acc_x")).toBeNull();
   });
@@ -645,7 +638,7 @@ describe("sceneService.getInventory", () => {
 
 describe("app 集成（scene/inventory 路由）", () => {
   it("GET /scene 与 POST /scene/action(move) 与 GET /inventory 全链路", async () => {
-    const { db, state } = mockDb();
+    const { db } = mockDb();
     const app = await createApp({ deps: { db, content: PACK }, inviteCodes: ["inv-1"] });
     await app.ready();
 
@@ -662,14 +655,7 @@ describe("app 集成（scene/inventory 路由）", () => {
       headers: { authorization: `Bearer ${token}` },
       payload: { name: "陆小风", gender: "male", attrs: { str: 25, int: 20, con: 20, dex: 15 } },
     });
-    const { characterId } = create.json() as { characterId: string };
-    state.character_items.push({
-      id: "ci_2",
-      character_id: characterId,
-      item_def_id: "iron_sword",
-      quantity: 1,
-      slot: null,
-    });
+    expect(create.statusCode).toBe(200);
 
     const sceneRes = await app.inject({
       method: "GET",
@@ -704,7 +690,7 @@ describe("app 集成（scene/inventory 路由）", () => {
     });
     expect(inv.json()).toEqual([
       { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
-      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: false },
+      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true },
     ]);
 
     const map = await app.inject({

@@ -61,6 +61,19 @@ describe("ExitPad（方位罗盘）", () => {
     expect(host.querySelector('[data-testid="exit-center"]')?.textContent).toContain("村口广场");
   });
 
+  it("aria 只用中文房名/方位，不含 roomId", () => {
+    const { host } = render(
+      <ExitPad
+        exits={[{ dir: "north", roomId: "village_dojo" }]}
+        roomName="村口广场"
+        onGo={() => undefined}
+      />,
+    );
+    const north = host.querySelector('[data-dir="north"]');
+    expect(north?.getAttribute("aria-label")).toContain("北");
+    expect(north?.getAttribute("aria-label") ?? "").not.toMatch(/village_/);
+  });
+
   it("点击出口回调方向", () => {
     let dir = "";
     const { host } = render(
@@ -68,6 +81,19 @@ describe("ExitPad（方位罗盘）", () => {
     );
     act(() => host.querySelector<HTMLButtonElement>('[data-dir="north"]')!.click());
     expect(dir).toBe("north");
+  });
+
+  it("aria-label 只用中文房名/方位，不泄漏 roomId", () => {
+    const { host } = render(
+      <ExitPad
+        exits={[{ dir: "east", roomId: "village_trail" }]}
+        roomName="杂货铺"
+        onGo={() => undefined}
+      />,
+    );
+    const aria = host.querySelector('[data-dir="east"]')?.getAttribute("aria-label") ?? "";
+    expect(aria).not.toContain("village_");
+    expect(aria).toMatch(/东/);
   });
 });
 
@@ -116,11 +142,11 @@ describe("SceneView（叙事优先 + 见闻动态流 + 交互 Tab）", () => {
     );
     const tabs = [...host.querySelectorAll<HTMLButtonElement>(".scene-tabs button")];
     expect(tabs.map((t) => t.textContent?.replace(/\d+/g, "").trim())).toEqual([
-      "人物",
-      "物品",
-      "动作",
+      "此地人物",
+      "此地物品",
+      "可做之事",
     ]);
-    expect(tabs.find((t) => t.classList.contains("on"))?.textContent).toContain("人物");
+    expect(tabs.find((t) => t.classList.contains("on"))?.textContent).toContain("此地人物");
     expect(host.querySelector(".tab-panel")?.textContent).toContain("王师傅");
     act(() => host.querySelector<HTMLButtonElement>(".scene-tabs button:nth-child(2)")!.click());
     expect(host.querySelector(".tab-panel")?.textContent).toContain("铁剑");

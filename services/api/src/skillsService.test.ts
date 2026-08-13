@@ -418,8 +418,9 @@ describe("skillsService.learn（当面请教）", () => {
     });
   });
 
-  it("经验不足 → exp_gate", async () => {
+  it("升到 2 级仍要历练门槛（DC-055：仅 0→1 豁免）", async () => {
     const { skills } = boot({ exp: 0 });
+    await skills.learn("acc_1", "basic_sword", "master_wang");
     await expect(skills.learn("acc_1", "basic_sword", "master_wang")).rejects.toMatchObject({
       code: "exp_gate",
     });

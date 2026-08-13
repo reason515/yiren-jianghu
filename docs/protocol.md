@@ -126,7 +126,7 @@ pvp.report
 
 # 6. 任务总览约定
 
-- `GET /quests` 返回 `{ quests, story, rumors }`：`quests` 是任务状态与相位进度，`story` 是服务端按内容包与任务记录组装的主线足迹，`rumors` 是江湖传闻池（内容包 `rumors/`，批次 D）；客户端不得自行推演任务状态。
+- `GET /quests` 返回 `{ quests, story, rumors }`：`quests` 是任务状态与相位进度，`story` 是服务端按内容包 `next` 链从根排序后与任务记录组装的主线足迹（DC-055：勿按文件名把「入城」排到「初入江湖」前），`rumors` 是江湖传闻池（内容包 `rumors/`，批次 D）；客户端不得自行推演任务状态。
 - 相位返回 `targetName`（玩家可见目标名）及可选 `targetRoomId`（导航指向）；客户端不得展示内部 `targetId`。
 - 移动抵达出口房间时，服务端调用任务进度钩子推进当前 `goto` 相位；击杀相位由战斗域推进。
 
@@ -142,14 +142,16 @@ pvp.report
 - `trade { targetId }`：仅可向当前房间商贩打开交易快照，返回服务端银两、内容包报价及行囊。
 - `buy` / `sell { targetId, itemId, count }`：商贩和物品均由服务端验证；扣款/入囊或扣物/入银两与每日回收额度在同一事务结算。
 
-**自然恢复与食水消耗（V2.12 / DC-044 / DC-051，对齐 xkx heal_up）**：`GET /scene`、移动、场景交互、`GET /characters/me`、`GET /session/resume` 时，服务端按距 `characters.last_heal_at` 的时间差结算：qi/jing/jingli/neili 按 `params.regen` 绝对值公式恢复（每拍 `con/3+maxNeili/10` 等 × `60/tickSeconds` × 分钟；`tickSeconds` 默认 9.5）；饥渴（food/water 不足 1）时不回气精；贴 `eff_*` 后缓慢抬伤势上限。food/water 按 `foodPerMin` / `waterPerMin` 绝对值消耗。单次封顶 `maxWindowMinutes` 防离线累积。新建角色写入 `last_heal_at=now()`；空值会在首次结算时初始化时钟（不补发离线恢复）。客户端约每分钟刷新生存值以更新顶栏。
+**自然恢复与食水消耗（V2.12 / DC-044 / DC-051，对齐 xkx heal_up）**：`GET /scene`、移动、场景交互、`GET /characters/me`、`GET /session/resume` 时，服务端按距 `characters.last_heal_at` 的时间差结算：qi/jing/jingli/neili 按 `params.regen` 绝对值公式恢复（每拍 `con/3+maxNeili/10` 等 × `60/tickSeconds` × 分钟；`tickSeconds` 默认 9.5）；饥渴（food/water 不足 1）时不回气精；贴 `eff_*` 后缓慢抬伤势上限。food/water 按 `foodPerMin` / `waterPerMin` 绝对值消耗。单次封顶 `maxWindowMinutes` 防离线累积。新建角色写入 `last_heal_at=now()`，并按上限写入气精精力食水（DC-055，防首屏超上限闪现）；空值会在首次结算时初始化时钟（不补发离线恢复）；1 分钟内仍钳制超上限。客户端约每分钟刷新生存值以更新顶栏。
+
+**建角赠予（DC-039 / DC-055）**：`POST /characters` 赠银 10、潜能 10，并默认穿戴粗布衣（armor）、佩戴铁剑（weapon）。
 
 客户端不得提交价格、银两余额、物品定义或结算结果；`targetId` / `itemId` 仅作服务端校验所需的内部引用，不在玩家界面展示（DC-025）。
 
 # 8. 武功请教与拜师（DC-039 / DC-040 / DC-041）
 
 - `GET /skills/teach-offer?npcId=`：返回当前房间该 NPC 的可教武功清单与服务端报价（银/精/潜能、下级等级、是否可学及原因），以及 `performOffers`（可学绝招：门槛/已学/可否学，DC-041）。客户端不得自算学费。
-- `POST /skills/learn { skillId, npcId }`：当面请教一次升 1 级。须同房。`tuition_teacher` 按次扣银；`apprentice_master` 须为**当前师父**（`master_npc_id`，DC-040），学费 0。另扣精+潜能；0 级首学精耗 ×2。升级达线时服务端自动解锁本级新招式，写入 `character_moves`（DC-041），响应体附 `unlockedMoves`。
+- `POST /skills/learn { skillId, npcId }`：当面请教一次升 1 级。须同房。`tuition_teacher` 按次扣银；`apprentice_master` 须为**当前师父**（`master_npc_id`，DC-040），学费 0。另扣精+潜能；0 级首学精耗 ×2。**目标等级 ≤1 豁免历练门槛**（DC-055；精耗仍 ×2）。升级达线时服务端自动解锁本级新招式，写入 `character_moves`（DC-041），响应体附 `unlockedMoves`。
 - `POST /skills/apprentice { npcId }`：向 `apprentice_master` 拜师。门外仅 `recruit.acceptOutsiders` 的入门点可收；同门可改拜更高辈（`generation` 更小）且满足 `recruit.minSkills`。写入 `master_npc_id` / `sect_id` / `generation`（= 师父 generation + 1）。跨门派拒绝。
 - 人物簿演练/参悟仍走 `/skills/practice`、`/skills/study`；升级同样触发 `unlockedMoves`；不可远程万能请教。
 - `POST /skills/enable { slot, skillId }`（DC-041）：将特殊功挂到基本功槎位（`slot` ∈ force/dodge/parry/unarmed/sword/blade），`skillId` 为 `null` 时清空该槎（回退按 `autoEnableMap` 自动补齐）。服务端校验该特殊功 `enableSlots` 含此槎且已学（等级 > 0）。返回补齐后的 `skillEnable` 全图与各槎有效等级 `effective`。挂到槎上的特殊功等级越高，普攻越可能抽中其解锁招式（`pickMove`），未挂槎则该槎恒用基本功等级。

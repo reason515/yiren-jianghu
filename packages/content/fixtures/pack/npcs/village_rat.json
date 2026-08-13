@@ -1,9 +1,9 @@
 {
-  "id": "wild_dog_mate",
-  "name": "瘦狗",
+  "id": "village_rat",
+  "name": "库房灰鼠",
   "kind": "battle",
   "level": 0,
-  "attrs": { "str": 5, "int": 4, "con": 1, "dex": 6 },
+  "attrs": { "str": 4, "int": 4, "con": 1, "dex": 6 },
   "skills": [
     {
       "skillId": "basic_unarmed",
@@ -14,20 +14,20 @@
       "level": 1
     }
   ],
-  "aggressive": true,
-  "respawnSec": 30,
+  "aggressive": false,
+  "respawnSec": 20,
   "drops": [
     {
       "itemId": "dry_food",
-      "chance": 0.3
+      "chance": 0.2
     }
   ],
   "battleRewards": {
-    "exp": 6,
+    "exp": 8,
     "potential": 2,
     "silver": 2
   },
-  "description": "比那只灰狗更瘦，却跟得更紧。眼珠子转，像在等一声口哨。",
+  "description": "米袋缝里钻出一只灰鼠，须一颤，黑豆似的眼睛盯着人。齿印还新，粮香还在它嘴里。",
   "nature": "beast",
   "minExp": 0
 }

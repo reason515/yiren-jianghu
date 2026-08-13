@@ -44,6 +44,13 @@ function practiceInput(overrides: Partial<Parameters<typeof practiceOnce>[0]> = 
 }
 
 describe("exp 门槛（小数值：武功²×2）", () => {
+  it("目标等级 1 豁免历练（DC-055）；等级 2 仍需 ≥8", () => {
+    expect(isLevelAllowed(P, 0, 1)).toBe(true);
+    expect(isLevelAllowed(P, 0, 2)).toBe(false);
+    expect(isLevelAllowed(P, 7, 2)).toBe(false);
+    expect(isLevelAllowed(P, 8, 2)).toBe(true);
+  });
+
   it("level 20 需 800 历练：799 不行，800 可以", () => {
     expect(isLevelAllowed(P, 799, 20)).toBe(false);
     expect(isLevelAllowed(P, 800, 20)).toBe(true);
@@ -59,6 +66,15 @@ describe("exp 门槛（小数值：武功²×2）", () => {
 });
 
 describe("learnUp（学习）", () => {
+  it("exp=0 仍可学到 1 级（DC-055 豁免）；精耗仍 ×2", () => {
+    const r = learnUp(learnInput({ exp: 0 }));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.skills["basic_sword"]).toEqual({ level: 1, practicePoints: 0 });
+      expect(r.jingSpent).toBe(Math.ceil(150 / 20) * 2);
+    }
+  });
+
   it("成功：等级 +1，扣除潜能与精与银两；首学精耗 ×2", () => {
     const r = learnUp(learnInput());
     expect(r.ok).toBe(true);

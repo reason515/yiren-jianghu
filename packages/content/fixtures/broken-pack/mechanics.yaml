@@ -3,6 +3,7 @@
 # 已接线机制（A–D / DC-047–049）：后天四维、装备进战、招式 dodge、加力、伤势、busy、演示毒。
 # DC-050：命中夹逼、伤害浮动、弱打强软帽、performBusyTurns=2。
 # DC-051：自然恢复改 xkx heal_up 绝对值（与 pack 同口径；本包仅坏引用）。
+# DC-055：expGate 目标等级 ≤1 豁免（与 pack 同口径）。
 # 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:
@@ -112,8 +113,8 @@ coeffs:
 formulas:
   expForNextLevel: "round(base * growth^(level - 1))"
   diminishMultiplier: "fullCycles <= 0 ? 1 : max(0, min(1, (1 - dailyDiminishRate)^fullCycles))"
-  # P0：level^2 * 2
-  expGateRequired: "level^expGateExponent / expGateDivisor"
+  # P0：level^2 * 2；DC-055：目标等级 ≤1 豁免（与 pack 同口径）
+  expGateRequired: "level <= 1 ? 0 : level^expGateExponent / expGateDivisor"
   potentialCostForNext: "ceil(nextLevel * potentialCostPerLevel)"
   jingCostForLearn: "max(1, ceil(learnJingCostBase / max(1, int))) * (isFirstLearn != 0 ? firstLearnJingMult : 1)"
   practiceCost: "practiceQiBase + level * practiceQiPerLevel"

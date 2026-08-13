@@ -2,15 +2,16 @@
   "id": "wild_dog",
   "name": "野狗",
   "kind": "battle",
-  "level": 1,
+  "level": 0,
+  "attrs": { "str": 6, "int": 4, "con": 1, "dex": 6 },
   "skills": [
     {
       "skillId": "basic_unarmed",
-      "level": 5
+      "level": 1
     },
     {
       "skillId": "basic_dodge",
-      "level": 3
+      "level": 1
     }
   ],
   "aggressive": true,

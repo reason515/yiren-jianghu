@@ -206,6 +206,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 | 改 `mechanics.yaml` / 战斗·成长·挂机系数         | `yjh-content-pack` + `yjh-mechanics-sync` 清单；改判定控制流另读 `yjh-project-conventions`        |
 | 前端/界面/交互                                   | `yjh-mobile-ui`                                                                                   |
 | 区域地图/世界地图/场景方位图                     | `yjh-map-design`                                                                                  |
+| 玩家试玩/体验审计（上手、好不好玩、对照 xkx）    | `yjh-playtest`（同步 wuxia / combat-presentation / mobile-ui；写报告加 `yjh-design-docs`）        |
 | 通用开发/测试/部署                               | 本 skill（`yjh-project-conventions`）                                                             |
 
 ## 下一步参考
@@ -213,6 +214,7 @@ CI（`.github/workflows/ci.yml`）含：quality 作业 + migrations 作业（pos
 - 内容工作 → 读 `yjh-content-pack` skill。
 - 玩家可见文案 → 读 `yjh-wuxia-copywriting` skill（绝招/房间/NPC/任务/剧情）。
 - 战斗过程呈现 → 读 `yjh-combat-presentation` skill（战报/着色/闲笔/人兽分流）。
+- 玩家试玩/体验审计 → 读 `yjh-playtest` skill（新号、九维、对照 xkx/pkuxkx）。
 - 计划任务状态 → `docs/design-and-development-plan.md` 执行记录表。
 - 项目级规则与技能触发 → `.cursor/rules/yjh-agents.mdc` + `.cursor/rules/yjh-task-wrapup.mdc`（收尾强制）；`.pi/agent/AGENTS.md`（pi 兼容）；skill 权威目录 → `.cursor/skills/`。
 - 新增服务/包 → 复制现有包骨架（package.json + tsconfig 继承 `tsconfig.base.json` + src/index.ts + src/index.test.ts），并记得在根 workspace 声明。

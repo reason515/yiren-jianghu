@@ -12,6 +12,7 @@ alwaysApply: true
 有可复用资产才更新（无则写「无新增沉淀」）：
 
 - 新模式/坑点 → 对应 `.cursor/skills/*/SKILL.md` 或 `docs/design-system.md`
+- 试玩方法/对照坑点/九维口径 → `yjh-playtest`
 - 战斗呈现新原则/反模式/节奏基线 → `yjh-combat-presentation`
 - **机制/数值变更** → 按 `yjh-mechanics-sync.mdc`：yaml（pack+broken-pack）+ schema 默认值 + `numeric-baseline` + 必要时 DC/`protocol`/`catalog`（漏同步不得收尾）
 - 外部借鉴 → `docs/sibling-borrowings.md`

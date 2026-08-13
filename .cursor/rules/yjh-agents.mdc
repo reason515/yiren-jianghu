@@ -20,12 +20,14 @@ alwaysApply: true
 | 界面粗糙/太丑/像管理后台/UI 升级（先取证分级） | `ui-visual-audit` | `.cursor/skills/ui-visual-audit/SKILL.md` |
 | 中文字体自包/子集化/防系统回退（woff2，禁 CDN） | `chinese-font-selfhost` | `.cursor/skills/chinese-font-selfhost/SKILL.md` |
 | 战斗过程呈现（战报/着色/闲笔/人兽分流/节奏） | `yjh-combat-presentation` | `.cursor/skills/yjh-combat-presentation/SKILL.md` |
+| 玩家试玩/上手/好不好玩/封测体验/对照 xkx·pkuxkx | `yjh-playtest` | `.cursor/skills/yjh-playtest/SKILL.md` |
 
 ## 强制规则
 
 - 涉及玩家文案：**第一步必须 read `yjh-wuxia-copywriting`**；每次触发重新加载，禁止用「已在上下文中」替代。
 - 改战斗过程呈现（战报/着色/闲笔/人兽/节奏）：**第一步 read `yjh-combat-presentation`**，并同步 `yjh-wuxia-copywriting`。
 - **机制/数值变更**（命中、伤害、busy、成长、恢复、挂机系数等）：同一任务内按 `.cursor/rules/yjh-mechanics-sync.mdc` 同步 `mechanics.yaml`（pack+broken-pack）、`schema` 默认值、`numeric-baseline`、必要时 DC/`protocol`；禁止只改代码不改 yaml/文档。
+- 玩家试玩/体验审计：**第一步 read `yjh-playtest`**；评文案/战报时同步加载对应 skill（见该 skill「启动必读」）。
 - 内容任务启动前，按 `yjh-project-conventions` 的「任务启动必读」表确认要加载的 skill。
 - 内容进仓库前登记 pkuxkx 权利状态，见 `docs/pkuxkx-content-catalog.md`。
 - 提交前门禁全绿：`pnpm build && pnpm typecheck && pnpm test && pnpm lint && pnpm format:check`；改 API/事件同步 `docs/protocol.md`（`pnpm test:docs`）。

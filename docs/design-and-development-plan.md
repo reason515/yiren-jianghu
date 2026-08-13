@@ -630,6 +630,7 @@
 | 在线生计真实跑图（DC-045） | ✅ 完成 | — | hub/route 合圈发奖；真改 room_path；挂机锁 move；任意处开活先导航 |
 | 生存结算闭环（DC-044） | ✅ 完成 | — | 修复气精不回/食水不降：`settleCharacterVitals` 统一入口（场景+getCharacter+resume）；建角写 `last_heal_at`；空值初始化时钟；`applyRegen` 消耗 food/water；H5 60s 轮询+移动刷新；迁移 0016 |
 | 玩家试玩审计（对照 xkx/pkuxkx） | ✅ 完成 | — | 生产新号「青萍客」全切片试玩 + 读码对照 xkx2001 Web / pkuxkx 35 步；九维评分（均分 3.4）；`docs/playtest-audit-2026-08.md` + canvas 评分板；P0×3（历练门槛 vs 先学武 / 鼠患杀守卫 / 首战过长）；本轮只出报告不改玩法 |
+| 试玩方法沉淀（yjh-playtest） | ✅ 完成 | — | 从 08-13 审计抽成项目级 skill：九维/新玩家立场/生产协议/对照读码/产出模板/常见坑；触发表 + 任务启动必读 + 收尾提炼表同步 |
 
 # 5. 风险与开放问题
 

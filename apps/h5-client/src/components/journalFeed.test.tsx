@@ -17,7 +17,7 @@ beforeAll(() => {
   const style = document.createElement("style");
   style.textContent =
     ".jl-name { color: rgb(143, 191, 166); }" +
-    ".jl-num { color: rgb(201, 168, 105); font-family: 'LXGW WenKai'; }";
+    ".jl-num { color: rgb(201, 168, 105); font-family: 'Noto Serif SC'; }";
   document.head.appendChild(style);
 });
 

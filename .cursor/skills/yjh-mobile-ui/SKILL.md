@@ -22,7 +22,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 | **战斗以"看局势—改预设—抓时机"为核心** | 平时按战术模板自动运行；关键抉择（手动绝招/回气）提供高价值按钮；对应"手动探索纯手动、挂机按模板"的已定决策       |
 | **离线必须留下叙事回声**               | 挂机归来看到的不只是"收益 +338"，而是角色在何处做了什么、发生了什么（战报叙事化，文案遵循 yjh-wuxia-copywriting） |
 | **数值必须带语义标签**                 | 双数标明"当前/先天"或"当前/上限"；不裸露 `18 / 16`；禁止把 hp/score 等命令名露给玩家                              |
-| **操作目标 ≥44px**                     | 移动端所有可点区域 44px 以上热区                                                                                  |
+| **操作目标 ≥`--touch-min`**            | 移动端可点热区默认 **30px**（DC-057；省垂直空间，低于常见 44）                                                    |
 | **高风险操作二次确认**                 | 关键战、放弃角色、不可逆消耗、PVP 发起等必须确认                                                                  |
 
 ## 2. 信息架构（主场景 + 导航层级）
@@ -95,10 +95,10 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.4 人物簿接线契约（E14.2 / DC-035）
 
 - 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。武功列表客户端按「已学优先」排序；`description` / `practicePoints` 随技能快照展示。
-- **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签（下划线式 `.char-tabs`，非大按钮）——**状态**（行止当前/上限细轨 + 四维）/ **武学**（DC-056：只读「临敌」摘要 + 单一已学列表；折叠只留功名/等级/「用」；演练·参悟·激发·招式·绝招进展开；空态「尚未学会武功」）/ **行囊**（当前佩挂置顶：兵器+衣甲；尚无独立饰品槽）/ **档案**（仪容短述 + 性别、改名、放弃）。默认打开「状态」。内容区 `.char-tab-panel` **固定高度**滚动，切换页签不跳动。
+- **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签（下划线式 `.char-tabs`，非大按钮）——**状态**（行止当前/上限细轨 + 四维）/ **武学**（DC-057：二级 Tab 临敌 / 特殊功 / 基本功；临敌只读摘要；折叠行功名+境界标签+等级，已激发前缀 `□`；激发·卸下·演练·参悟同排；杂学归基本功页）/ **行囊**（当前佩挂置顶：兵器+衣甲；已佩名前缀 `□`）/ **档案**（仪容短述 + 性别、改名、放弃）。默认打开「状态」。内容区 `.char-tab-panel` **固定高度**滚动且隐藏滚动条，切换页签不跳动。
 - **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿（默认状态页）；顶栏另有独立「运功」（`onExert` → `ExertSheet`，DC-052），不与人物簿冲突。
 - **场外运功（DC-052）**：`POST /skills/exert { performId }`；列表来自角色快照 `performs` 的 `fieldKind`（heal/cure/heal_jing）；顶栏独立入口；武学页仅在展开绝招行内「运功」，不再单列绝招区。
-- **武学临敌（DC-056）**：`GET /characters/me` 的 `effective` 为各槎有效等级唯一来源；临敌摘要只读，激发从功法展开行提交 `POST /skills/enable`；界面用中文槎名，禁 `Lv`/`force`/`sword` 等内部名。
+- **武学临敌（DC-056/057）**：`GET /characters/me` 的 `effective` 为各槎有效等级唯一来源；临敌摘要只读；激发/卸下提交 `POST /skills/enable`（`skillId: null` = 显式清空，不被 auto 补回）；界面用中文槎名，禁 `Lv`/`force`/`sword` 等内部名。
 - **仪容**：客户端 `buildCharacterLook` 由性别、已学最高等级、佩挂衣甲/兵器拼装第二人称短述（对齐 xkx look me 结构，无命令）；建角时服务端赠送并穿戴 `cubu_yi`（`START_CLOTH_ITEM_ID`）。
 - 行止、四维、经验、有效潜能、银两、性别取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。
 - 请教/演练/参悟与佩上/卸下/使用、改名（`PUT /characters/name`）均只提交受控意图；请求期间禁用重复操作，成功后重新拉取人物簿快照，再以一条 toast 告知结果。不得乐观扣减资源、改等级或改行囊数量。
@@ -145,7 +145,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 
 - **ChoiceRow<T> 泛化分段**：互斥分段统一用 `components/base/ChoiceRow.tsx`（`options/value/onChange/label`；禁原生 select）；AfkSheet 修炼/行侠、LeaderboardView 双轨、CharacterCreateSheet 性别均已替换。新增分段先查此处复用。
 - **主界面底部导航与全局 toast 是真实缺口历史**：`.app-nav`（fixed 底部、`--safe-b` 内边距、44px 按钮）与 `.toast-host`（fixed、z-index 300、pointer-events 只放行 toast 本身）必须存在，新增主界面布局勿删；toast 只在 App 层出现，浮层内反馈也走全局 toast（z-index 高于 overlay 100）。
-- 触控/安全区：`--touch-min: 44px`、`--safe-b/--safe-t`（env(safe-area-inset-*)）；sheet-scroll 与 app-nav 均已接 safe-b。颜色一律来自 tokens，新颜色先补 token 再使用。
+- 触控/安全区：`--touch-min: 30px`（DC-057）、`--safe-b/--safe-t`（env(safe-area-inset-*)）；sheet-scroll 与 app-nav 均已接 safe-b。颜色一律来自 tokens，新颜色先补 token 再使用。
 
 ## 4.12 视觉落地硬性项（DC-027 V2 实战验证，新增界面/样式必须遵守）
 
@@ -226,7 +226,7 @@ _*建角流程（V2.3：全屏两步，组合 ink-* + 卷轴 + 宣纸控件）_*
 - [ ] 场景叙事优先，数字只在需要时出现。
 - [ ] 动作从世界长出（场景动作 chip），无万能功能页。
 - [ ] 数值带语义标签；无命令名裸露。
-- [ ] 无原生 `<select>`；可点区域 ≥44px。
+- [ ] 无原生 `<select>`；可点区域 ≥`--touch-min`（当前 30px）。
 - [ ] 高风险操作有二次确认。
 - [ ] 颜色全部来自 tokens；字体遵循字体栈。
 - [ ] 挂机战报与绝招演出按 wuxia 文案规范。

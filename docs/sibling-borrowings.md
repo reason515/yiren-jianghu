@@ -36,7 +36,7 @@
 | **ShopView**（交易面板） | **缺**（E14.1 交易） | 结构借鉴：商品列表/买入/卖出/库存/货币；本项目用 content `goods` + economy API |
 | **ChoiceRow**（泛型分段按钮，禁 select） | AttributeAllocator 有类似 | 抽成通用 `ChoiceRow<T>`（E14.10 易用性） |
 | **TrainSheet / buildPracticeOptions** | 缺（E14.2 学武面板） | 结构借鉴：可学武功选项/学/练动作；本项目 learn/practice/study API |
-| **CharacterSheet 五页签 + 行内展开** | V2.15 四页签人物簿（DC-035）→ DC-056 武学页 | 借鉴页签分层与点开再动手；本项目定为状态/武学/行囊/档案。DC-056 再借 xkx「已激发只读摘要 + 行内 enable」，不借 prepare/wimpy/命令刷面板；仪容短述借鉴 look me 结构 |
+| **CharacterSheet 五页签 + 行内展开** | V2.15 四页签人物簿（DC-035）→ DC-056/057 武学页 | 借鉴页签分层与点开再动手；本项目定为状态/武学/行囊/档案。DC-056/057 再借 xkx「已激发只读 + 行内 enable + □ 标记 + skills.c 境界表」，不借 prepare/wimpy/命令刷面板；仪容短述借鉴 look me 结构 |
 | **FloatingPerfBar**（战斗悬浮绝招，战斗中屏底） | CombatView `.combat-float-bar` 两行：上行加力/回气/逃跑，下行绝招横滑 | 已落地（DC-037 + 动作条重构） |
 | **s_combatd 战斗文案结构**（guard_msg 击间闲笔、人/兽/鸟 race、分级 damage_msg） | `combatNarrative.ts` | 只借结构神韵：击间盯破绽/移步、兽扑咬抓、伤势分档；句子原创；关键字着色非整行 |
 | **action / query_dodge_msg 具名招式**（剑法 action 嵌「一招「名」」、身法 dodge_msg 嵌「一式「名」」） | `moveName`/`dodgeMoveName` + 战报嵌名（DC-053） | 借结构：普攻/闪避分别具名；**不借**原句与 `$N/$n/$w` 模板 |
@@ -73,6 +73,7 @@
 - E14.2 学武面板 → xkx TrainSheet/buildPracticeOptions
 - V2.15 人物簿四页签 → xkx CharacterSheet（页签分层 + 行内展开 + 仪容结构；不借 MUD enable/命令）
 - DC-056 武学页简洁化 → xkx SkillsPanel（已激发只读 + 行内激发；不借 prepare/命令）
+- DC-057 武学三分页 / 境界 / □ → xkx skills.c 境界表 + `.eq` 前缀；卸下语义对齐显式 map 清空
 - E14.5 战斗悬浮 → xkx FloatingPerfBar
 - E14.10 易用性 → xkx ChoiceRow / attr-card / toast 约定
 - E14.11 新手引导 → sanguo first-session-ux-v3（改写）

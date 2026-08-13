@@ -795,7 +795,8 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
       const current = decodeEnableMap(ch.skill_enable);
       const next: SkillEnableMap = { ...current };
       if (input.skillId === null) {
-        delete next[input.slot];
+        // DC-057：显式 null = 强制回退基本功；delete 会导致 resolve 时被 autoEnable 补回。
+        next[input.slot] = null;
       } else {
         try {
           assertCanEnable(input.slot, input.skillId, raw);

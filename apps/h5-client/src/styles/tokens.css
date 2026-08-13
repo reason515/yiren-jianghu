@@ -26,8 +26,8 @@
   font-style: normal;
   font-display: swap;
 }
-/* 数字字体（V2.11：霞鹜文楷数字子集 4.6KB——楷体笔意 + 全数字等宽 600，
- * 适配武侠账本气质；ZCOOL 数字不等宽（305–584）对齐差，Noto 数字无楷韵） */
+/* 数字字体：LXGW 子集文件仍随包保留，但 DC-057 起 --font-digit 改指向 Noto Serif SC
+ *（与汉字同宋体）；对齐改靠 tabular-nums。 */
 @font-face {
   font-family: "LXGW WenKai";
   src: url("fonts/lxgw-wenkai-digits-400.woff2") format("woff2");
@@ -40,7 +40,8 @@
   /* 字体 */
   --font-body: "Noto Serif SC", serif;
   --font-display: "ZCOOL XiaoWei", serif;
-  --font-digit: "LXGW WenKai", "Noto Serif SC", serif;
+  /* DC-057：数字与正文同宋体；保留 tabular-nums 对齐（见各 .*-num 规则） */
+  --font-digit: "Noto Serif SC", serif;
   --font-mono: ui-monospace, "Cascadia Code", monospace;
 
   /* 基础色板（墨色武侠） */
@@ -106,7 +107,7 @@
   --quality-legendary: #d8904d;
 
   /* 触控与安全区 */
-  --touch-min: 44px;
+  --touch-min: 30px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 

@@ -28,8 +28,13 @@ export const ENABLE_SLOTS: readonly EnableSlot[] = [
   "blade",
 ];
 
-/** 槽位 → 已激发特殊功 id；缺省表示该槽无特殊功激发，仅用基本功。 */
-export type SkillEnableMap = Partial<Record<EnableSlot, string>>;
+/**
+ * 槽位 → 已激发特殊功 id。
+ * - 缺键：尚未配置，解析时按 autoEnableMap 补齐；
+ * - 字符串：显式激发该特殊功；
+ * - `null`：显式卸下，强制回退基本功（禁止再被 auto 补回，DC-057）。
+ */
+export type SkillEnableMap = Partial<Record<EnableSlot, string | null>>;
 
 /** 内容包技能定义 + 角色原始等级的合并视图（enable.ts 各函数的统一入参）。 */
 export interface SkillRaw {

@@ -37,7 +37,7 @@
 |---|---|---|---|
 | `--font-display` | ZCOOL XiaoWei | 全 GB2312（2.6MB） | 标题/印章/方向字/底部导航：书法体，**数字不等宽（305–584）勿用于数值列** |
 | `--font-body` | Noto Serif SC | 全 GB2312（400/600，2.6MB） | 正文/界面/按钮：印刷宋体，可读性主力 |
-| `--font-digit` | **LXGW WenKai 数字子集**（V2.11 新增，4.6KB） | 仅 `0123456789/.,:%+-×·` | **数值专用**：楷体笔意 + 全数字等宽 600（对齐天然成立），配武侠账本气质；状态栏/银两/经验潜能/见闻数字 |
+| `--font-digit` | **与 body 同栈 Noto Serif SC**（DC-057） | 同 body | **数值语义 token**：与汉字同宋体气质；对齐靠 `font-variant-numeric: tabular-nums`（不再用独立楷体数字子集） |
 
 **字号层级（正文不放大原则 §2.4 的延伸）**：
 
@@ -66,7 +66,7 @@
 
 ## 2.3 其它
 
-状态资源（qi/jing/jingli/neili/food/water/potential/exp）、四维（str/int/con/dex）、武功门类、精通 6 级、物品、品质色均见 tokens.css；字体 `--font-display`（ZCOOL XiaoWei 标题/主按钮）+ `--font-body`（Noto Serif SC 正文）；触控 `--touch-min: 44px`、安全区 `--safe-b/--safe-t`；纹理 `--bg-noise`（SVG data-URI 5% 噪点，破纯黑扁平）。
+状态资源（qi/jing/jingli/neili/food/water/potential/exp）、四维（str/int/con/dex）、武功门类、精通 6 级、物品、品质色均见 tokens.css；字体 `--font-display`（ZCOOL XiaoWei 标题/主按钮）+ `--font-body` / `--font-digit`（均为 Noto Serif SC，DC-057）；触控 `--touch-min: 30px`（DC-057，省垂直空间刻意低于常见 44）、安全区 `--safe-b/--safe-t`；纹理 `--bg-noise`（SVG data-URI 5% 噪点，破纯黑扁平）。
 
 ## 2.4 文字颜色规范（V2.5：三层体系 + 类/项区分）
 
@@ -183,7 +183,7 @@
 
 ## 3.4 按钮与 chip 规范（V2.11：统一质感基线）
 
-移动端所有可点区域 **≥44px 触控**（`--touch-min`），但**视觉**上紧凑精致、不过度占宽：
+移动端所有可点区域 **≥`--touch-min`**（DC-057 起默认 **30px**，省垂直空间；视觉仍须可点），但**视觉**上紧凑精致、不过度占宽：
 
 | 元素 | 尺寸 | 边框 | 底 | 按压态 |
 |---|---|---|---|---|

@@ -60,7 +60,7 @@
 }
 .char-tabs button {
   flex: 1;
-  min-height: 36px;
+  min-height: 28px;
   padding: 0 8px;
   background: none;
   border: none;
@@ -82,12 +82,42 @@
   border-bottom-color: var(--jade);
 }
 
-/* 固定内容区高度，切换页签不跳动 */
+/* 武学二级页签（DC-057） */
+.char-skills-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 6px;
+  border-bottom: 1px solid var(--line);
+}
+.char-skills-tabs button {
+  flex: 1;
+  min-height: 26px;
+  padding: 0 6px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--paper-dim);
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.char-skills-tabs button.on {
+  color: var(--jade-bright);
+  border-bottom-color: var(--jade);
+}
+
+/* 固定内容区高度，切换页签不跳动；可滚但隐藏滚动条（DC-057） */
 .char-tab-panel {
   height: min(52vh, 420px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.char-tab-panel::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .char-section {
@@ -336,11 +366,32 @@
   font-size: 15px;
   color: var(--paper);
 }
-.char-skill-used {
+.char-skill-name.eq {
+  color: var(--item-equipped);
+}
+.char-skill-mastery {
   font-style: normal;
   font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--jade-bright);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.char-skill-mastery.mastery-1 {
+  color: var(--mastery-1);
+}
+.char-skill-mastery.mastery-2 {
+  color: var(--mastery-2);
+}
+.char-skill-mastery.mastery-3 {
+  color: var(--mastery-3);
+}
+.char-skill-mastery.mastery-4 {
+  color: var(--mastery-4);
+}
+.char-skill-mastery.mastery-5 {
+  color: var(--mastery-5);
+}
+.char-skill-mastery.mastery-6 {
+  color: var(--mastery-6);
 }
 .char-skill-level {
   font-family: var(--font-digit);
@@ -452,6 +503,9 @@
 }
 .char-inv-name.item-misc {
   color: var(--item-misc);
+}
+.char-inv-name.eq {
+  color: var(--item-equipped);
 }
 .char-inv-qty {
   color: var(--paper-faint);

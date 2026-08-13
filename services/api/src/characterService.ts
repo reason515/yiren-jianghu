@@ -249,7 +249,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         food: 0,
         water: 0,
       };
-      // DC-041：激发图与已学招式/绝招（缺省槎按 autoEnableMap 补齐）；无内容包时全空兜底。
+      // DC-041/057：激发图与已学招式/绝招（缺键按 autoEnableMap 补齐；显式 null=强制卸下）；无内容包时全空兜底。
       let skillEnable: SkillEnableMap = {};
       const effective: CharacterSummary["effective"] = {};
       let moves: CharacterSummary["moves"] = [];

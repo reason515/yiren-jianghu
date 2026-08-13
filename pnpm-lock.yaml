@@ -32,6 +32,9 @@ importers:
 
   apps/h5-client:
     dependencies:
+      '@yjh/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@yjh/shared':
         specifier: workspace:*
         version: link:../../packages/shared

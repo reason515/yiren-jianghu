@@ -53,7 +53,12 @@ function toSkillRawMap(
   return out;
 }
 
-/** 解析角色激发图；缺省槽用 autoEnableMap 补齐。 */
+/**
+ * 解析角色激发图（DC-057）：
+ * - 存档缺键 → autoEnableMap 补齐；
+ * - 显式 `null` → 强制清空该槎（保留 null，供 UI 识别「已卸下」）；
+ * - 合法特殊功 id → 覆盖 auto。
+ */
 export function resolveEnableMap(
   content: ContentPack,
   skillLevels: Map<string, number>,
@@ -63,9 +68,9 @@ export function resolveEnableMap(
   const auto = autoEnableMap(raw);
   if (!stored || Object.keys(stored).length === 0) return auto;
   const merged: SkillEnableMap = { ...auto };
-  for (const [slot, skillId] of Object.entries(stored) as [keyof SkillEnableMap, string][]) {
-    if (!skillId) {
-      delete merged[slot];
+  for (const [slot, skillId] of Object.entries(stored) as [keyof SkillEnableMap, string | null][]) {
+    if (skillId === null || skillId === "") {
+      merged[slot] = null;
       continue;
     }
     const sk = raw.get(skillId);

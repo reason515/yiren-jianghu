@@ -101,7 +101,14 @@ const CHARACTER: CharacterView = {
 };
 
 function clickTab(host: HTMLDivElement, label: string): void {
-  const btn = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+  const btn = [...host.querySelectorAll<HTMLButtonElement>(".char-tabs [role='tab']")].find(
+    (candidate) => candidate.textContent === label,
+  )!;
+  act(() => btn.click());
+}
+
+function clickSkillsSubTab(host: HTMLDivElement, label: string): void {
+  const btn = [...host.querySelectorAll<HTMLButtonElement>(".char-skills-tabs [role='tab']")].find(
     (candidate) => candidate.textContent === label,
   )!;
   act(() => btn.click());
@@ -135,14 +142,14 @@ describe("CharacterSheet（角色面板）", () => {
       <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
     );
     clickTab(host, "武学");
+    expect(host.querySelector(".char-skills-tabs")).not.toBeNull();
     expect(host.querySelector("[data-testid=char-combat]")).not.toBeNull();
     expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("内功");
     expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("玄门内功");
     expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("18");
     expect(host.querySelector("[data-testid=combat-unarmed]")?.textContent).toContain("未激发");
     expect(host.querySelector("[data-testid=combat-unarmed]")?.textContent).toContain("2");
-    expect(host.textContent).toContain("玄门内功");
-    expect(host.textContent).not.toContain("未学之术");
+    expect(host.querySelector("[data-testid=skill-row-xuanmen_force]")).toBeNull();
     expect(host.textContent).not.toContain("演练点");
     expect(host.textContent).not.toContain("白虹贯日");
     expect(host.textContent).not.toContain("Lv");
@@ -152,7 +159,7 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.querySelector(".char-skill-bar")).toBeNull();
   });
 
-  it("武学页：只列已学；展开后可演练、激发", () => {
+  it("武学页：特殊功展开后可演练、激发；□ 与境界标签", () => {
     const skills: string[] = [];
     const enables: string[] = [];
     const { host } = render(
@@ -165,6 +172,12 @@ describe("CharacterSheet（角色面板）", () => {
       />,
     );
     clickTab(host, "武学");
+    clickSkillsSubTab(host, "特殊功");
+
+    const forceRow = host.querySelector('[data-testid="skill-row-xuanmen_force"]')!;
+    expect(forceRow.textContent).toContain("□");
+    expect(forceRow.textContent).toContain("不堪一击");
+    expect(forceRow.textContent).not.toContain("用");
 
     const toggle = host.querySelector<HTMLButtonElement>(
       '[data-testid="skill-row-xuanmen_force"] .char-skill-toggle',
@@ -173,6 +186,7 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.textContent).toContain("演练点 4");
     expect(host.textContent).toContain("回春诀");
     expect(host.textContent).toContain("卸下");
+    expect(host.textContent).toContain("演练");
     expect(host.textContent).not.toContain("激发为内功");
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
@@ -202,7 +216,7 @@ describe("CharacterSheet（角色面板）", () => {
     expect(enables).toEqual(["force:none", "sword:xuanmen_sword"]);
   });
 
-  it("武学页：全未学时给出空态说明", () => {
+  it("武学页：全未学时临敌给出空态说明", () => {
     const empty: CharacterView = {
       ...CHARACTER,
       skills: CHARACTER.skills.map((skill) => ({ ...skill, level: 0 })),
@@ -213,9 +227,9 @@ describe("CharacterSheet（角色面板）", () => {
     };
     const { host } = render(<CharacterSheet open character={empty} onClose={() => undefined} />);
     clickTab(host, "武学");
+    expect(host.querySelector("[data-testid=char-combat]")).not.toBeNull();
     expect(host.textContent).toContain("尚未学会武功");
     expect(host.textContent).toContain("当面请教");
-    expect(host.querySelector("[data-testid=char-combat]")).toBeNull();
   });
 
   it("行囊页：衣甲佩挂置顶；行囊展开后提交意图", () => {

@@ -142,7 +142,7 @@ interface CharState {
   sect_id: string | null;
   generation: number | null;
   attrs: { str: number; int: number; con: number; dex: number };
-  skill_enable?: Record<string, string> | null;
+  skill_enable?: Record<string, string | null> | null;
 }
 
 interface SkillState {
@@ -367,6 +367,24 @@ function boot(over: Partial<CharState> = {}) {
   const skills = createSkillsService(db, PACK);
   return { db, state, skills };
 }
+
+describe("skillsService.enable（DC-057）", () => {
+  it("卸下写入显式 null，resolve 后不被 autoEnable 补回", async () => {
+    const { skills, state } = boot({ skill_enable: { force: "xuanmen_force" } });
+    state.skills.push({
+      character_id: "char_1",
+      skill_id: "xuanmen_force",
+      level: 40,
+      practice_points: 0,
+    });
+    const cleared = await skills.enable("acc_1", { slot: "force", skillId: null });
+    expect(cleared.skillEnable.force).toBeNull();
+    expect(state.characters[0]!.skill_enable).toEqual({ force: null });
+
+    const again = await skills.enable("acc_1", { slot: "force", skillId: "xuanmen_force" });
+    expect(again.skillEnable.force).toBe("xuanmen_force");
+  });
+});
 
 describe("skillsService.getSkills", () => {
   it("列出内容包全部武功与当前进度；无角色返回 null", async () => {

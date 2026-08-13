@@ -6,6 +6,7 @@ import { runner } from "node-pg-migrate";
 import { loadContentDir } from "@yjh/content";
 import { settleDueJobs } from "@yjh/worker";
 import { createApp } from "../src/app.js";
+import { START_POTENTIAL } from "../src/characterService.js";
 import { createPgDb } from "../src/db.js";
 import type { FastifyInstance } from "fastify";
 
@@ -17,7 +18,7 @@ import type { FastifyInstance } from "fastify";
  *
  * SQL 造数点（标注：待商店/自然恢复域落地后可移除）：
  *   - UPDATE characters SET exp/qi/jing/neili/silver —— 学武、首战与交易的教学准备（恢复/经济域完善后收敛）
- *   - INSERT INTO character_items    —— 拾取/商店未落地时直接造行囊
+ *   - INSERT INTO character_items（金创药）—— 使用药品；铁剑已由建角赠予（DC-055），勿再造一把
  *
  * 每次运行用唯一邀请码 → 幂等可重跑（本地/CI 皆可）。
  */
@@ -144,7 +145,7 @@ describe("F3 全链路旅程", () => {
     };
     expect(body.character.id).toBe(characterA);
     expect(body.character.roomPath).toBe("village_start");
-    expect(body.character.effectivePotential).toBe(0);
+    expect(body.character.effectivePotential).toBe(START_POTENTIAL);
   });
 
   it("3. 场景探索：初始房间 → 向东到村口广场（含 NPC/物品/动作）", async () => {
@@ -593,26 +594,30 @@ describe("F3 全链路旅程", () => {
     expect((again.json() as { pendingPvpReportIds: string[] }).pendingPvpReportIds).toHaveLength(0);
   });
 
-  it("11. 装备/使用：SQL 造行囊 → equip → unequip → use（气血恢复）", async () => {
-    await pool.query(
-      "INSERT INTO character_items (id, character_id, item_def_id, quantity) VALUES (gen_random_uuid(), $1, 'iron_sword', 1)",
-      [characterA],
-    );
+  it("11. 装备/使用：建角铁剑 unequip/equip + SQL 造金创药用（气血恢复）", async () => {
     await pool.query(
       "INSERT INTO character_items (id, character_id, item_def_id, quantity) VALUES (gen_random_uuid(), $1, 'jinchuang_yao', 1)",
       [characterA],
     );
     const inv = await app.inject({ method: "GET", url: "/inventory", headers: auth(tokenA) });
     const items = inv.json() as Array<{ id: string; name: string; equipped: boolean }>;
-    // 首战掉落可能已在行囊中；只断言本步骤造入的两件物品均可见。
-    expect(items.length).toBeGreaterThanOrEqual(2);
+    // DC-055：铁剑开局已佩戴；再 INSERT 一把会让 find 命中已装备件 → equip 400。
+    const sword = items.find((i) => i.name === "铁剑" && i.equipped);
+    expect(sword).toBeDefined();
 
-    const sword = items.find((i) => i.name === "铁剑")!;
+    const unequipFirst = await app.inject({
+      method: "POST",
+      url: "/inventory/unequip",
+      headers: auth(tokenA),
+      payload: { itemId: sword!.id },
+    });
+    expect(unequipFirst.statusCode).toBe(200);
+
     const equip = await app.inject({
       method: "POST",
       url: "/inventory/equip",
       headers: auth(tokenA),
-      payload: { itemId: sword.id },
+      payload: { itemId: sword!.id },
     });
     expect(equip.statusCode).toBe(200);
 
@@ -620,7 +625,7 @@ describe("F3 全链路旅程", () => {
       method: "POST",
       url: "/inventory/unequip",
       headers: auth(tokenA),
-      payload: { itemId: sword.id },
+      payload: { itemId: sword!.id },
     });
     expect(unequip.statusCode).toBe(200);
 

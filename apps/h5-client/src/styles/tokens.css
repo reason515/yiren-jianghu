@@ -26,15 +26,7 @@
   font-style: normal;
   font-display: swap;
 }
-/* 数字字体：LXGW 子集文件仍随包保留，但 DC-057 起 --font-digit 改指向 Noto Serif SC
- *（与汉字同宋体）；对齐改靠 tabular-nums。 */
-@font-face {
-  font-family: "LXGW WenKai";
-  src: url("fonts/lxgw-wenkai-digits-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* DC-057：数字改用 Noto Serif SC（--font-digit）；LXGW 数字子集文件仍留 fonts/，本轮不删。 */
 
 :root {
   /* 字体 */

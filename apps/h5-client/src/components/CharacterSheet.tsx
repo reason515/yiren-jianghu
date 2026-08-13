@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
-import { skillMastery } from "@yjh/game-core";
+import { skillMastery } from "@yjh/game-core/skillMastery";
 import { Sheet } from "./base/Sheet.js";
 import { Chip } from "./base/Chip.js";
 import { buildCharacterLook } from "../lib/characterLook.js";

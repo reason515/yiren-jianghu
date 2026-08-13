@@ -17,6 +17,26 @@ export type SkillCategory =
   "force" | "dodge" | "parry" | "unarmed" | "sword" | "blade" | "knowledge";
 /** 可激发槎位（DC-041）；knowledge 只展示/门槛，不可激发。 */
 export type EnableSlot = "force" | "dodge" | "parry" | "unarmed" | "sword" | "blade";
+
+/** 槎位玩家可见名（DC-056；禁泄漏 force/sword 等内部 id）。 */
+export const ENABLE_SLOT_LABEL: Record<EnableSlot, string> = {
+  force: "内功",
+  sword: "剑法",
+  unarmed: "拳脚",
+  dodge: "轻功",
+  parry: "招架",
+  blade: "刀法",
+};
+
+/** 临敌摘要展示顺序。 */
+export const ENABLE_SLOT_ORDER: EnableSlot[] = [
+  "force",
+  "sword",
+  "unarmed",
+  "dodge",
+  "parry",
+  "blade",
+];
 export type ItemKind = "weapon" | "armor" | "drug" | "food" | "misc";
 
 export interface SkillRowView {
@@ -94,6 +114,8 @@ export interface CharacterProfile {
   masterName?: string | null;
   /** 激发图（DC-041：缺省槎已按 autoEnableMap 补齐）。 */
   skillEnable?: SkillEnableMap;
+  /** 各槎有效等级（DC-056：临敌摘要；服务端计算）。 */
+  effective?: Partial<Record<EnableSlot, number>>;
   /** 已解锁招式（DC-041）。 */
   moves?: MoveRowView[];
   /** 已学绝招（DC-041）。 */

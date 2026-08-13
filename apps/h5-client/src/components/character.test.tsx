@@ -33,7 +33,29 @@ const CHARACTER: CharacterView = {
     con: { cur: 20, base: 20 },
     dex: { cur: 15, base: 20 },
   },
+  skillEnable: { force: "xuanmen_force" },
+  effective: { force: 18, sword: 4, unarmed: 2, dodge: 0, parry: 0, blade: 0 },
+  moves: [{ id: "sword_pierce", name: "白虹贯日", skillId: "xuanmen_sword" }],
+  performs: [
+    {
+      id: "force_heal",
+      name: "回春诀",
+      skillId: "xuanmen_force",
+      fieldKind: "heal",
+      cost: { qi: 0, jing: 0, neili: 20 },
+    },
+  ],
   skills: [
+    {
+      id: "basic_unarmed",
+      name: "基本拳脚",
+      category: "unarmed",
+      kind: "basic",
+      enableSlots: [],
+      level: 4,
+      maxLevel: 200,
+      practicePoints: 1,
+    },
     {
       id: "xuanmen_force",
       name: "玄门内功",
@@ -108,42 +130,92 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.textContent).toContain("当前 25 · 先天 20");
   });
 
-  it("武学页：只列已学；不展示 0 级；展开后可演练", () => {
+  it("武学页：临敌有效等级 + 折叠不见演练点/招式清单", () => {
+    const { host } = render(
+      <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
+    );
+    clickTab(host, "武学");
+    expect(host.querySelector("[data-testid=char-combat]")).not.toBeNull();
+    expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("内功");
+    expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("玄门内功");
+    expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("18");
+    expect(host.querySelector("[data-testid=combat-unarmed]")?.textContent).toContain("未激发");
+    expect(host.querySelector("[data-testid=combat-unarmed]")?.textContent).toContain("2");
+    expect(host.textContent).toContain("玄门内功");
+    expect(host.textContent).not.toContain("未学之术");
+    expect(host.textContent).not.toContain("演练点");
+    expect(host.textContent).not.toContain("白虹贯日");
+    expect(host.textContent).not.toContain("Lv");
+    expect(host.textContent).not.toMatch(/\bforce\b/);
+    expect(host.textContent).not.toMatch(/\bsword\b/);
+    expect(host.querySelector(".seg")).toBeNull();
+    expect(host.querySelector(".char-skill-bar")).toBeNull();
+  });
+
+  it("武学页：只列已学；展开后可演练、激发", () => {
     const skills: string[] = [];
+    const enables: string[] = [];
     const { host } = render(
       <CharacterSheet
         open
         character={CHARACTER}
         onClose={() => undefined}
         onSkillAction={(action, id) => skills.push(`${action}:${id}`)}
+        onEnableSkill={(slot, id) => enables.push(`${slot}:${id ?? "none"}`)}
       />,
     );
     clickTab(host, "武学");
-    expect(host.textContent).toContain("玄门内功");
-    expect(host.textContent).not.toContain("未学之术");
-    expect(host.textContent).toContain("演练点 4");
 
     const toggle = host.querySelector<HTMLButtonElement>(
       '[data-testid="skill-row-xuanmen_force"] .char-skill-toggle',
     )!;
     act(() => toggle.click());
+    expect(host.textContent).toContain("演练点 4");
+    expect(host.textContent).toContain("回春诀");
+    expect(host.textContent).toContain("卸下");
+    expect(host.textContent).not.toContain("激发为内功");
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
         .find((c) => c.textContent === "演练")!
         .click(),
     );
     expect(skills).toEqual(["practice:xuanmen_force"]);
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>(".chip")]
+        .find((c) => c.textContent === "卸下")!
+        .click(),
+    );
+    expect(enables).toEqual(["force:none"]);
+
+    act(() =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="skill-row-xuanmen_sword"] .char-skill-toggle',
+        )!
+        .click(),
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>(".chip")]
+        .find((c) => c.textContent === "激发为剑法")!
+        .click(),
+    );
+    expect(enables).toEqual(["force:none", "sword:xuanmen_sword"]);
   });
 
   it("武学页：全未学时给出空态说明", () => {
     const empty: CharacterView = {
       ...CHARACTER,
       skills: CHARACTER.skills.map((skill) => ({ ...skill, level: 0 })),
+      skillEnable: {},
+      effective: {},
+      moves: [],
+      performs: [],
     };
     const { host } = render(<CharacterSheet open character={empty} onClose={() => undefined} />);
     clickTab(host, "武学");
-    expect(host.textContent).toContain("尚未学会基本功");
+    expect(host.textContent).toContain("尚未学会武功");
     expect(host.textContent).toContain("当面请教");
+    expect(host.querySelector("[data-testid=char-combat]")).toBeNull();
   });
 
   it("行囊页：衣甲佩挂置顶；行囊展开后提交意图", () => {

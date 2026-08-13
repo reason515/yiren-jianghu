@@ -260,7 +260,49 @@
   font-weight: 400;
 }
 
-/* 武学：紧凑行 + 展开动作 */
+/* 武学：临敌摘要 + 折叠单行（DC-056） */
+.char-combat-row {
+  display: grid;
+  grid-template-columns: 3em 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.char-combat-row:last-child {
+  border-bottom: none;
+}
+.char-combat-slot {
+  color: var(--paper-faint);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.char-combat-name {
+  color: var(--paper);
+  font-size: 14px;
+  min-width: 0;
+}
+.char-combat-name.empty {
+  color: var(--paper-faint);
+}
+.char-combat-lv {
+  font-family: var(--font-digit);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--paper);
+}
+.char-skill-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.char-skill-group + .char-skill-group {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
 .char-skill-row {
   display: flex;
   flex-direction: column;
@@ -274,10 +316,9 @@
 }
 .char-skill-toggle {
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
   width: 100%;
   min-height: var(--touch-min);
   margin: 0;
@@ -295,67 +336,31 @@
   font-size: 15px;
   color: var(--paper);
 }
-.char-skill-name.skill-force {
-  color: var(--skill-force);
-}
-.char-skill-name.skill-sword {
-  color: var(--skill-sword);
-}
-.char-skill-name.skill-blade {
-  color: var(--skill-blade);
-}
-.char-skill-name.skill-dodge {
-  color: var(--skill-dodge);
-}
-.char-skill-name.skill-parry {
-  color: var(--skill-parry);
-}
-.char-skill-name.skill-unarmed {
-  color: var(--skill-unarmed);
-}
-.char-skill-name.skill-knowledge {
-  color: var(--skill-knowledge);
-}
-.char-skill-level {
+.char-skill-used {
   font-style: normal;
   font-size: 12px;
-  justify-self: end;
+  letter-spacing: 1px;
+  color: var(--jade-bright);
 }
-.char-skill-level.mastery-1 {
-  color: var(--mastery-1);
-}
-.char-skill-level.mastery-2 {
-  color: var(--mastery-2);
-}
-.char-skill-level.mastery-3 {
-  color: var(--mastery-3);
-}
-.char-skill-level.mastery-4 {
-  color: var(--mastery-4);
-}
-.char-skill-level.mastery-5 {
-  color: var(--mastery-5);
-}
-.char-skill-level.mastery-6 {
-  color: var(--mastery-6);
+.char-skill-level {
+  font-family: var(--font-digit);
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--paper);
 }
 .char-skill-points {
-  grid-column: 1 / -1;
+  margin: 0;
   font-size: 12px;
   color: var(--paper-faint);
 }
-.char-skill-bar {
-  grid-column: 1 / -1;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ink-soft);
-  overflow: hidden;
-}
-.char-skill-bar b {
-  display: block;
-  height: 100%;
-  background: var(--jade);
-  border-radius: 2px;
+.char-skill-hint {
+  margin: 0;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--paper-faint);
 }
 .char-skill-detail {
   display: flex;
@@ -460,25 +465,6 @@
   margin: 0;
 }
 
-.char-enable-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-}
-.char-enable-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 13px;
-  color: var(--paper-dim);
-}
-.char-enable-head em {
-  font-style: normal;
-  color: var(--jade);
-  font-weight: 600;
-}
 .char-move-list {
   list-style: none;
   margin: 0;

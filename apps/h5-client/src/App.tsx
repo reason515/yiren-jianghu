@@ -38,6 +38,7 @@ import { GuideTip } from "./components/GuideTip.js";
 import { TacticEditor } from "./components/TacticEditor.js";
 import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
 import {
+  ENABLE_SLOT_LABEL,
   toCharacterView,
   type CharacterView,
   type EnableSlot,
@@ -1046,12 +1047,15 @@ export function App(): JSX.Element {
     void api
       .enableSkill(slot, skillId)
       .then(async (result) => {
-        setCharacterView((prev) => (prev ? { ...prev, skillEnable: result.skillEnable } : prev));
+        setCharacterView((prev) =>
+          prev ? { ...prev, skillEnable: result.skillEnable, effective: result.effective } : prev,
+        );
         await refreshCharacter();
         const name = skillId
           ? (characterView?.skills.find((s) => s.id === skillId)?.name ?? "特殊功")
           : "基本功";
-        showToast(skillId ? `已激发${name}。` : `已收回${slot}激发。`);
+        const slotLabel = ENABLE_SLOT_LABEL[slot];
+        showToast(skillId ? `已激发${name}。` : `已收回${slotLabel}激发。`);
       })
       .catch(notify)
       .finally(() => setCharacterPending(null));
@@ -1745,7 +1749,6 @@ export function App(): JSX.Element {
           onInventoryAction={onInventoryAction}
           onRename={onRename}
           onDiscard={() => setDiscardOpen(true)}
-          onOpenExert={openExert}
           onExertPerform={onExert}
         />
       )}

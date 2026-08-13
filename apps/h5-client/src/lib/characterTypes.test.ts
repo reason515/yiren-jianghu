@@ -16,6 +16,7 @@ const PROFILE: CharacterProfile = {
   },
   vitals: { qi: 92, jing: 84, jingli: 70, neili: 20, food: 230, water: 260 },
   vitalsMax: { qi: 420, jing: 380, jingli: 300, neili: 200, food: 400, water: 350 },
+  effective: { force: 18, sword: 9 },
 };
 
 describe("toCharacterView", () => {
@@ -61,5 +62,6 @@ describe("toCharacterView", () => {
       { slot: "armor" },
     ]);
     expect(view.inventory[1]?.kind).toBe("misc");
+    expect(view.effective).toEqual({ force: 18, sword: 9 });
   });
 });

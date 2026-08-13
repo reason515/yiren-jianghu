@@ -2,12 +2,14 @@ import {
   acquiredAttrs,
   attrLevelsFromSkills,
   computeMaxVitals,
+  ENABLE_SLOTS,
   effectiveLevel,
   effectivePotential,
   fieldExertKind,
   maxFoodCapacity,
   maxWaterCapacity,
   resolveEnableMap,
+  type EnableSlot,
   type SkillEnableMap,
   type SkillRaw,
 } from "@yjh/game-core";
@@ -61,6 +63,8 @@ export interface CharacterSummary {
   masterName: string | null;
   /** 激发图（DC-041：槎 → 特殊功 id；缺省槎已按 autoEnableMap 补齐）。 */
   skillEnable: SkillEnableMap;
+  /** 各槎有效等级（DC-056：临敌摘要；无内容包时为空）。 */
+  effective: Partial<Record<EnableSlot, number>>;
   /** 已学招式（DC-041，character_moves）。 */
   moves: Array<{ id: string; name: string; skillId: string }>;
   /** 已学绝招（DC-041，character_performs；DC-052 附场外运功元数据）。 */
@@ -247,6 +251,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       };
       // DC-041：激发图与已学招式/绝招（缺省槎按 autoEnableMap 补齐）；无内容包时全空兜底。
       let skillEnable: SkillEnableMap = {};
+      const effective: CharacterSummary["effective"] = {};
       let moves: CharacterSummary["moves"] = [];
       let performs: CharacterSummary["performs"] = [];
       if (content) {
@@ -274,9 +279,12 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           });
           skillList.push({ category: def.category, level });
         }
-        const forceLevel = effectiveLevel("force", skillMap, skillEnable, content.params);
-        const dodgeLevel = effectiveLevel("dodge", skillMap, skillEnable, content.params);
-        const unarmedLevel = effectiveLevel("unarmed", skillMap, skillEnable, content.params);
+        for (const slot of ENABLE_SLOTS) {
+          effective[slot] = effectiveLevel(slot, skillMap, skillEnable, content.params);
+        }
+        const forceLevel = effective.force ?? 0;
+        const dodgeLevel = effective.dodge ?? 0;
+        const unarmedLevel = effective.unarmed ?? 0;
         const cur = acquiredAttrs(
           {
             str: attrs.str.base,
@@ -361,6 +369,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         effectivePotential: effectivePotential(Number(row.potential), Number(row.learned_points)),
         silver: Number(row.silver),
         skillEnable,
+        effective,
         moves,
         performs,
         masterNpcId: row.master_npc_id,

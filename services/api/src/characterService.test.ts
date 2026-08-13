@@ -267,6 +267,39 @@ describe("characterService", () => {
     expect(withForce?.vitalsMax).toMatchObject({ neili: 80, jingli: 70 });
   });
 
+  it("快照含六槎有效等级（DC-056）", async () => {
+    const { db, state } = mockDb();
+    const service = createCharacterService(db, CONTENT);
+    await service.createCharacter("acc_1", INPUT);
+    const fresh = await service.getCharacter("acc_1");
+    expect(fresh?.effective).toEqual({
+      force: 0,
+      dodge: 0,
+      parry: 0,
+      unarmed: 0,
+      sword: 0,
+      blade: 0,
+    });
+    state.skills.push(
+      {
+        id: "cs_force",
+        character_id: state.characters[0]!.id,
+        skill_id: "xuanmen_force",
+        level: 10,
+      },
+      {
+        id: "cs_sword",
+        character_id: state.characters[0]!.id,
+        skill_id: "basic_sword",
+        level: 20,
+      },
+    );
+    const withSkills = await service.getCharacter("acc_1");
+    // 内功：自动激发玄门心法 → 0/2+10；剑法：基本 20/2+0
+    expect(withSkills?.effective).toMatchObject({ force: 10, sword: 10 });
+    expect(withSkills?.skillEnable?.force).toBe("xuanmen_force");
+  });
+
   it("拒绝已有角色、重复名号和不合规属性", async () => {
     const { db } = mockDb();
     const service = createCharacterService(db);

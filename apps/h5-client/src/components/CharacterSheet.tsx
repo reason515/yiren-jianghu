@@ -1,9 +1,15 @@
 import { useEffect, useState, type JSX } from "react";
 import { Sheet } from "./base/Sheet.js";
 import { Chip } from "./base/Chip.js";
-import { ChoiceRow } from "./base/ChoiceRow.js";
 import { buildCharacterLook } from "../lib/characterLook.js";
-import type { CharacterView, EnableSlot, SkillCategory, VitalKey } from "../lib/characterTypes.js";
+import {
+  ENABLE_SLOT_LABEL,
+  ENABLE_SLOT_ORDER,
+  type CharacterView,
+  type EnableSlot,
+  type SkillRowView,
+  type VitalKey,
+} from "../lib/characterTypes.js";
 
 /** 人物簿四页签：状态 / 武学 / 行囊 / 档案。 */
 export type CharacterTab = "body" | "skills" | "bag" | "profile";
@@ -22,8 +28,7 @@ export interface CharacterSheetProps {
   onRename?: (name: string) => void;
   /** 放弃角色入口（由上层接 ConfirmSheet 二次确认）。 */
   onDiscard?: () => void;
-  /** 场外运功（DC-052）：打开运功 Sheet 或直接施展。 */
-  onOpenExert?: () => void;
+  /** 场外运功（DC-052）：行内施展已学自疗类绝招。 */
   onExertPerform?: (performId: string) => void;
 }
 
@@ -50,38 +55,9 @@ const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
   water: { label: "饮水", tone: "water" },
 };
 
-const SKILL_CLASS: Record<SkillCategory, string> = {
-  force: "skill-force",
-  sword: "skill-sword",
-  blade: "skill-blade",
-  dodge: "skill-dodge",
-  parry: "skill-parry",
-  unarmed: "skill-unarmed",
-  knowledge: "skill-knowledge",
-};
-
-const ENABLE_SLOTS: Array<{ slot: EnableSlot; label: string }> = [
-  { slot: "force", label: "内功" },
-  { slot: "sword", label: "剑法" },
-  { slot: "unarmed", label: "拳脚" },
-  { slot: "dodge", label: "轻功" },
-  { slot: "parry", label: "招架" },
-  { slot: "blade", label: "刀法" },
-];
-
 /** 首版仅兵器 + 衣甲两槽；衣履同属衣甲槽，尚无独立饰品槽（见内容包 kind）。 */
 const SLOT_LABEL: Record<"weapon" | "armor", string> = { weapon: "兵器", armor: "衣甲" };
 const GENDER_LABEL: Record<CharacterView["gender"], string> = { male: "男", female: "女" };
-
-function masteryClass(level: number, maxLevel: number): string {
-  const ratio = maxLevel > 0 ? level / maxLevel : 0;
-  if (ratio < 0.15) return "mastery-1";
-  if (ratio < 0.35) return "mastery-2";
-  if (ratio < 0.55) return "mastery-3";
-  if (ratio < 0.75) return "mastery-4";
-  if (ratio < 0.95) return "mastery-5";
-  return "mastery-6";
-}
 
 function pctOf(value: number, max: number): number {
   if (max <= 0) return 0;
@@ -98,7 +74,6 @@ export function CharacterSheet({
   onInventoryAction,
   onRename,
   onDiscard,
-  onOpenExert,
   onExertPerform,
 }: CharacterSheetProps): JSX.Element | null {
   const [tab, setTab] = useState<CharacterTab>("body");
@@ -112,20 +87,39 @@ export function CharacterSheet({
 
   const isPending = (key: string): boolean => pendingAction === key;
   const learnedSkills = character.skills.filter((skill) => skill.level > 0);
-  const basicSkills = learnedSkills.filter((s) => s.kind === "basic");
-  const specialSkills = learnedSkills.filter((s) => s.kind === "special");
   const moves = character.moves ?? [];
   const performs = character.performs ?? [];
   const skillEnable = character.skillEnable ?? {};
+  const effective = character.effective ?? {};
   const lookLines = buildCharacterLook(character);
+  const enabledSkillIds = new Set(
+    Object.values(skillEnable).filter((id): id is string => Boolean(id)),
+  );
 
   const skillName = (id: string | null | undefined): string => {
     if (!id) return "未激发";
     return character.skills.find((s) => s.id === id)?.name ?? id;
   };
 
-  const candidatesForSlot = (slot: EnableSlot) =>
-    specialSkills.filter((s) => s.enableSlots.includes(slot) && s.level > 0);
+  const combatSlots = ENABLE_SLOT_ORDER.filter((slot) => {
+    const hasBasic = learnedSkills.some((s) => s.kind === "basic" && s.category === slot);
+    return hasBasic || Boolean(skillEnable[slot]);
+  });
+
+  const specialEnabled = learnedSkills.filter(
+    (s) => s.kind === "special" && enabledSkillIds.has(s.id),
+  );
+  const specialOther = learnedSkills.filter(
+    (s) => s.kind === "special" && !enabledSkillIds.has(s.id),
+  );
+  const basicSkills = learnedSkills.filter((s) => s.kind === "basic" && s.category !== "knowledge");
+  const knowledgeSkills = learnedSkills.filter((s) => s.category === "knowledge");
+
+  const skillGroups: Array<{ title: string; skills: SkillRowView[] }> = [
+    { title: "特殊功", skills: [...specialEnabled, ...specialOther] },
+    { title: "基本功", skills: basicSkills },
+    { title: "杂学", skills: knowledgeSkills },
+  ].filter((group) => group.skills.length > 0);
 
   const itemAction = (item: CharacterView["inventory"][number]) => {
     if (item.equipped) return { action: "unequip" as const, label: "卸下" };
@@ -251,223 +245,137 @@ export function CharacterSheet({
 
         {tab === "skills" && (
           <>
-            <section className="char-section">
-              <h4 className="char-section-title">激发</h4>
-              <p className="char-skill-hint">有效等级 = 基本功÷2 + 已激发特殊功。临敌按此算力。</p>
-              {ENABLE_SLOTS.map(({ slot, label }) => {
-                const candidates = candidatesForSlot(slot);
-                if (candidates.length === 0 && !skillEnable[slot]) return null;
-                const current = skillEnable[slot] ?? null;
-                const options: Array<{ value: string; label: string }> = [
-                  { value: "", label: "未激发" },
-                  ...candidates.map((s) => ({ value: s.id, label: `${s.name} ·${s.level}` })),
-                ];
-                return (
-                  <div className="char-enable-row" key={slot} data-testid={`enable-${slot}`}>
-                    <div className="char-enable-head">
-                      <span>{label}</span>
-                      <em>{skillName(current)}</em>
+            {combatSlots.length > 0 && (
+              <section className="char-section" data-testid="char-combat">
+                <h4 className="char-section-title">临敌</h4>
+                {combatSlots.map((slot) => {
+                  const current = skillEnable[slot] ?? null;
+                  const name = skillName(current);
+                  return (
+                    <div className="char-combat-row" key={slot} data-testid={`combat-${slot}`}>
+                      <span className="char-combat-slot">{ENABLE_SLOT_LABEL[slot]}</span>
+                      <span className={`char-combat-name${current ? "" : " empty"}`}>{name}</span>
+                      <b className="char-combat-lv">{effective[slot] ?? 0}</b>
                     </div>
-                    {onEnableSkill ? (
-                      <ChoiceRow
-                        label={`${label}激发`}
-                        options={options}
-                        value={current ?? ""}
-                        onChange={(value) => onEnableSkill(slot, value === "" ? null : value)}
-                      />
-                    ) : null}
+                  );
+                })}
+              </section>
+            )}
+
+            <section className="char-section">
+              {learnedSkills.length === 0 ? (
+                <p className="char-empty">尚未学会武功。去村中武馆当面请教。</p>
+              ) : (
+                skillGroups.map((group) => (
+                  <div className="char-skill-group" key={group.title}>
+                    <h4 className="char-section-title">{group.title}</h4>
+                    {group.skills.map((skill) => {
+                      const expanded = expandedSkillId === skill.id;
+                      const inUse = enabledSkillIds.has(skill.id);
+                      const skillMoves = moves.filter((move) => move.skillId === skill.id);
+                      const skillPerforms = performs.filter((pf) => pf.skillId === skill.id);
+                      return (
+                        <div
+                          className={`char-skill-row${expanded ? " open" : ""}`}
+                          key={skill.id}
+                          data-testid={`skill-row-${skill.id}`}
+                        >
+                          <button
+                            type="button"
+                            className="char-skill-toggle"
+                            aria-expanded={expanded}
+                            onClick={() => toggleSkill(skill.id)}
+                          >
+                            <span className="char-skill-name">{skill.name}</span>
+                            {inUse ? <em className="char-skill-used">用</em> : null}
+                            <b className="char-skill-level">{skill.level}</b>
+                          </button>
+                          {expanded && (
+                            <div className="char-skill-detail">
+                              {skill.description ? (
+                                <p className="char-skill-desc">{skill.description}</p>
+                              ) : null}
+                              <p className="char-skill-points">演练点 {skill.practicePoints}</p>
+                              {skillMoves.length > 0 ? (
+                                <ul className="char-move-list">
+                                  {skillMoves.map((move) => (
+                                    <li key={move.id}>
+                                      <span>{move.name}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                              {skillPerforms.length > 0 ? (
+                                <ul className="char-move-list">
+                                  {skillPerforms.map((pf) => (
+                                    <li key={pf.id}>
+                                      <span>{pf.name}</span>
+                                      {pf.fieldKind && onExertPerform ? (
+                                        <Chip
+                                          label={isPending(`exert:${pf.id}`) ? "运功中…" : "运功"}
+                                          variant="perform"
+                                          disabled={Boolean(pendingAction)}
+                                          onClick={() => onExertPerform(pf.id)}
+                                        />
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                              {skill.kind === "special" && onEnableSkill ? (
+                                <div className="char-row-actions">
+                                  {skill.enableSlots.map((slot) => {
+                                    const active = skillEnable[slot] === skill.id;
+                                    const key = `enable:${slot}`;
+                                    return (
+                                      <Chip
+                                        key={slot}
+                                        label={
+                                          isPending(key)
+                                            ? "行功中…"
+                                            : active
+                                              ? "卸下"
+                                              : `激发为${ENABLE_SLOT_LABEL[slot]}`
+                                        }
+                                        variant="action"
+                                        disabled={Boolean(pendingAction)}
+                                        onClick={() =>
+                                          onEnableSkill(slot, active ? null : skill.id)
+                                        }
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                              {onSkillAction ? (
+                                <div className="char-row-actions">
+                                  {skill.kind === "basic" ? (
+                                    <p className="char-skill-hint">
+                                      请教须当面寻师父；此处可自行演练、参悟。
+                                    </p>
+                                  ) : null}
+                                  {(["practice", "study"] as const).map((action) => {
+                                    const label = action === "practice" ? "演练" : "参悟";
+                                    const key = `skill:${action}:${skill.id}`;
+                                    return (
+                                      <Chip
+                                        key={action}
+                                        label={isPending(key) ? "行功中…" : label}
+                                        variant="action"
+                                        disabled={Boolean(pendingAction)}
+                                        onClick={() => onSkillAction(action, skill.id)}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </section>
-
-            <section className="char-section">
-              <h4 className="char-section-title">基本功</h4>
-              {basicSkills.length === 0 ? (
-                <p className="char-empty">尚未学会基本功。去村中武馆当面请教吧。</p>
-              ) : (
-                basicSkills.map((skill) => {
-                  const expanded = expandedSkillId === skill.id;
-                  return (
-                    <div
-                      className={`char-skill-row${expanded ? " open" : ""}`}
-                      key={skill.id}
-                      data-testid={`skill-row-${skill.id}`}
-                    >
-                      <button
-                        type="button"
-                        className="char-skill-toggle"
-                        aria-expanded={expanded}
-                        onClick={() => toggleSkill(skill.id)}
-                      >
-                        <span className={`char-skill-name ${SKILL_CLASS[skill.category]}`}>
-                          {skill.name}
-                        </span>
-                        <em
-                          className={`char-skill-level ${masteryClass(skill.level, skill.maxLevel)}`}
-                        >
-                          Lv {skill.level}
-                        </em>
-                        <span className="char-skill-points">演练点 {skill.practicePoints}</span>
-                        <i className="char-skill-bar">
-                          <b
-                            style={{
-                              width: `${skill.maxLevel > 0 ? Math.min(100, (skill.level / skill.maxLevel) * 100) : 0}%`,
-                            }}
-                          />
-                        </i>
-                      </button>
-                      {expanded && (
-                        <div className="char-skill-detail">
-                          {skill.description ? (
-                            <p className="char-skill-desc">{skill.description}</p>
-                          ) : null}
-                          {onSkillAction && (
-                            <div className="char-row-actions">
-                              <p className="char-skill-hint">
-                                请教须当面寻师父；此处可自行演练、参悟。
-                              </p>
-                              {(["practice", "study"] as const).map((action) => {
-                                const label = action === "practice" ? "演练" : "参悟";
-                                const key = `skill:${action}:${skill.id}`;
-                                return (
-                                  <Chip
-                                    key={action}
-                                    label={isPending(key) ? "行功中…" : label}
-                                    variant="action"
-                                    disabled={Boolean(pendingAction)}
-                                    onClick={() => onSkillAction(action, skill.id)}
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </section>
-
-            <section className="char-section">
-              <h4 className="char-section-title">特殊功</h4>
-              {specialSkills.length === 0 ? (
-                <p className="char-empty">入门后，向师门请教特殊武功。</p>
-              ) : (
-                specialSkills.map((skill) => {
-                  const expanded = expandedSkillId === skill.id;
-                  return (
-                    <div
-                      className={`char-skill-row${expanded ? " open" : ""}`}
-                      key={skill.id}
-                      data-testid={`skill-row-${skill.id}`}
-                    >
-                      <button
-                        type="button"
-                        className="char-skill-toggle"
-                        aria-expanded={expanded}
-                        onClick={() => toggleSkill(skill.id)}
-                      >
-                        <span className={`char-skill-name ${SKILL_CLASS[skill.category]}`}>
-                          {skill.name}
-                        </span>
-                        <em
-                          className={`char-skill-level ${masteryClass(skill.level, skill.maxLevel)}`}
-                        >
-                          Lv {skill.level}
-                        </em>
-                        <span className="char-skill-points">演练点 {skill.practicePoints}</span>
-                        <i className="char-skill-bar">
-                          <b
-                            style={{
-                              width: `${skill.maxLevel > 0 ? Math.min(100, (skill.level / skill.maxLevel) * 100) : 0}%`,
-                            }}
-                          />
-                        </i>
-                      </button>
-                      {expanded && (
-                        <div className="char-skill-detail">
-                          {skill.description ? (
-                            <p className="char-skill-desc">{skill.description}</p>
-                          ) : null}
-                          {skill.enableSlots.length > 0 ? (
-                            <p className="char-skill-hint">
-                              可激发：{skill.enableSlots.join("、")}
-                            </p>
-                          ) : null}
-                          {onSkillAction && (
-                            <div className="char-row-actions">
-                              {(["practice", "study"] as const).map((action) => {
-                                const label = action === "practice" ? "演练" : "参悟";
-                                const key = `skill:${action}:${skill.id}`;
-                                return (
-                                  <Chip
-                                    key={action}
-                                    label={isPending(key) ? "行功中…" : label}
-                                    variant="action"
-                                    disabled={Boolean(pendingAction)}
-                                    onClick={() => onSkillAction(action, skill.id)}
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </section>
-
-            <section className="char-section">
-              <h4 className="char-section-title">招式</h4>
-              {moves.length === 0 ? (
-                <p className="char-empty">特殊功进境后，招式会自行领悟。</p>
-              ) : (
-                <ul className="char-move-list">
-                  {moves.map((move) => (
-                    <li key={move.id}>
-                      <span>{move.name}</span>
-                      <em>{skillName(move.skillId)}</em>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            <section className="char-section">
-              <div className="char-section-head">
-                <h4 className="char-section-title">绝招</h4>
-                {onOpenExert && (
-                  <Chip
-                    label="运功"
-                    variant="perform"
-                    disabled={Boolean(pendingAction)}
-                    onClick={onOpenExert}
-                  />
-                )}
-              </div>
-              {performs.length === 0 ? (
-                <p className="char-empty">达级后当面请教师父，方可学会绝招。</p>
-              ) : (
-                <ul className="char-move-list">
-                  {performs.map((pf) => (
-                    <li key={pf.id}>
-                      <span>{pf.name}</span>
-                      <em>{skillName(pf.skillId)}</em>
-                      {pf.fieldKind && onExertPerform && (
-                        <Chip
-                          label={isPending(`exert:${pf.id}`) ? "运功中…" : "运功"}
-                          variant="perform"
-                          disabled={Boolean(pendingAction)}
-                          onClick={() => onExertPerform(pf.id)}
-                        />
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                ))
               )}
             </section>
           </>

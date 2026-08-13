@@ -154,6 +154,7 @@ pvp.report
 - `POST /skills/learn { skillId, npcId }`：当面请教一次升 1 级。须同房。`tuition_teacher` 按次扣银；`apprentice_master` 须为**当前师父**（`master_npc_id`，DC-040），学费 0。另扣精+潜能；0 级首学精耗 ×2。**目标等级 ≤1 豁免历练门槛**（DC-055；精耗仍 ×2）。升级达线时服务端自动解锁本级新招式，写入 `character_moves`（DC-041），响应体附 `unlockedMoves`。
 - `POST /skills/apprentice { npcId }`：向 `apprentice_master` 拜师。门外仅 `recruit.acceptOutsiders` 的入门点可收；同门可改拜更高辈（`generation` 更小）且满足 `recruit.minSkills`。写入 `master_npc_id` / `sect_id` / `generation`（= 师父 generation + 1）。跨门派拒绝。
 - 人物簿演练/参悟仍走 `/skills/practice`、`/skills/study`；升级同样触发 `unlockedMoves`；不可远程万能请教。
+- `GET /characters/me`：角色快照含 `skillEnable`、`moves`、`performs`，以及各槎有效等级 `effective`（DC-056，与 `/skills/enable` / `/skills/mastery` 同口径；无内容包时为空对象）。客户端不得自算有效等级。
 - `POST /skills/enable { slot, skillId }`（DC-041）：将特殊功挂到基本功槎位（`slot` ∈ force/dodge/parry/unarmed/sword/blade），`skillId` 为 `null` 时清空该槎（回退按 `autoEnableMap` 自动补齐）。服务端校验该特殊功 `enableSlots` 含此槎且已学（等级 > 0）。返回补齐后的 `skillEnable` 全图与各槎有效等级 `effective`。挂到槎上的特殊功等级越高，普攻越可能抽中其解锁招式（`pickMove`），未挂槎则该槎恒用基本功等级。
 - `POST /skills/learn-perform { performId, npcId }`（DC-041）：学会绝招须同房师父/教头当面传授，且该 NPC `teaches` 含此绝招所属武功；须满足 `learnMinLevel` + `learnRequires`（前置技能等级门槛）；写入 `character_performs`，此后战斗中 `POST /combat/action { action: "perform", performId }` 方可使用。已学绝招不可重复学。
 - `GET /skills/mastery`：人物簿「武学」页一站式视图——`skills`（含 `kind`/`enableSlots`）、`skillEnable`、各槎 `effective` 有效等级、已学 `moves`、已学 `performs`（含 `effectType`/`fieldKind`/`cost`，DC-052）。无角色返回 404。

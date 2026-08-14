@@ -85,35 +85,45 @@ async function main() {
 
   if (cmd === "deploy") {
     const repo = path.resolve(__dirname, "..");
-    const tar = path.join(os.tmpdir(), "yiren-release.tar");
-    console.log("== [1/5] 本地打包源码（git archive）==");
-    execSync(`git -C ${repo} archive --format=tar HEAD -o ${tar}`, { stdio: "inherit" });
-    console.log("   tar:", tar, `${fs.statSync(tar).size / 1024 / 1024} MB`);
+    const skipBuild = process.env.SKIP_BUILD === "1";
+    if (!skipBuild) {
+      const tar = path.join(os.tmpdir(), "yiren-release.tar");
+      console.log("== [1/5] 本地打包源码（git archive）==");
+      execSync(`git -C ${repo} archive --format=tar HEAD -o ${tar}`, { stdio: "inherit" });
+      console.log("   tar:", tar, `${fs.statSync(tar).size / 1024 / 1024} MB`);
 
-    console.log("== [2/5] 上传源码包并构建镜像 ==");
-    await new Promise((res, rej) => {
-      ssh.sftp((err, sftp) =>
-        err
-          ? rej(err)
-          : sftp.fastPut(tar, "/opt/yiren-jianghu/release.tar", (e) => (e ? rej(e) : res())),
+      console.log("== [2/5] 上传源码包并构建镜像 ==");
+      await new Promise((res, rej) => {
+        ssh.sftp((err, sftp) =>
+          err
+            ? rej(err)
+            : sftp.fastPut(tar, "/opt/yiren-jianghu/release.tar", (e) => (e ? rej(e) : res())),
+        );
+      });
+      await check(
+        "cd /opt/yiren-jianghu/src && tar xf /opt/yiren-jianghu/release.tar && rm /opt/yiren-jianghu/release.tar",
+        "解压源码",
       );
-    });
-    await check(
-      "cd /opt/yiren-jianghu/src && tar xf /opt/yiren-jianghu/release.tar && rm /opt/yiren-jianghu/release.tar",
-      "解压源码",
-    );
-    await check(
-      "cd /opt/yiren-jianghu/src && docker build -t yiren/api:main -f services/api/Dockerfile . && echo API_BUILD_OK",
-      "构建 api 镜像",
-    );
-    await check(
-      "cd /opt/yiren-jianghu/src && docker build -t yiren/worker:main -f services/worker/Dockerfile . && echo WORKER_BUILD_OK",
-      "构建 worker 镜像",
-    );
+      await check(
+        "cd /opt/yiren-jianghu/src && docker build -t yiren/api:main -f services/api/Dockerfile . && echo API_BUILD_OK",
+        "构建 api 镜像",
+      );
+      await check(
+        "cd /opt/yiren-jianghu/src && docker build -t yiren/worker:main -f services/worker/Dockerfile . && echo WORKER_BUILD_OK",
+        "构建 worker 镜像",
+      );
+    } else {
+      console.log("== [1-2/5] SKIP_BUILD=1，沿用服务器已有 yiren/api:main 与 worker 镜像 ==");
+    }
 
     console.log("== [3/5] 重建服务并迁移 ==");
+    // compose recreate 中断会留下 `hash_yiren-jianghu-prod-api-1` 占名，导致下次 up 冲突
     await check(
-      "cd /opt/yiren-jianghu && API_IMAGE=yiren/api:main WORKER_IMAGE=yiren/worker:main docker compose -f docker-compose.prod.yml up -d api worker",
+      "docker ps -aq --filter name=_yiren-jianghu-prod-api | xargs -r docker rm -f; docker ps -aq --filter name=_yiren-jianghu-prod-worker | xargs -r docker rm -f; true",
+      "清理残留 compose 容器名",
+    );
+    await check(
+      "cd /opt/yiren-jianghu && API_IMAGE=yiren/api:main WORKER_IMAGE=yiren/worker:main docker compose -f docker-compose.prod.yml up -d --force-recreate api worker",
       "compose up api/worker",
     );
     await new Promise((r) => setTimeout(r, 4000));

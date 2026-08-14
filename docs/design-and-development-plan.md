@@ -634,6 +634,7 @@
 | 审计修复闭环（DC-055） | ✅ 完成 | — | 0→1 expGate 豁免 + 建角赠铁剑/潜能 10 + 野狗短打；`village_rat` 修正鼠患；P1（padding/GuideTip/酒旗/story 链/vitals 钳制/前往 BFS/请托直接/逃跑不锁/Tab/aria）+ 廉价 P2（停工文案/四维提示/时辰 /120）；生产 R2 复核村环已通（playtest-audit §7） |
 | 武学页简洁化（DC-056） | ✅ 完成 | — | 人物簿武学：临敌只读摘要 + 单一已学列表 + 行内激发/演练；`GET /characters/me` 回传六槎 `effective`；砍掉 ChoiceRow 激发台与招式/绝招独立清单；yjh-mobile-ui §4.4 / protocol / sibling-borrowings 同步 |
 | 武学打磨 + 数字字体（DC-057） | ✅ 完成 | — | 临敌/特殊/基本三分页；境界标签；卸下存 null；□ 标记；触控 30px；`--font-digit`→Noto Serif SC；protocol / catalog / design-system 同步 |
+| 武学二级 Tab 分层 | ✅ 完成 | — | 临敌/特殊/基本改为分段按钮并与一级下划线 Tab 留白分层，避免贴行误触 |
 
 # 5. 风险与开放问题
 

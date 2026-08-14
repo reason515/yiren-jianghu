@@ -143,6 +143,7 @@ describe("CharacterSheet（角色面板）", () => {
     );
     clickTab(host, "武学");
     expect(host.querySelector(".char-skills-tabs")).not.toBeNull();
+    expect(host.querySelector(".char-tabs .char-skills-tabs")).toBeNull();
     expect(host.querySelector("[data-testid=char-combat]")).not.toBeNull();
     expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("内功");
     expect(host.querySelector("[data-testid=combat-force]")?.textContent).toContain("玄门内功");

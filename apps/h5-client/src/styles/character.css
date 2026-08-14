@@ -55,7 +55,7 @@
 .char-tabs {
   display: flex;
   gap: 2px;
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   border-bottom: 1px solid var(--line);
 }
 .char-tabs button {
@@ -82,29 +82,38 @@
   border-bottom-color: var(--jade);
 }
 
-/* 武学二级页签（DC-057） */
+/* 武学二级页签：分段按钮，与一级下划线 Tab 分层，避免贴行误触 */
 .char-skills-tabs {
   display: flex;
-  gap: 2px;
-  margin: 0 0 6px;
-  border-bottom: 1px solid var(--line);
+  gap: 6px;
+  margin: 4px 0 10px;
+  padding: 8px 0 0;
+  border: none;
 }
 .char-skills-tabs button {
   flex: 1;
-  min-height: 26px;
-  padding: 0 6px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+  min-height: var(--touch-min);
+  padding: 0 8px;
+  background: var(--ink-lift);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
   color: var(--paper-dim);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 1px;
   cursor: pointer;
 }
+.char-skills-tabs button:active {
+  color: var(--paper);
+}
 .char-skills-tabs button.on {
+  border-color: var(--jade);
   color: var(--jade-bright);
-  border-bottom-color: var(--jade);
+  background: rgba(95, 143, 120, 0.14);
+}
+.char-skills-tabs + .char-section {
+  border-top: none;
+  padding-top: 2px;
 }
 
 /* 固定内容区高度，切换页签不跳动；可滚但隐藏滚动条（DC-057） */

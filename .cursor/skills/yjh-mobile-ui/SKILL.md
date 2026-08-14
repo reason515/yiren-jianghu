@@ -64,7 +64,7 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 - 基础：`components/base/` 的 `Sheet`（浮层）/ `Chip`（动作）/ `Bar`（状态条）/ `Toast`（提示）/ `ChoiceRow`（分段控件，泛型，禁 select）
 - 流程：`ConfirmSheet`（二次确认）/ `AttributeAllocator`（四维分配）/ `LoginPage`（水墨远景 + 开场卷轴 + 宣纸表单，见 §4.13）/ `CharacterCreateSheet`（全屏两步：序章引导 + 立名与根基，组合 ink-* 原语 + 卷轴 + 宣纸控件，见 §4.13）/ `DepartureOverlay`（起程过场：建角后进入场景前，水墨远景 + 宣纸卡横排叙事，对齐内容包初始房间与主线）
 - 场景：`SceneView`（叙事优先 + 见闻 Tab）/ `ExitPad`（九宫格出口）/ `EntitySheet`（能力→动作）/ `StatusBar`（主界面顶栏：细轨进度条 + 双色读数 + 银两简牍印记，sticky 吸顶，V2.13）
-- 战斗/模板：`CombatView`（自动普攻 + 多敌血条 + 战报演出 + 悬浮动作条 + 结果离去）/ `CharacterSheet`（人物簿四页签：状态/武学/行囊/档案，行内展开动作）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
+- 战斗/模板：`CombatView`（自动普攻 + 多敌血条 + 战报演出 + 悬浮动作条 + 结果离去）/ `CharacterSheet`（人物簿四页签：状态/武学/行囊/档案；状态页行止下按已学显示运功按钮；行内展开动作）/ `TacticEditor`（战术模板：规则优先级 + 条件/动作 chips + 兜底 + 遮蔽警告）
 - 挂机/任务/地图：`GrindBanner`（挂机状态条 + 停止原因）/ `AfkSheet`（修炼/行侠分段切换：武功+时长 / 已接击杀差事+战术模板+时长）/ `AfkReportView`（行止回响）/ `QuestPanel`（江湖足迹 + 任务卡）/ `MapSheet`（SVG 八向舆图：缩放/拖拽/回到位置）
 - 社区/榜/重连/演出：`ForumView` + `PostComposer`（受控纯文本社区）/ `LeaderboardView`（双轨榜）/ `PvpView`（论剑：赛季余日 + 对手列表 + 邀战）+ `PvpReplayView`（战报叙事回放，与 PVE 共用 `battleEventLine`）/ `ReconnectingOverlay`（断线重连）/ `ArtPlaceholder`（首字印章插画占位）
 - 样式：`styles/tokens.css` + `base.css` + `auth.css` + `scene.css`
@@ -95,9 +95,9 @@ description: 《一人江湖》(yiren-jianghu) 移动端 UI/UX 设计规范—�
 ## 4.4 人物簿接线契约（E14.2 / DC-035）
 
 - 打开 `CharacterSheet` 时并发拉取 `GET /characters/me`、`GET /skills`、`GET /inventory`；服务端返回的角色、武功、行囊快照是唯一事实来源，客户端只做展示聚合。武功列表客户端按「已学优先」排序；`description` / `practicePoints` 随技能快照展示。
-- **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签（下划线式 `.char-tabs`，非大按钮）——**状态**（行止当前/上限细轨 + 四维）/ **武学**（DC-057：二级分类临敌 / 特殊功 / 基本功用分段按钮 `.char-skills-tabs`，与一级下划线 Tab 留白分层，勿再叠第二排下划线；临敌只读摘要；折叠行功名+境界标签+等级，已激发前缀 `□`；激发·卸下·演练·参悟同排；杂学归基本功页）/ **行囊**（当前佩挂置顶：兵器+衣甲；已佩名前缀 `□`）/ **档案**（仪容短述 + 性别、改名、放弃）。默认打开「状态」。内容区 `.char-tab-panel` **固定高度**滚动且隐藏滚动条，切换页签不跳动。
-- **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿（默认状态页）；顶栏另有独立「运功」（`onExert` → `ExertSheet`，DC-052），不与人物簿冲突。
-- **场外运功（DC-052）**：`POST /skills/exert { performId }`；列表来自角色快照 `performs` 的 `fieldKind`（heal/cure/heal_jing）；顶栏独立入口；武学页仅在展开绝招行内「运功」，不再单列绝招区。
+- **信息架构**：固定摘要（经验/可用潜能/银两）+ 四页签（下划线式 `.char-tabs`，非大按钮）——**状态**（行止当前/上限细轨 + 已学才显示的运功按钮 + 四维）/ **武学**（DC-057：二级分类临敌 / 特殊功 / 基本功用分段按钮 `.char-skills-tabs`，与一级下划线 Tab 留白分层，勿再叠第二排下划线；临敌只读摘要；折叠行功名+境界标签+等级，已激发前缀 `□`；激发·卸下·演练·参悟同排；杂学归基本功页）/ **行囊**（当前佩挂置顶：兵器+衣甲；已佩名前缀 `□`）/ **档案**（仪容短述 + 性别、改名、放弃）。默认打开「状态」。内容区 `.char-tab-panel` **固定高度**滚动且隐藏滚动条，切换页签不跳动。
+- **入口**：底栏「角色」与顶栏 `StatusBar`（`onOpen`）均可打开人物簿（默认状态页）。
+- **场外运功（DC-052）**：`POST /skills/exert { performId }`；列表来自角色快照 `performs` 的 `fieldKind`（heal/cure/heal_jing）。状态页「行止」下：已学自疗类绝招才显示对应运功按钮（招式名），未学不占位、不空态。武学页展开绝招行内仍可「运功」。顶栏不再放独立入口。
 - **武学临敌（DC-056/057）**：`GET /characters/me` 的 `effective` 为各槎有效等级唯一来源；临敌摘要只读；激发/卸下提交 `POST /skills/enable`（`skillId: null` = 显式清空，不被 auto 补回）；界面用中文槎名，禁 `Lv`/`force`/`sword` 等内部名。
 - **仪容**：客户端 `buildCharacterLook` 由性别、已学最高等级、佩挂衣甲/兵器拼装第二人称短述（对齐 xkx look me 结构，无命令）；建角时服务端赠送并穿戴 `cubu_yi`（`START_CLOTH_ITEM_ID`）。
 - 行止、四维、经验、有效潜能、银两、性别取角色快照；装备槽由行囊内 `equipped` 物品按 `weapon` / `armor` 派生，禁止在客户端另存一套装备状态。

@@ -429,10 +429,38 @@
 }
 .char-row-actions .chip,
 .char-equip-row .chip,
-.char-rename .chip {
+.char-rename .chip,
+.char-exert-row .chip {
   min-height: var(--touch-min);
   padding: 0 10px;
   font-size: 13px;
+}
+
+/* 状态页场外运功（DC-052）：已学才显示对应按钮 */
+.char-exert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.char-exert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-min);
+}
+.char-exert-kind {
+  font-style: normal;
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.char-exert-cost {
+  margin-left: auto;
+  color: var(--paper-faint);
+  font-size: 12px;
+  font-family: var(--font-digit);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 佩挂 / 行囊 */
@@ -539,72 +567,6 @@
   color: var(--paper-faint);
   font-size: 12px;
   margin-left: auto;
-}
-
-/* 场外运功 Sheet（DC-052） */
-.exert-sheet {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-bottom: 8px;
-}
-.exert-lead {
-  margin: 0;
-  color: var(--paper-dim);
-  font-size: 14px;
-  line-height: 1.7;
-  letter-spacing: 1px;
-}
-.exert-empty {
-  margin: 0;
-  padding: 16px 8px;
-  text-align: center;
-  color: var(--paper-faint);
-  font-size: 14px;
-  line-height: 1.8;
-}
-.exert-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.exert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: var(--touch-min);
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(201, 168, 105, 0.08), transparent 55%), var(--ink-soft);
-  box-shadow: inset 0 1px 0 rgba(232, 224, 208, 0.05);
-}
-.exert-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.exert-name {
-  font-family: var(--font-display);
-  color: var(--paper);
-  font-size: 16px;
-  letter-spacing: 2px;
-}
-.exert-kind {
-  font-style: normal;
-  color: var(--gold);
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-.exert-cost {
-  color: var(--paper-faint);
-  font-size: 12px;
-  font-family: var(--font-digit);
 }
 
 /* 档案 */

@@ -11,6 +11,7 @@ import {
   type SkillRowView,
   type VitalKey,
 } from "../lib/characterTypes.js";
+import { fieldExertKindLabel, formatExertCost, toFieldExertOptions } from "../lib/fieldExert.js";
 
 /** 人物簿四页签：状态 / 武学 / 行囊 / 档案。 */
 export type CharacterTab = "body" | "skills" | "bag" | "profile";
@@ -32,7 +33,7 @@ export interface CharacterSheetProps {
   onRename?: (name: string) => void;
   /** 放弃角色入口（由上层接 ConfirmSheet 二次确认）。 */
   onDiscard?: () => void;
-  /** 场外运功（DC-052）：行内施展已学自疗类绝招。 */
+  /** 场外运功（DC-052）：状态页按已学自疗绝招显示对应按钮。 */
   onExertPerform?: (performId: string) => void;
 }
 
@@ -102,6 +103,7 @@ export function CharacterSheet({
   const learnedSkills = character.skills.filter((skill) => skill.level > 0);
   const moves = character.moves ?? [];
   const performs = character.performs ?? [];
+  const fieldExertOptions = toFieldExertOptions(performs);
   const skillEnable = character.skillEnable ?? {};
   const effective = character.effective ?? {};
   const lookLines = buildCharacterLook(character);
@@ -337,6 +339,30 @@ export function CharacterSheet({
                 })}
               </div>
             </section>
+
+            {fieldExertOptions.length > 0 ? (
+              <section className="char-section" data-testid="char-exert">
+                <h4 className="char-section-title">运功</h4>
+                <div className="char-exert-list">
+                  {fieldExertOptions.map((opt) => (
+                    <div
+                      className="char-exert-row"
+                      key={opt.id}
+                      data-testid={`char-exert-${opt.id}`}
+                    >
+                      <Chip
+                        label={isPending(`exert:${opt.id}`) ? `${opt.name}…` : opt.name}
+                        variant="perform"
+                        disabled={Boolean(pendingAction) || !onExertPerform}
+                        onClick={() => onExertPerform?.(opt.id)}
+                      />
+                      <em className="char-exert-kind">{fieldExertKindLabel(opt.kind)}</em>
+                      <span className="char-exert-cost">{formatExertCost(opt.cost)}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="char-section">
               <h4 className="char-section-title">四维</h4>

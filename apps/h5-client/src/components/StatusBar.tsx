@@ -5,7 +5,7 @@ import type { VitalKey } from "../lib/characterTypes.js";
  * 主界面顶栏生存状态（V2.13：细轨进度条 + 双色读数，取代色点 HUD）。
  * - 生存项（气/精/精力/内力）：标签 +「当前/上限」双色数字 + 细墨轨道填充；
  * - 银两：货币非状态，右侧竖排简牍印记，与状态组视觉隔离。
- * - 整条可点打开人物簿（默认状态页签）；独立「运功」不冒泡（DC-052）。
+ * - 整条可点打开人物簿（默认状态页签）。
  * 数据来自服务端角色快照（resume/refreshCharacter）。
  */
 export interface StatusBarProps {
@@ -14,8 +14,6 @@ export interface StatusBarProps {
   silver: number | null;
   /** 点击顶栏打开人物簿。 */
   onOpen?: () => void;
-  /** 独立「运功」入口（DC-052）；不触发人物簿。 */
-  onExert?: () => void;
 }
 
 const VITAL_META: Array<{ key: VitalKey; label: string; cls: string }> = [
@@ -30,13 +28,7 @@ function pctOf(value: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round((value / max) * 100)));
 }
 
-export function StatusBar({
-  vitals,
-  vitalsMax,
-  silver,
-  onOpen,
-  onExert,
-}: StatusBarProps): JSX.Element {
+export function StatusBar({ vitals, vitalsMax, silver, onOpen }: StatusBarProps): JSX.Element {
   const interactive = Boolean(onOpen);
   return (
     <div
@@ -96,20 +88,6 @@ export function StatusBar({
         })}
       </div>
       <div className="status-aside">
-        {onExert && (
-          <button
-            type="button"
-            className="status-exert"
-            data-testid="status-exert"
-            aria-label="运功"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExert();
-            }}
-          >
-            运功
-          </button>
-        )}
         <span className="status-silver" data-testid="status-silver">
           <em>银两</em>
           <b>{silver ?? "–"}</b>

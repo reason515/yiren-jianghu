@@ -20,7 +20,6 @@ import { TeachSheet } from "./components/TeachSheet.js";
 import type { TeachOfferData } from "./lib/teachTypes.js";
 import { CombatView, RESULT_TEXT } from "./components/CombatView.js";
 import { CharacterSheet } from "./components/CharacterSheet.js";
-import { ExertSheet } from "./components/ExertSheet.js";
 import { ConfirmSheet } from "./components/ConfirmSheet.js";
 import { Sheet } from "./components/base/Sheet.js";
 import { QuestPanel } from "./components/QuestPanel.js";
@@ -44,7 +43,6 @@ import {
   type EnableSlot,
   type VitalKey,
 } from "./lib/characterTypes.js";
-import { toFieldExertOptions } from "./lib/fieldExert.js";
 import {
   toAfkQuestOptions,
   toAfkSkillOptions,
@@ -187,7 +185,6 @@ export function App(): JSX.Element {
   const [moreOpen, setMoreOpen] = useState(false);
   const [characterView, setCharacterView] = useState<CharacterView | null>(null);
   const [characterPending, setCharacterPending] = useState<string | null>(null);
-  const [exertOpen, setExertOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<SceneNpc | SceneItem | null>(null);
@@ -642,11 +639,6 @@ export function App(): JSX.Element {
   const openCharacter = (): void => {
     setPanel("character");
     void refreshCharacter();
-  };
-
-  const openExert = (): void => {
-    setExertOpen(true);
-    void refreshCharacter().catch(() => undefined);
   };
 
   const onExert = (performId: string): void => {
@@ -1452,7 +1444,6 @@ export function App(): JSX.Element {
         !questOpen &&
         panel === "none" &&
         !moreOpen &&
-        !exertOpen &&
         !discardOpen && <GuideTip text={guideTipText} onDismiss={() => setGuideTipText(null)} />}
       {needCreate && (
         <CharacterCreateSheet
@@ -1483,13 +1474,7 @@ export function App(): JSX.Element {
               <div className="ink-vignette" />
             </div>
           </div>
-          <StatusBar
-            vitals={vitals}
-            vitalsMax={vitalsMax}
-            silver={silver}
-            onOpen={openCharacter}
-            onExert={openExert}
-          />
+          <StatusBar vitals={vitals} vitalsMax={vitalsMax} silver={silver} onOpen={openCharacter} />
           <SceneView
             room={room}
             journal={journal}
@@ -1750,14 +1735,6 @@ export function App(): JSX.Element {
           onExertPerform={onExert}
         />
       )}
-
-      <ExertSheet
-        open={exertOpen}
-        options={toFieldExertOptions(characterView?.performs)}
-        busy={Boolean(characterPending?.startsWith("exert:"))}
-        onClose={() => setExertOpen(false)}
-        onExert={onExert}
-      />
 
       <ConfirmSheet
         open={discardOpen}

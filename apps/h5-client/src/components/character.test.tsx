@@ -137,6 +137,40 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.textContent).toContain("当前 25 · 先天 20");
   });
 
+  it("状态页：已学场外运功才在行止下显示对应按钮", () => {
+    const ids: string[] = [];
+    const { host } = render(
+      <CharacterSheet
+        open
+        character={CHARACTER}
+        onClose={() => undefined}
+        onExertPerform={(id) => ids.push(id)}
+      />,
+    );
+    expect(host.querySelector("[data-testid=char-exert]")).not.toBeNull();
+    expect(host.textContent).toContain("回春诀");
+    expect(host.textContent).toContain("回气");
+    expect(host.textContent).toContain("内力 20");
+    act(() =>
+      host.querySelector<HTMLButtonElement>("[data-testid=char-exert-force_heal] .chip")!.click(),
+    );
+    expect(ids).toEqual(["force_heal"]);
+  });
+
+  it("状态页：未学自疗绝招时不占位", () => {
+    const empty: CharacterView = { ...CHARACTER, performs: [] };
+    const { host } = render(
+      <CharacterSheet
+        open
+        character={empty}
+        onClose={() => undefined}
+        onExertPerform={() => undefined}
+      />,
+    );
+    expect(host.querySelector("[data-testid=char-exert]")).toBeNull();
+    expect(host.textContent).not.toContain("回春诀");
+  });
+
   it("武学页：临敌有效等级 + 折叠不见演练点/招式清单", () => {
     const { host } = render(
       <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,

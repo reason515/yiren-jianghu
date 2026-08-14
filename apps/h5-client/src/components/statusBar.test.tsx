@@ -50,6 +50,8 @@ describe("StatusBar（主界面顶栏生存状态）", () => {
     // 银两是独立简牍区（货币非状态）
     expect(host.querySelector('[data-testid="status-silver"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="status-silver"] b')?.textContent).toBe("12");
+    expect(host.querySelector("[data-testid=status-exert]")).toBeNull();
+    expect(host.textContent).not.toContain("运功");
   });
 
   it("低值时标记 low（色彩与读数共同警示）", () => {

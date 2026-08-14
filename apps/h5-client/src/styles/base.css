@@ -397,25 +397,7 @@ textarea {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  gap: 6px;
   align-self: stretch;
-}
-.status-exert {
-  min-height: var(--touch-min);
-  min-width: 44px;
-  padding: 0 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(201, 168, 105, 0.45);
-  background: linear-gradient(180deg, rgba(201, 168, 105, 0.18), rgba(42, 36, 28, 0.9));
-  color: var(--gold);
-  font-family: var(--font-display);
-  font-size: 14px;
-  letter-spacing: 3px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-.status-exert:active {
-  transform: translateY(1px);
-  filter: brightness(1.12);
 }
 /* 银两：竖排简牍印记（非现代胶囊） */
 .status-silver {

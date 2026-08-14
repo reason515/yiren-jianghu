@@ -2,8 +2,6 @@ import {
   applyRegen,
   clampVitals,
   computeMaxVitals,
-  maxFoodCapacity,
-  maxWaterCapacity,
   type GameParams,
   type VitalsState,
 } from "@yjh/game-core";
@@ -21,8 +19,6 @@ type HealRow = {
   jing: number;
   jingli: number;
   neili: number;
-  food: number;
-  water: number;
   eff_qi: number;
   eff_jing: number;
   attrs: string | Record<string, unknown> | null;
@@ -30,7 +26,7 @@ type HealRow = {
 };
 
 /**
- * V2.12 / DC-044 / DC-051：按距上次结算的时间差恢复气精等，并消耗食水。
+ * V2.12 / DC-051 / DC-058：按距上次结算的时间差恢复气精等。
  * 在 getScene / move / act / getCharacter / resume 入口调用；1 分钟内不结算。
  * last_heal_at 为空时只初始化时钟（不补发离线恢复），避免新建角色永久跳过结算。
  */
@@ -40,7 +36,7 @@ export async function settleCharacterVitals(
   accountId: string,
 ): Promise<VitalsState | null> {
   const rows = await database.query<HealRow>(
-    "SELECT id, qi, jing, jingli, neili, food, water, eff_qi, eff_jing, attrs, last_heal_at FROM characters WHERE account_id = $1 AND status = 'active'",
+    "SELECT id, qi, jing, jingli, neili, eff_qi, eff_jing, attrs, last_heal_at FROM characters WHERE account_id = $1 AND status = 'active'",
     [accountId],
   );
   const row = rows.rows[0];
@@ -51,8 +47,6 @@ export async function settleCharacterVitals(
     jing: row.jing,
     jingli: row.jingli,
     neili: row.neili,
-    food: row.food,
-    water: row.water,
     effQi: Number(row.eff_qi) || row.qi,
     effJing: Number(row.eff_jing) || row.jing,
   };
@@ -77,8 +71,6 @@ export async function settleCharacterVitals(
     forceLevel,
   };
   const maxVitals = computeMaxVitals(content.params, attrs);
-  const foodCap = maxFoodCapacity(content.params, attrs.con);
-  const waterCap = maxWaterCapacity(content.params, attrs.dex);
 
   if (!row.last_heal_at) {
     await database.query("UPDATE characters SET last_heal_at = now() WHERE id = $1", [row.id]);
@@ -87,26 +79,22 @@ export async function settleCharacterVitals(
 
   const deltaMinutes = (Date.now() - new Date(row.last_heal_at).getTime()) / 60000;
   if (deltaMinutes < 1) {
-    const clamped = clampVitals(current, maxVitals, foodCap, waterCap);
+    const clamped = clampVitals(current, maxVitals);
     if (
       clamped.qi !== current.qi ||
       clamped.jing !== current.jing ||
       clamped.jingli !== current.jingli ||
       clamped.neili !== current.neili ||
-      clamped.food !== current.food ||
-      clamped.water !== current.water ||
       clamped.effQi !== current.effQi ||
       clamped.effJing !== current.effJing
     ) {
       await database.query(
-        "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8 WHERE id = $9",
+        "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, eff_qi = $5, eff_jing = $6 WHERE id = $7",
         [
           clamped.qi,
           clamped.jing,
           clamped.jingli,
           clamped.neili,
-          clamped.food,
-          clamped.water,
           clamped.effQi,
           clamped.effJing,
           row.id,
@@ -118,18 +106,8 @@ export async function settleCharacterVitals(
 
   const next = applyRegen(current, maxVitals, deltaMinutes, content.params, attrs);
   await database.query(
-    "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8, last_heal_at = now() WHERE id = $9",
-    [
-      next.qi,
-      next.jing,
-      next.jingli,
-      next.neili,
-      next.food,
-      next.water,
-      next.effQi,
-      next.effJing,
-      row.id,
-    ],
+    "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, eff_qi = $5, eff_jing = $6, last_heal_at = now() WHERE id = $7",
+    [next.qi, next.jing, next.jingli, next.neili, next.effQi, next.effJing, row.id],
   );
   return next;
 }

@@ -62,8 +62,9 @@ erDiagram
 | status | text | CHECK active/discarded/frozen | 见 §4 状态机 |
 | attrs | jsonb | NOT NULL | `{ str, int, con, dex: { cur, base } }` |
 | exp / potential / learned_points / silver | bigint | NOT NULL | 有效潜能 = potential − learned_points；建角默认赠银 10（DC-039） |
-| qi/jing/jingli/neili/food/water/eff_qi/eff_jing | integer | NOT NULL | 当前值持久化（上限由 C2 动态计算） |
-| last_heal_at | timestamptz | NULL，DEFAULT now() | 上次生存结算时刻（DC-032/044；场景/读档按时间差恢复气精并消耗食水） |
+| qi/jing/jingli/neili/eff_qi/eff_jing | integer | NOT NULL | 当前值持久化（上限由 C2 动态计算） |
+| food/water | integer | NOT NULL | 已废弃（DC-058）；列暂留，规则层不再读写 |
+| last_heal_at | timestamptz | NULL，DEFAULT now() | 上次生存结算时刻（DC-032/044/058；场景/读档按时间差恢复气精） |
 | room_path / safe_room_id | text | NOT NULL | 当前位置与安全点（内容包房间 id） |
 | master_npc_id | text | NULL | 当前师父 NPC id（DC-039/040）；收费请教不写；请教须匹配此人 |
 | sect_id | text | NULL | 门派 id（如 `xuanmen`）；与师父同落库 |

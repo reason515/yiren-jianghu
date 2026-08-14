@@ -25,8 +25,6 @@ type CharacterRow = {
   jing?: number;
   jingli?: number;
   neili?: number;
-  food?: number;
-  water?: number;
   eff_qi?: number;
   eff_jing?: number;
   last_heal_at?: string | null;
@@ -66,8 +64,6 @@ function mockDb() {
               jing: character.jing ?? 100,
               jingli: character.jingli ?? 100,
               neili: character.neili ?? 0,
-              food: character.food ?? 300,
-              water: character.water ?? 300,
               eff_qi: character.eff_qi ?? character.qi ?? 100,
               eff_jing: character.eff_jing ?? character.jing ?? 100,
               attrs: character.attrs,
@@ -77,19 +73,17 @@ function mockDb() {
       }
       if (
         text.includes(
-          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8",
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, eff_qi = $5, eff_jing = $6",
         )
       ) {
-        const character = state.characters.find((row) => row.id === params[8]);
+        const character = state.characters.find((row) => row.id === params[6]);
         if (character) {
           character.qi = Number(params[0]);
           character.jing = Number(params[1]);
           character.jingli = Number(params[2]);
           character.neili = Number(params[3]);
-          character.food = Number(params[4]);
-          character.water = Number(params[5]);
-          character.eff_qi = Number(params[6]);
-          character.eff_jing = Number(params[7]);
+          character.eff_qi = Number(params[4]);
+          character.eff_jing = Number(params[5]);
           character.last_heal_at = new Date().toISOString();
         }
         return { rows: [] as unknown as T[] };
@@ -119,8 +113,6 @@ function mockDb() {
               jing: character.jing ?? 100,
               jingli: character.jingli ?? 100,
               neili: character.neili ?? 0,
-              food: character.food ?? 300,
-              water: character.water ?? 300,
               master_npc_id: null,
               sect_id: null,
               generation: null,
@@ -235,7 +227,7 @@ describe("characterService", () => {
     expect(await service.getCharacter("acc_1")).toMatchObject({
       name: "陆小风",
       attrs: { str: { cur: 25, base: 25 } },
-      vitals: { qi: 210, jing: 210, jingli: 50, neili: 0, food: 200, water: 175 },
+      vitals: { qi: 210, jing: 210, jingli: 50, neili: 0 },
       effectivePotential: 10,
     });
   });
@@ -246,14 +238,12 @@ describe("characterService", () => {
     await service.createCharacter("acc_1", INPUT);
     const character = await service.getCharacter("acc_1");
     // 无内功时：maxQi = 50 + 20*8 = 210；maxJing = 50 + 20*8 = 210；
-    // maxJingli = 50；maxNeili = 0；maxFood = 100 + 20*5 = 200；maxWater = 100 + 15*5 = 175
+    // maxJingli = 50；maxNeili = 0
     expect(character?.vitalsMax).toEqual({
       qi: 210,
       jing: 210,
       jingli: 50,
       neili: 0,
-      food: 200,
-      water: 175,
     });
     // 有内功时内力/气血随等级增长
     state.skills.push({

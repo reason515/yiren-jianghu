@@ -418,7 +418,7 @@ export function App(): JSX.Element {
     return () => window.clearInterval(timer);
   }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
-  // DC-044：在线约每分钟刷新生存值（触发服务端恢复/食水结算并更新顶栏）
+  // DC-044：在线约每分钟刷新生存值（触发服务端自然恢复结算并更新顶栏）
   useEffect(() => {
     if (!token || !character) return;
     const timer = window.setInterval(() => {
@@ -661,8 +661,6 @@ export function App(): JSX.Element {
           jing: result.vitals.jing,
           jingli: result.vitals.jingli,
           neili: result.vitals.neili,
-          food: result.vitals.food,
-          water: result.vitals.water,
         });
         await refreshCharacter().catch(() => undefined);
         showToast(result.message);

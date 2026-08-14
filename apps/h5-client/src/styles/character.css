@@ -239,18 +239,6 @@
 .char-vital.neili .char-vital-fill {
   background: var(--stat-neili);
 }
-.char-vital.food {
-  border-left-color: var(--stat-food);
-}
-.char-vital.food .char-vital-fill {
-  background: var(--stat-food);
-}
-.char-vital.water {
-  border-left-color: var(--stat-water);
-}
-.char-vital.water .char-vital-fill {
-  background: var(--stat-water);
-}
 .char-vital.low .char-vital-cur {
   color: var(--cinnabar);
 }

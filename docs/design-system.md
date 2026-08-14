@@ -66,7 +66,7 @@
 
 ## 2.3 其它
 
-状态资源（qi/jing/jingli/neili/food/water/potential/exp）、四维（str/int/con/dex）、武功门类、精通 6 级、物品、品质色均见 tokens.css；字体 `--font-display`（ZCOOL XiaoWei 标题/主按钮）+ `--font-body` / `--font-digit`（均为 Noto Serif SC，DC-057）；触控 `--touch-min: 30px`（DC-057，省垂直空间刻意低于常见 44）、安全区 `--safe-b/--safe-t`；纹理 `--bg-noise`（SVG data-URI 5% 噪点，破纯黑扁平）。
+状态资源（qi/jing/jingli/neili/potential/exp）、四维（str/int/con/dex）、武功门类、精通 6 级、物品、品质色均见 tokens.css；字体 `--font-display`（ZCOOL XiaoWei 标题/主按钮）+ `--font-body` / `--font-digit`（均为 Noto Serif SC，DC-057）；触控 `--touch-min: 30px`（DC-057，省垂直空间刻意低于常见 44）、安全区 `--safe-b/--safe-t`；纹理 `--bg-noise`（SVG data-URI 5% 噪点，破纯黑扁平）。
 
 ## 2.4 文字颜色规范（V2.5：三层体系 + 类/项区分）
 

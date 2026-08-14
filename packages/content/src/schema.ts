@@ -68,8 +68,8 @@ export const paramsSchema = z.object({
     cultivateForceDiv: z.number().int().positive().default(10),
     cultivateMaxOverflowMult: z.number().positive().default(2),
   }),
-  /** 自然恢复/消耗（V2.12 + DC-044 + DC-051，对齐 xkx heal_up 绝对值）：
-   * 气/精/精力/内力按「每拍点数 × (60/tickSeconds) × 分钟」恢复；food/water 按绝对值消耗；
+  /** 自然恢复（V2.12 + DC-051，对齐 xkx heal_up 绝对值；DC-058 移除食水）：
+   * 气/精/精力/内力按「每拍点数 × (60/tickSeconds) × 分钟」恢复；
    * 场景/角色/会话入口按距上次结算的时间差结算，单次封顶 maxWindowMinutes 防离线累积。 */
   regen: z
     .object({
@@ -89,10 +89,6 @@ export const paramsSchema = z.object({
       minVitalPerTick: z.number().int().nonnegative().default(3),
       /** 气/精已贴 eff 时每拍抬有效上限（疗伤）。 */
       woundCurePerTick: z.number().int().nonnegative().default(1),
-      /** 饱腹每分钟消耗点数（绝对值，非比例）。 */
-      foodPerMin: z.number().min(0).default(0.8),
-      /** 饮水每分钟消耗点数（绝对值，非比例）。 */
-      waterPerMin: z.number().min(0).default(1.2),
       maxWindowMinutes: z.number().int().min(1).max(1440).default(30),
     })
     .default({}),
@@ -110,10 +106,6 @@ export const paramsSchema = z.object({
     jingliPerLevel: z.number().int().nonnegative().default(2),
     neiliToQiDiv: z.number().int().positive().default(4),
     neiliToJingDiv: z.number().int().positive().default(12),
-    foodBase: z.number().int().positive().default(100),
-    foodPerCon: z.number().int().nonnegative().default(5),
-    waterBase: z.number().int().positive().default(100),
-    waterPerDex: z.number().int().nonnegative().default(5),
   }),
   /** 成长（学习/练习/读书）：exp 门槛与资源消耗 */
   growth: z.object({
@@ -333,7 +325,7 @@ export const itemSchema = z.object({
   description: z.string().default(""),
   usable: z
     .object({
-      effect: z.enum(["heal_qi", "heal_jing", "restore_neili", "feed", "quench", "cure_qi"]),
+      effect: z.enum(["heal_qi", "heal_jing", "restore_neili", "cure_qi"]),
       amount: z.number().positive(),
     })
     .optional(),

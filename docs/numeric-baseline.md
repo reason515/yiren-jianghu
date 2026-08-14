@@ -37,8 +37,8 @@
 | max_neili | `SKILL_D(force)->query_max_neili`（内功自定义） | `内功等级 × neiliPerLevel(10)` | 首版统一系数，内功自定义留作扩展 |
 | max_jingli | `force_skill * jingli_times` | `jingliBase=100 + 内功等级×3` | 保留内功驱动；基础值保证新角色可用 |
 | 年龄衰减 | 60 岁后气血衰减（attribute.c） | 首版无年龄阶段 | 移动端节奏（DC-020 注释）；后续引入 |
-| 食物/饮水 | `max_food_capacity()` 按 con | `foodBase=100 + con×5`；水同式按 dex | 简化线性；封测调 |
-| 自然恢复 | `heal_up`：约 9.5s 一拍，`con/3+max_neili/10`（精同构） | **绝对值**（DC-051）：同构分母 + `tickSeconds=9.5`；饥渴不回气精；贴 eff 后 `woundCurePerTick=1` 抬伤势 | 废弃上限比例；对齐 MUD 站桩回血；读写 `eff_*` |
+| 食物/饮水 | `max_food_capacity()` 按 con | **已移除（DC-058）**；pkuxkx 对照列仅归档 | 指标不可见且封测几乎不可达；干粮/清水改为小量回气/回精 |
+| 自然恢复 | `heal_up`：约 9.5s 一拍，`con/3+max_neili/10`（精同构） | **绝对值**（DC-051）：同构分母 + `tickSeconds=9.5`；贴 eff 后 `woundCurePerTick=1` 抬伤势；**无饥渴 gate（DC-058）** | 废弃上限比例；对齐 MUD 站桩回血；读写 `eff_*` |
 
 ## 2.3 战斗（combat）
 
@@ -97,6 +97,7 @@
 
 | 日期 | 项 | 新值 | 理由 |
 |---|---|---|---|
+| 2026-08-14 | DC-058 移除饱腹/饮水 | 删 `maxFood`/`maxWater`、`foodPerMin`/`waterPerMin`、hungry gate；干粮 `heal_qi` 30、清水 `heal_jing` 40 | 隐性摩擦非玩法；人物簿只留气精精力内力 |
 | 2026-08-13 | DC-055 新手村：expGate 目标等级 ≤1 豁免；建角赠铁剑+潜能 10；教学兽 con≈1 / level 0 | mechanics + characterService + NPC | 打通引导→学武→首战；精耗仍 ×2；不改全局公式 |
 | 2026-08-12 | DC-054 挂机：onlineTickSec=15、questOnlineTickSec=30、roundGain 1/1/1、修炼三态 | mechanics + grind_jobs | 在线有动效；古制时辰；练功/打坐/吐纳 |
 | 2026-08-11 | 自然恢复 DC-051：xkx 绝对值（tickSeconds=9.5、con/内力分母）；修 eff 读写 | mechanics + vitalsSettle | 对齐 MUD 站桩回血；非空血可回升 |

@@ -76,6 +76,7 @@
 | DC-055 | 2026-08 | 新手村闭环：0→1 请教豁免 + 开局佩剑 + 教学短打 | ①`expGateRequired`：目标等级 ≤1 豁免历练（精耗仍 ×2 / DC-039；对齐 pkuxkx `learn.c` 0 级可学）。②建角赠铁剑并佩戴 `weapon` 槽，并赠潜能 10 以免豁免历练后卡在潜能。③野狗/瘦狗/灰鼠 `level:0`、con≈1（气血贴 qiBase 地板）+ 技能 1 级；不改全局伤害/命中公式。新手有效等级 0 + DC-050 夹逼下约十余自动回合结束（UI 约 30–45s），不再磨 4+ 分钟。不搬回 35 步命令教学、不加区；城/门派历练 50/80 另开 | 试玩审计 P0：引导「先学武」与门槛对撞、学剑无兵器、首战磨 4+ 分钟 | mechanics.yaml、numeric-baseline、characterService、wild_dog、protocol、playtest-audit | ✅ |
 | DC-056 | 2026-08 | 武学页 IA：临敌摘要 + 单列表 + 行内激发 | 人物簿武学页改为两层：①只读「临敌」摘要（槎位中文 / 已激发功名 / 服务端 `effective`）；②单一已学列表（已激发特殊→其余特殊→基本→杂学），折叠只留名+等级+「用」；演练/参悟/激发/招式/绝招/运功进展开。砍掉激发 ChoiceRow 控制台与招式/绝招独立清单。机制仍 DC-041；`GET /characters/me` 回传六槎 `effective` | 武学页把配置台当成阅读面，首屏无法回答「临敌用什么」；对齐 xkx 已激发只读 + 行内 enable，不借 prepare/命令 | protocol.md、yjh-mobile-ui §4.4、sibling-borrowings、uiux-v2-spec、h5 CharacterSheet、characterService | ✅ |
 | DC-057 | 2026-08 | 武学三分页 + 境界标签 + 卸下 null + 触控/数字字体 | ①武学二级 Tab：临敌 / 特殊功 / 基本功（杂学归基本功页）。②`skillMastery`：武学 level/30、知识 /50 取 pkuxkx 境界表；`--mastery-1..6` 着色。③激发卸下存显式 `null`，`resolveEnableMap` 不再被 auto 补回。④动作同排；□ 激发/佩挂；藏滚动条。⑤`--touch-min: 30px`。⑥`--font-digit` 并入 Noto Serif SC | 卸下假成功；武学仍挤；数字楷体与汉字气质不一致 | protocol、enable/combatantFactory、skillMastery、CharacterSheet、tokens、design-system、yjh-mobile-ui、catalog | ✅ |
+| DC-058 | 2026-08 | 移除饱腹/饮水生存层 | ①`applyRegen` 不再消耗 food/water、无饥渴阻回气精。②人物簿/协议快照只保留气/精/精力/内力。③删 `maxFood`/`maxWater` 公式与 regen 食水系数；`feed`/`quench` 效果退役。④干粮→`heal_qi`、陶壶清水→`heal_jing`。⑤DB `characters.food/water` 列暂留、规则层不读写 | 指标不可见、封测几乎不可达，属隐性摩擦而非玩法；对齐移动端减挫败 | mechanics.yaml、schema、numeric-baseline、protocol、vitals.ts、vitalsSettle、characterService、sceneService、H5 CharacterSheet | ✅ |
 
 # 3. 被替代决策（变更历史）
 
@@ -92,6 +93,7 @@
 | DC-020 战斗线性命中/伤害简化口径（对照列）中「生效列仍为线性」 | DC-041 | 生效列改为 skill_power + 招式系数；params 旧线性系数保留作伤害基底 |
 | DC-032「食水不自动恢复 / 暂不实现饥饿」 | DC-044 | 同 tick 按绝对值消耗 food/water；恢复入口扩展至读档与顶栏轮询 |
 | DC-032/044「气精按上限比例 *PerMin 恢复」 | DC-051 | 改为 xkx heal_up 绝对值（con/内力分母 + 9.5s 拍）；饥渴阻回气精；读写 eff |
+| DC-044「食水消耗」与 DC-051「饥渴不回气精」 | DC-058 | 移动端移除食水生存层；气精自然恢复不再受饥渴 gate；DB 列暂留 |
 | DC-020「公式形态留代码、只改参数表数字」 | DC-046 | 系数与公式表达式均进 `mechanics.yaml`；控制流仍留代码；旧 `params.json` 退役 |
 
 # 4. 一致性检查

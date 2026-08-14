@@ -22,8 +22,6 @@ export const REQUIRED_FORMULA_IDS = [
   "maxQi",
   "maxJing",
   "maxJingli",
-  "maxFood",
-  "maxWater",
   "attackDamageBase",
   "moveDamageApplied",
   "parryDamage",

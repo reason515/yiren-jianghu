@@ -6,8 +6,6 @@ import {
   effectiveLevel,
   effectivePotential,
   fieldExertKind,
-  maxFoodCapacity,
-  maxWaterCapacity,
   resolveEnableMap,
   type EnableSlot,
   type SkillEnableMap,
@@ -40,15 +38,13 @@ export interface CharacterSummary {
   gender: string;
   status: string;
   attrs: Record<"str" | "int" | "con" | "dex", { cur: number; base: number }>;
-  vitals: { qi: number; jing: number; jingli: number; neili: number; food: number; water: number };
+  vitals: { qi: number; jing: number; jingli: number; neili: number };
   /** 生存资源上限（V2.9：与当前值成对展示；无内容包时全 0）。 */
   vitalsMax: {
     qi: number;
     jing: number;
     jingli: number;
     neili: number;
-    food: number;
-    water: number;
   };
   exp: number;
   effectivePotential: number;
@@ -173,17 +169,13 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
 
       if (content) {
         const maxVitals = computeMaxVitals(content.params, { ...input.attrs, forceLevel: 0 });
-        const foodCap = maxFoodCapacity(content.params, input.attrs.con);
-        const waterCap = maxWaterCapacity(content.params, input.attrs.dex);
         await db.query(
-          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8 WHERE id = $9",
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, eff_qi = $5, eff_jing = $6 WHERE id = $7",
           [
             maxVitals.maxQi,
             maxVitals.maxJing,
             maxVitals.maxJingli,
             maxVitals.maxNeili,
-            foodCap,
-            waterCap,
             maxVitals.maxQi,
             maxVitals.maxJing,
             characterId,
@@ -195,7 +187,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
     },
 
     async getCharacter(accountId) {
-      // DC-044：读档前先结算恢复/食水，保证人物簿与顶栏看到最新状态。
+      // DC-044 / DC-058：读档前先结算自然恢复，保证人物簿与顶栏看到最新状态。
       if (content) {
         await settleCharacterVitals(db, vitalsContentFromPack(content), accountId);
       }
@@ -213,14 +205,12 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         jing: number;
         jingli: number;
         neili: number;
-        food: number;
-        water: number;
         master_npc_id: string | null;
         sect_id: string | null;
         generation: number | null;
         skill_enable: SkillEnableMap | string | null;
       }>(
-        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, master_npc_id, sect_id, generation, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, attrs, exp, potential, learned_points, silver, qi, jing, jingli, neili, master_npc_id, sect_id, generation, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0];
@@ -246,8 +236,6 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         jing: 0,
         jingli: 0,
         neili: 0,
-        food: 0,
-        water: 0,
       };
       // DC-041/057：激发图与已学招式/绝招（缺键按 autoEnableMap 补齐；显式 null=强制卸下）；无内容包时全空兜底。
       let skillEnable: SkillEnableMap = {};
@@ -316,8 +304,6 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           jing: maxVitals.maxJing,
           jingli: maxVitals.maxJingli,
           neili: maxVitals.maxNeili,
-          food: maxFoodCapacity(content.params, attrs.con.cur),
-          water: maxWaterCapacity(content.params, attrs.dex.cur),
         };
         const [moveRows, performRows] = await Promise.all([
           db.query<{ move_id: string }>(
@@ -361,8 +347,6 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           jing: row.jing,
           jingli: row.jingli,
           neili: row.neili,
-          food: row.food,
-          water: row.water,
         },
         vitalsMax,
         exp: Number(row.exp),

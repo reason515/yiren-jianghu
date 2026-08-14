@@ -24,16 +24,12 @@ describe("StatusBar（主界面顶栏生存状态）", () => {
     jing: 80,
     jingli: 64,
     neili: 40,
-    food: 100,
-    water: 100,
   };
   const vitalsMax: Record<VitalKey, number> = {
     qi: 420,
     jing: 380,
     jingli: 300,
     neili: 200,
-    food: 400,
-    water: 350,
   };
 
   it("渲染气/精/精力/内力（细轨进度条 + 双色读数）+ 银两简牍印记", () => {

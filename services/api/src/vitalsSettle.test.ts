@@ -3,7 +3,7 @@ import { DEFAULT_PARAMS } from "@yjh/game-core";
 import type { Db, DbRow } from "./db.js";
 import { settleCharacterVitals } from "./vitalsSettle.js";
 
-describe("settleCharacterVitals（DC-044 / DC-051）", () => {
+describe("settleCharacterVitals（DC-044 / DC-051 / DC-058）", () => {
   it("last_heal_at 为空时只初始化时钟，不改资源", async () => {
     const character = {
       id: "c1",
@@ -13,8 +13,6 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       jing: 20,
       jingli: 30,
       neili: 0,
-      food: 300,
-      water: 300,
       eff_qi: 210,
       eff_jing: 210,
       attrs: { str: 20, int: 20, con: 20, dex: 20 },
@@ -41,11 +39,11 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
       "a1",
     );
-    expect(next).toMatchObject({ qi: 10, jing: 20, food: 300 });
+    expect(next).toMatchObject({ qi: 10, jing: 20 });
     expect(character.last_heal_at).toBeTruthy();
   });
 
-  it("满 10 分钟结算：气精按 xkx 绝对值回满、食水下降", async () => {
+  it("满 10 分钟结算：气精按 xkx 绝对值回满", async () => {
     const character = {
       id: "c1",
       account_id: "a1",
@@ -54,8 +52,6 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       jing: 0,
       jingli: 0,
       neili: 0,
-      food: 300,
-      water: 300,
       eff_qi: 210,
       eff_jing: 210,
       attrs: { str: 20, int: 20, con: 20, dex: 20 },
@@ -74,10 +70,8 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
           character.jing = Number(params[1]);
           character.jingli = Number(params[2]);
           character.neili = Number(params[3]);
-          character.food = Number(params[4]);
-          character.water = Number(params[5]);
-          character.eff_qi = Number(params[6]);
-          character.eff_jing = Number(params[7]);
+          character.eff_qi = Number(params[4]);
+          character.eff_jing = Number(params[5]);
           return { rows: [] as unknown as T[] };
         }
         throw new Error(`unexpected: ${text}`);
@@ -88,10 +82,10 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
       "a1",
     );
-    expect(next).toMatchObject({ qi: 210, jing: 210, jingli: 50, food: 292, water: 288 });
+    expect(next).toMatchObject({ qi: 210, jing: 210, jingli: 50 });
   });
 
-  it("1 分钟内仍钳制超上限（jingli/食水闪现）", async () => {
+  it("1 分钟内仍钳制超上限（jingli 闪现）", async () => {
     const character = {
       id: "c1",
       account_id: "a1",
@@ -100,8 +94,6 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       jing: 100,
       jingli: 100,
       neili: 0,
-      food: 300,
-      water: 300,
       eff_qi: 210,
       eff_jing: 210,
       attrs: { str: 20, int: 20, con: 20, dex: 15 },
@@ -120,8 +112,6 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
           character.jing = Number(params[1]);
           character.jingli = Number(params[2]);
           character.neili = Number(params[3]);
-          character.food = Number(params[4]);
-          character.water = Number(params[5]);
           return { rows: [] as unknown as T[] };
         }
         throw new Error(`unexpected: ${text}`);
@@ -132,7 +122,7 @@ describe("settleCharacterVitals（DC-044 / DC-051）", () => {
       { params: DEFAULT_PARAMS, getSkillCategory: () => undefined },
       "a1",
     );
-    expect(next).toMatchObject({ jingli: 50, food: 200, water: 175 });
+    expect(next).toMatchObject({ jingli: 50 });
     expect(character.jingli).toBe(50);
   });
 });

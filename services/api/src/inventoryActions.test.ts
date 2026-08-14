@@ -27,7 +27,7 @@ const PACK = {
       kind: "food",
       value: 2,
       stackable: true,
-      usable: { effect: "feed", amount: 30 },
+      usable: { effect: "heal_qi", amount: 30 },
     },
     {
       id: "clear_water",
@@ -35,7 +35,7 @@ const PACK = {
       kind: "food",
       value: 2,
       stackable: true,
-      usable: { effect: "quench", amount: 500 },
+      usable: { effect: "heal_jing", amount: 40 },
     },
     { id: "herbs", name: "药草", kind: "misc", value: 1, stackable: true },
   ],
@@ -52,8 +52,6 @@ interface CharState {
   qi: number;
   jing: number;
   neili: number;
-  food: number;
-  water: number;
   eff_qi: number;
   eff_jing: number;
   attrs: { str: number; int: number; con: number; dex: number };
@@ -111,11 +109,7 @@ function mockDb() {
             .map((c) => ({ id: c.id, room_path: "village_start" })) as unknown as T[],
         };
       }
-      if (
-        text.includes(
-          "SELECT id, qi, jing, neili, food, water, eff_qi, eff_jing, attrs FROM characters",
-        )
-      ) {
+      if (text.includes("SELECT id, qi, jing, neili, eff_qi, eff_jing, attrs FROM characters")) {
         return {
           rows: state.characters
             .filter((c) => c.id === params[0])
@@ -124,25 +118,8 @@ function mockDb() {
               qi: c.qi,
               jing: c.jing,
               neili: c.neili,
-              food: c.food,
-              water: c.water,
               eff_qi: c.eff_qi,
               eff_jing: c.eff_jing,
-              attrs: c.attrs,
-            })) as unknown as T[],
-        };
-      }
-      if (text.includes("SELECT id, qi, jing, neili, food, water, attrs FROM characters")) {
-        return {
-          rows: state.characters
-            .filter((c) => c.id === params[0])
-            .map((c) => ({
-              id: c.id,
-              qi: c.qi,
-              jing: c.jing,
-              neili: c.neili,
-              food: c.food,
-              water: c.water,
               attrs: c.attrs,
             })) as unknown as T[],
         };
@@ -213,18 +190,13 @@ function mockDb() {
         };
       }
       if (text.includes("UPDATE characters SET qi = $1")) {
-        const withEff = text.includes("eff_qi");
-        const c = state.characters.find((x) => x.id === params[withEff ? 7 : 5]);
+        const c = state.characters.find((x) => x.id === params[5]);
         if (c) {
           c.qi = Number(params[0]);
           c.jing = Number(params[1]);
           c.neili = Number(params[2]);
-          c.food = Number(params[3]);
-          c.water = Number(params[4]);
-          if (withEff) {
-            c.eff_qi = Number(params[5]);
-            c.eff_jing = Number(params[6]);
-          }
+          c.eff_qi = Number(params[3]);
+          c.eff_jing = Number(params[4]);
         }
         return { rows: [] as unknown as T[] };
       }
@@ -253,8 +225,6 @@ function boot() {
     qi: 100,
     jing: 100,
     neili: 0,
-    food: 100,
-    water: 100,
     eff_qi: 500,
     eff_jing: 500,
     attrs: { str: 25, int: 20, con: 20, dex: 15 },
@@ -342,11 +312,11 @@ describe("sceneService.useItem", () => {
     expect(state.items.find((i) => i.id === "it_yao")).toBeUndefined(); // 用完删除
   });
 
-  it("干粮补食物（上限钳制）；非可用物 → cannot_use", async () => {
+  it("干粮回气血（上限钳制）；非可用物 → cannot_use", async () => {
     const { scene, state } = boot();
     await scene.useItem("acc_1", "it_food");
-    // maxFood = 100 + 20*5 = 200；100 + 30 = 130（未触顶）
-    expect(state.characters[0]?.food).toBe(130);
+    // maxQi = 50 + 20*8 = 210；100 + 30 = 130（未触顶）
+    expect(state.characters[0]?.qi).toBe(130);
 
     await expect(scene.useItem("acc_1", "it_herbs")).rejects.toMatchObject({
       code: "cannot_use",
@@ -356,12 +326,12 @@ describe("sceneService.useItem", () => {
     });
   });
 
-  it("陶壶清水从空喝到满（上限钳制）", async () => {
+  it("陶壶清水回精（上限钳制）", async () => {
     const { scene, state } = boot();
-    state.characters[0]!.water = 0;
+    state.characters[0]!.jing = 180;
     await scene.useItem("acc_1", "it_water");
-    // maxWater = 100 + 15*5 = 175；0 + 500 → 钳到满
-    expect(state.characters[0]?.water).toBe(175);
+    // maxJing = 50 + 20*8 = 210；180 + 40 → 钳到 210
+    expect(state.characters[0]?.jing).toBe(210);
     expect(state.items.find((i) => i.id === "it_water")).toBeUndefined();
   });
 });
@@ -395,8 +365,6 @@ describe("app 集成（inventory 动作路由）", () => {
       qi: 100,
       jing: 100,
       neili: 0,
-      food: 100,
-      water: 100,
       eff_qi: 500,
       eff_jing: 500,
       attrs: { str: 25, int: 20, con: 20, dex: 15 },

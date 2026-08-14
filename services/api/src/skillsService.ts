@@ -196,8 +196,6 @@ export interface ExertResultView {
     jing: number;
     jingli: number;
     neili: number;
-    food: number;
-    water: number;
     effQi: number;
     effJing: number;
   };
@@ -214,8 +212,6 @@ type CharacterRow = {
   qi: number;
   jingli: number;
   neili: number;
-  food: number;
-  water: number;
   eff_qi: number;
   eff_jing: number;
   silver: number | string;
@@ -266,7 +262,7 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
 
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
-      "SELECT id, exp, potential, learned_points, jing, qi, jingli, neili, food, water, eff_qi, eff_jing, silver, room_path, master_npc_id, sect_id, generation, attrs, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
+      "SELECT id, exp, potential, learned_points, jing, qi, jingli, neili, eff_qi, eff_jing, silver, room_path, master_npc_id, sect_id, generation, attrs, skill_enable FROM characters WHERE account_id = $1 AND status = 'active'",
       [accountId],
     );
     const r = rows.rows[0];
@@ -961,8 +957,6 @@ export function createSkillsService(db: Db, content: ContentPack): SkillsService
           jing: result.vitals.jing,
           jingli: ch.jingli,
           neili: result.vitals.neili,
-          food: ch.food,
-          water: ch.water,
           effQi: result.vitals.effQi,
           effJing: result.vitals.effJing,
         },

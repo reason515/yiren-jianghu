@@ -1,11 +1,5 @@
 import type { ContentPack, Item, Npc, Room, Rumor, Skill } from "@yjh/content";
-import {
-  buildNpcObserveLines,
-  computeMaxVitals,
-  maxFoodCapacity,
-  maxWaterCapacity,
-  type ObserveGear,
-} from "@yjh/game-core";
+import { buildNpcObserveLines, computeMaxVitals, type ObserveGear } from "@yjh/game-core";
 import type { Db } from "./db.js";
 import type { QuestsService } from "./questsService.js";
 import { settleCharacterVitals, vitalsContentFromIndex } from "./vitalsSettle.js";
@@ -713,15 +707,12 @@ export function createSceneService(
         qi: number;
         jing: number;
         neili: number;
-        food: number;
-        water: number;
         eff_qi: number;
         eff_jing: number;
         attrs: { str: number; int: number; con: number; dex: number };
-      }>(
-        "SELECT id, qi, jing, neili, food, water, eff_qi, eff_jing, attrs FROM characters WHERE id = $1",
-        [character.id],
-      );
+      }>("SELECT id, qi, jing, neili, eff_qi, eff_jing, attrs FROM characters WHERE id = $1", [
+        character.id,
+      ]);
       const current = me.rows[0]!;
       const forceRows = await db.query<{ skill_id: string; level: number }>(
         "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
@@ -739,10 +730,7 @@ export function createSceneService(
         dex: attrs.dex,
         forceLevel,
       });
-      const maxFood = maxFoodCapacity(content.params, attrs.con);
-      const maxWater = maxWaterCapacity(content.params, attrs.dex);
-
-      let { qi, jing, neili, food, water } = current;
+      let { qi, jing, neili } = current;
       let effQi = Math.min(maxVitals.maxQi, Math.max(0, current.eff_qi ?? maxVitals.maxQi));
       const effJing = Math.min(
         maxVitals.maxJing,
@@ -764,16 +752,10 @@ export function createSceneService(
         case "restore_neili":
           neili = Math.min(maxVitals.maxNeili, neili + amount);
           break;
-        case "feed":
-          food = Math.min(maxFood, food + amount);
-          break;
-        case "quench":
-          water = Math.min(maxWater, water + amount);
-          break;
       }
       await db.query(
-        "UPDATE characters SET qi = $1, jing = $2, neili = $3, food = $4, water = $5, eff_qi = $6, eff_jing = $7 WHERE id = $8",
-        [qi, jing, neili, food, water, effQi, effJing, character.id],
+        "UPDATE characters SET qi = $1, jing = $2, neili = $3, eff_qi = $4, eff_jing = $5 WHERE id = $6",
+        [qi, jing, neili, effQi, effJing, character.id],
       );
       if (row.quantity > 1) {
         await db.query("UPDATE character_items SET quantity = quantity - 1 WHERE id = $1", [

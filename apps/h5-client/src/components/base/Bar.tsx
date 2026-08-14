@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 /** 状态条（气血/精神/内力等；低值色彩+文案共同警示，数值带语义标签「当前/上限」）。 */
-export type BarTone = "qi" | "jing" | "jingli" | "neili" | "food" | "water";
+export type BarTone = "qi" | "jing" | "jingli" | "neili";
 
 export interface BarProps {
   value: number;

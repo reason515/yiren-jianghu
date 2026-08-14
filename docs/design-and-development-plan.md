@@ -552,7 +552,7 @@
 | 工程机制：E2E 冒烟 + CD 脚手架 + 协议一致性 | ✅ 完成 | — | CI e2e 作业（真实 PG+Redis）；deploy 工作流 + Dockerfile + 生产 compose 脚手架（激活需 secrets）；docs/protocol.md ↔ 代码契约测试（test:docs） |
 | C1–C10 规则引擎 | ⬜ | | 按清单顺序推进 |
 | C1 数值参数表 | ✅ 完成 | — | game-core/params：经验/潜能/挂机递减/装载校验（复用 content Schema 单一来源），确定性单测 |
-| C2 Vitals 计算 | ✅ 完成 | — | game-core/vitals：动态上限（qi/jing/neili/jingli）+ eff 钳制 + 食物饮水；参数表 vitals 段（内容包驱动），属性矩阵单测 |
+| C2 Vitals 计算 | ✅ 完成 | — | game-core/vitals：动态上限（qi/jing/neili/jingli）+ eff 钳制；食水层已撤（DC-058）；参数表 vitals 段（内容包驱动），属性矩阵单测 |
 | C3 战斗引擎 v1 | ✅ 完成 | — | game-core/combat：seeded RNG（mulberry32）+ 命中三态 + 分系伤害/减伤 + 回合循环 + 动作选择器接口 + 事件流；参数表 combat 段扩展，确定性单测（55 用例） |
 | C4 绝招定义与执行 | ✅ 完成 | — | 4 个代表性绝招内容（内功回气/兵器伤害/技能门槛/处决）+ 条件/消耗/冷却校验 + 映射战斗动作 + 冷却跟踪；buff 类型保留 Schema 但校验器告警；71 用例 |
 | C5 技能成长 | ✅ 完成 | — | game-core/growth：learn（潜能+精，exp 门槛 = 等级³/10）/practice（气血累积）/study（精累积）；有效潜能修正；84 用例 |
@@ -619,7 +619,7 @@
 | V2.18 自动战 + 真·1vN（DC-037/038） | ✅ 完成 | — | 手动 PVE：自动普攻节拍 + 绝招/回气/逃跑；同场多敌引擎/协议/UI；野狗+瘦狗群战；收起≠放弃；武侠战报轮换与 perform-flash |
 | V2.19 战斗读感（DC-050） | ✅ 完成 | — | HUD 随战报回放；攻防 exchange 停顿+行动方高亮；命中夹逼/伤害浮动/弱打强软帽/busy=2 |
 | V2.20 战斗条两行 + 场外运功（DC-052） | ✅ 完成 | — | 战斗底栏：上行加力分段+回气+逃跑，下行绝招横滑并美化；`POST /skills/exert` 场外疗伤/回气/回精；顶栏+人物簿双入口；新增静心回神 |
-| 自然恢复对齐 MUD（DC-051） | ✅ 完成 | — | 气精改 xkx heal_up 绝对值（9.5s 拍 + con/内力）；饥渴阻回；读写 eff；约 5 分钟回满新手空血 |
+| 自然恢复对齐 MUD（DC-051） | ✅ 完成 | — | 气精改 xkx heal_up 绝对值（9.5s 拍 + con/内力）；读写 eff；约 5 分钟回满新手空血；饥渴 gate 后由 DC-058 撤销 |
 | G1–G4 部署封测 | ✅ 完成 | — | G1 部署上线（117.72.34.43，生产入口接线修复 ×2）；G2 备份/监控/日志（恢复演练 23 表）；G3 Redis 限流 + frozen 风控（deps 覆盖修复）；G4 封测门禁（15 项核验 + 35 邀请码，docs/beta-launch-checklist.md） |
 | G5 指标看板 | ⬜ | | 封测期周复盘数据聚合（SQL 脚本）；试玩阶段后可排 |
 | 武功双轨学艺（DC-039） | ✅ 完成 | — | 收费请教（村武馆按次扣银+精+潜能）+ 门派拜师落库 master/sect；TeachSheet 当面请教；废除远程万能请教；迁移 0013；建角赠银 10 |
@@ -628,13 +628,14 @@
 | 新手生计挂机（DC-042） | ✅ 完成 | — | `kind=grind`：村中杂役/溪边垂钓发银+历练+潜能；Worker settleGrind；AfkSheet 默认生计；野狗去群战 1v1 |
 | 在线/离线挂机 + 历练用词（DC-043） | ✅ 完成 | — | presence+心跳 pause；settleJobNow 共用；在线生计/行侠见闻；离线实时累计；玩家向「经验」→「历练」；wipe 库改建表 |
 | 在线生计真实跑图（DC-045） | ✅ 完成 | — | hub/route 合圈发奖；真改 room_path；挂机锁 move；任意处开活先导航 |
-| 生存结算闭环（DC-044） | ✅ 完成 | — | 修复气精不回/食水不降：`settleCharacterVitals` 统一入口（场景+getCharacter+resume）；建角写 `last_heal_at`；空值初始化时钟；`applyRegen` 消耗 food/water；H5 60s 轮询+移动刷新；迁移 0016 |
+| 生存结算闭环（DC-044） | ✅ 完成 | — | 修复气精不回：`settleCharacterVitals` 统一入口（场景+getCharacter+resume）；建角写 `last_heal_at`；空值初始化时钟；H5 60s 轮询+移动刷新；迁移 0016；食水消耗后由 DC-058 撤销 |
 | 玩家试玩审计（对照 xkx/pkuxkx） | ✅ 完成 | — | 生产新号「青萍客」全切片试玩 + 读码对照 xkx2001 Web / pkuxkx 35 步；九维评分（均分 3.4）；`docs/playtest-audit-2026-08.md` + canvas 评分板；P0×3（历练门槛 vs 先学武 / 鼠患杀守卫 / 首战过长）；本轮只出报告不改玩法 |
 | 试玩方法沉淀（yjh-playtest） | ✅ 完成 | — | 从 08-13 审计抽成项目级 skill：九维/新玩家立场/生产协议/对照读码/产出模板/常见坑；触发表 + 任务启动必读 + 收尾提炼表同步 |
 | 审计修复闭环（DC-055） | ✅ 完成 | — | 0→1 expGate 豁免 + 建角赠铁剑/潜能 10 + 野狗短打；`village_rat` 修正鼠患；P1（padding/GuideTip/酒旗/story 链/vitals 钳制/前往 BFS/请托直接/逃跑不锁/Tab/aria）+ 廉价 P2（停工文案/四维提示/时辰 /120）；生产 R2 复核村环已通（playtest-audit §7） |
 | 武学页简洁化（DC-056） | ✅ 完成 | — | 人物簿武学：临敌只读摘要 + 单一已学列表 + 行内激发/演练；`GET /characters/me` 回传六槎 `effective`；砍掉 ChoiceRow 激发台与招式/绝招独立清单；yjh-mobile-ui §4.4 / protocol / sibling-borrowings 同步 |
 | 武学打磨 + 数字字体（DC-057） | ✅ 完成 | — | 临敌/特殊/基本三分页；境界标签；卸下存 null；□ 标记；触控 30px；`--font-digit`→Noto Serif SC；protocol / catalog / design-system 同步 |
 | 武学二级 Tab 分层 | ✅ 完成 | — | 临敌/特殊/基本改为分段按钮并与一级下划线 Tab 留白分层，避免贴行误触 |
+| 移除饱腹/饮水（DC-058） | ✅ 完成 | — | 规则层去掉食水消耗与饥渴 gate；人物簿/快照只留气精精力内力；干粮回气、清水回精；DB 列暂留 |
 
 # 5. 风险与开放问题
 

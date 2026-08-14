@@ -131,8 +131,6 @@ interface CharState {
   qi: number;
   jingli?: number;
   neili?: number;
-  food?: number;
-  water?: number;
   eff_qi?: number;
   eff_jing?: number;
   last_heal_at?: string | null;
@@ -206,8 +204,6 @@ function mockDb() {
               qi: c.qi,
               jingli: c.jingli ?? 100,
               neili: c.neili ?? 80,
-              food: c.food ?? 100,
-              water: c.water ?? 100,
               eff_qi: c.eff_qi ?? c.qi,
               eff_jing: c.eff_jing ?? c.jing,
               silver: c.silver,
@@ -220,7 +216,7 @@ function mockDb() {
             })) as unknown as T[],
         };
       }
-      if (text.includes("SELECT id, qi, jing, jingli, neili, food, water, eff_qi, eff_jing")) {
+      if (text.includes("SELECT id, qi, jing, jingli, neili, eff_qi, eff_jing")) {
         return {
           rows: state.characters
             .filter((c) => c.account_id === params[0] && c.status === "active")
@@ -230,8 +226,6 @@ function mockDb() {
               jing: c.jing,
               jingli: c.jingli ?? 100,
               neili: c.neili ?? 80,
-              food: c.food ?? 100,
-              water: c.water ?? 100,
               eff_qi: c.eff_qi ?? c.qi,
               eff_jing: c.eff_jing ?? c.jing,
               attrs: c.attrs,
@@ -699,8 +693,6 @@ describe("app 集成（skills 路由）", () => {
       qi: 80,
       jingli: 100,
       neili: 60,
-      food: 80,
-      water: 80,
       eff_qi: 100,
       eff_jing: 100,
       last_heal_at: new Date().toISOString(),

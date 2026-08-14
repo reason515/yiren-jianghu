@@ -243,12 +243,6 @@ textarea {
 .bar.neili .bar-fill {
   background: var(--stat-neili);
 }
-.bar.food .bar-fill {
-  background: var(--stat-food);
-}
-.bar.water .bar-fill {
-  background: var(--stat-water);
-}
 .bar.low .bar-fill {
   background: var(--cinnabar);
 }

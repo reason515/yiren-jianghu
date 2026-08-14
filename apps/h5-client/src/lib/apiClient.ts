@@ -94,8 +94,6 @@ export interface ApiClient {
       jing: number;
       jingli: number;
       neili: number;
-      food: number;
-      water: number;
       effQi: number;
       effJing: number;
     };

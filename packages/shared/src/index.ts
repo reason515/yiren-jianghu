@@ -38,10 +38,6 @@ export interface Vitals {
   maxJingli: number;
   neili: number;
   maxNeili: number;
-  food: number;
-  maxFood: number;
-  water: number;
-  maxWater: number;
 }
 
 /** 四维：当前 / 先天。 */

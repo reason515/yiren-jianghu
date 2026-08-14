@@ -34,10 +34,6 @@ function basePack(): ContentPack {
         jingliPerLevel: 2,
         neiliToQiDiv: 4,
         neiliToJingDiv: 12,
-        foodBase: 100,
-        foodPerCon: 5,
-        waterBase: 100,
-        waterPerDex: 5,
       },
       growth: {
         learnJingCostBase: 150,

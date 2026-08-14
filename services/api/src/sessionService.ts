@@ -1,10 +1,5 @@
 import { PROTOCOL_VERSION } from "@yjh/shared";
-import {
-  computeMaxVitals,
-  effectivePotential,
-  maxFoodCapacity,
-  maxWaterCapacity,
-} from "@yjh/game-core";
+import { computeMaxVitals, effectivePotential } from "@yjh/game-core";
 import type { ContentPack } from "@yjh/content";
 import type { Db } from "./db.js";
 import { settleCharacterVitals, vitalsContentFromPack } from "./vitalsSettle.js";
@@ -26,15 +21,13 @@ export interface ResumeCharacterView {
   gender: string;
   status: string;
   roomPath: string;
-  vitals: { qi: number; jing: number; jingli: number; neili: number; food: number; water: number };
+  vitals: { qi: number; jing: number; jingli: number; neili: number };
   /** 生存资源上限（V2.9：与当前值成对展示；无内容包时全 0）。 */
   vitalsMax: {
     qi: number;
     jing: number;
     jingli: number;
     neili: number;
-    food: number;
-    water: number;
   };
   exp: number;
   effectivePotential: number;
@@ -73,20 +66,18 @@ type CharRow = {
   jing: number;
   jingli: number;
   neili: number;
-  food: number;
-  water: number;
   attrs?: Record<string, unknown> | string | null;
 };
 
 export function createSessionService(db: Db, content?: ContentPack): SessionService {
   return {
     async resume(accountId) {
-      // DC-044：重连恢复点先结算气精/食水，再读快照。
+      // DC-044 / DC-058：重连恢复点先结算自然恢复，再读快照。
       if (content) {
         await settleCharacterVitals(db, vitalsContentFromPack(content), accountId);
       }
       const rows = await db.query<CharRow>(
-        "SELECT id, name, gender, status, room_path, exp, potential, learned_points, silver, qi, jing, jingli, neili, food, water, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
+        "SELECT id, name, gender, status, room_path, exp, potential, learned_points, silver, qi, jing, jingli, neili, attrs FROM characters WHERE account_id = $1 AND status = 'active'",
         [accountId],
       );
       const row = rows.rows[0] ?? null;
@@ -96,8 +87,6 @@ export function createSessionService(db: Db, content?: ContentPack): SessionServ
         jing: 0,
         jingli: 0,
         neili: 0,
-        food: 0,
-        water: 0,
       };
       if (row && content) {
         const rawAttrs =
@@ -129,8 +118,6 @@ export function createSessionService(db: Db, content?: ContentPack): SessionServ
           jing: maxVitals.maxJing,
           jingli: maxVitals.maxJingli,
           neili: maxVitals.maxNeili,
-          food: maxFoodCapacity(content.params, num("con")),
-          water: maxWaterCapacity(content.params, num("dex")),
         };
       }
 
@@ -146,8 +133,6 @@ export function createSessionService(db: Db, content?: ContentPack): SessionServ
               jing: row.jing,
               jingli: row.jingli,
               neili: row.neili,
-              food: row.food,
-              water: row.water,
             },
             vitalsMax,
             exp: row.exp,

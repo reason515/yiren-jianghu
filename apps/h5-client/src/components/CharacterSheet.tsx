@@ -61,8 +61,6 @@ const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
   jing: { label: "精神", tone: "jing" },
   jingli: { label: "精力", tone: "jingli" },
   neili: { label: "内力", tone: "neili" },
-  food: { label: "饱腹", tone: "food" },
-  water: { label: "饮水", tone: "water" },
 };
 
 /** 首版仅兵器 + 衣甲两槽；衣履同属衣甲槽，尚无独立饰品槽（见内容包 kind）。 */

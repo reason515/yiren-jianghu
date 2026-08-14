@@ -21,8 +21,6 @@ interface CharState {
   jing: number;
   jingli: number;
   neili: number;
-  food: number;
-  water: number;
   eff_qi?: number;
   eff_jing?: number;
   attrs?: Record<string, unknown> | string | null;
@@ -103,8 +101,6 @@ function mockDb() {
               jing: c.jing,
               jingli: c.jingli,
               neili: c.neili,
-              food: c.food,
-              water: c.water,
               eff_qi: c.eff_qi ?? c.qi,
               eff_jing: c.eff_jing ?? c.jing,
               attrs: c.attrs ?? null,
@@ -114,19 +110,17 @@ function mockDb() {
       }
       if (
         text.includes(
-          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, food = $5, water = $6, eff_qi = $7, eff_jing = $8",
+          "UPDATE characters SET qi = $1, jing = $2, jingli = $3, neili = $4, eff_qi = $5, eff_jing = $6",
         )
       ) {
-        const character = state.characters.find((c) => c.id === params[8]);
+        const character = state.characters.find((c) => c.id === params[6]);
         if (character) {
           character.qi = Number(params[0]);
           character.jing = Number(params[1]);
           character.jingli = Number(params[2]);
           character.neili = Number(params[3]);
-          character.food = Number(params[4]);
-          character.water = Number(params[5]);
-          character.eff_qi = Number(params[6]);
-          character.eff_jing = Number(params[7]);
+          character.eff_qi = Number(params[4]);
+          character.eff_jing = Number(params[5]);
           character.last_heal_at = new Date().toISOString();
         }
         return { rows: [] as unknown as T[] };
@@ -154,8 +148,6 @@ function mockDb() {
               jing: c.jing,
               jingli: c.jingli,
               neili: c.neili,
-              food: c.food,
-              water: c.water,
               attrs: c.attrs,
             })) as unknown as T[],
         };
@@ -230,8 +222,6 @@ function boot() {
     jing: 200,
     jingli: 100,
     neili: 50,
-    food: 180,
-    water: 160,
   });
   const session = createSessionService(db);
   return { db, state, session };
@@ -267,7 +257,7 @@ describe("sessionService.resume", () => {
       exp: 1500,
       effectivePotential: 80, // 120 − 40
       silver: 66,
-      vitals: { qi: 300, jing: 200, jingli: 100, neili: 50, food: 180, water: 160 },
+      vitals: { qi: 300, jing: 200, jingli: 100, neili: 50 },
     });
   });
 
@@ -286,8 +276,6 @@ describe("sessionService.resume", () => {
       jing: 50 + 20 * 8 + 10 * 1 + Math.floor(80 / 12),
       jingli: 70,
       neili: 80,
-      food: 100 + 20 * 5,
-      water: 100 + 15 * 5,
     });
   });
 
@@ -403,8 +391,6 @@ describe("app 集成（session 路由）", () => {
       jing: 150,
       jingli: 80,
       neili: 0,
-      food: 150,
-      water: 140,
     });
     const res = await app.inject({
       method: "GET",

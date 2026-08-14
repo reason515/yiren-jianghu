@@ -49,23 +49,6 @@ export function computeMaxVitals(
   };
 }
 
-/** 食物/饮水上限。 */
-export function maxFoodCapacity(
-  p: GameParams,
-  con: number,
-  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
-): number {
-  return evalFormulaWithCoeffs(mechanics, p, "maxFood", { con });
-}
-
-export function maxWaterCapacity(
-  p: GameParams,
-  dex: number,
-  mechanics: CompiledMechanics = DEFAULT_MECHANICS,
-): number {
-  return evalFormulaWithCoeffs(mechanics, p, "maxWater", { dex });
-}
-
 function ticksInWindow(
   deltaMinutes: number,
   tickSeconds: number,
@@ -76,9 +59,8 @@ function ticksInWindow(
 }
 
 /**
- * 自然恢复与食水消耗（V2.12 / DC-044 / DC-051）。
- * 气/精/精力/内力按 xkx heal_up 绝对值 × 时间窗折算；食水按绝对值消耗。
- * 饥渴时不回气精（对齐 xkx）；贴有效上限后缓慢抬 eff（疗伤）。
+ * 自然恢复（V2.12 / DC-051；DC-058 移除食水消耗与饥渴 gate）。
+ * 气/精/精力/内力按 xkx heal_up 绝对值 × 时间窗折算；贴有效上限后缓慢抬 eff（疗伤）。
  */
 export function applyRegen(
   current: VitalsState,
@@ -89,8 +71,6 @@ export function applyRegen(
 ): VitalsState {
   const r = p.regen;
   const ticks = ticksInWindow(deltaMinutes, r.tickSeconds, r.maxWindowMinutes);
-  const drain = (perMin: number | undefined): number =>
-    Math.floor((perMin ?? 0) * Math.min(deltaMinutes, r.maxWindowMinutes));
 
   const effQi = current.effQi > 0 ? clampEff(current.effQi, max.maxQi) : max.maxQi;
   const effJing = current.effJing > 0 ? clampEff(current.effJing, max.maxJing) : max.maxJing;
@@ -107,24 +87,19 @@ export function applyRegen(
   const perTickNeili =
     max.maxNeili > 0 ? Math.max(0, Math.floor(attrs.forceLevel / r.neiliForceDiv)) : 0;
 
-  const hungry = current.food < 1 || current.water < 1;
-  let nextQi = current.qi;
-  let nextJing = current.jing;
+  let nextQi = Math.min(effQi, current.qi + Math.floor(perTickQi * ticks));
+  let nextJing = Math.min(effJing, current.jing + Math.floor(perTickJing * ticks));
   let nextEffQi = effQi;
   let nextEffJing = effJing;
 
-  if (!hungry) {
-    nextQi = Math.min(effQi, current.qi + Math.floor(perTickQi * ticks));
-    nextJing = Math.min(effJing, current.jing + Math.floor(perTickJing * ticks));
-    const wound = Math.floor(r.woundCurePerTick * ticks);
-    if (nextQi >= nextEffQi && nextEffQi < max.maxQi) {
-      nextEffQi = Math.min(max.maxQi, nextEffQi + wound);
-      nextQi = Math.min(nextEffQi, nextQi);
-    }
-    if (nextJing >= nextEffJing && nextEffJing < max.maxJing) {
-      nextEffJing = Math.min(max.maxJing, nextEffJing + wound);
-      nextJing = Math.min(nextEffJing, nextJing);
-    }
+  const wound = Math.floor(r.woundCurePerTick * ticks);
+  if (nextQi >= nextEffQi && nextEffQi < max.maxQi) {
+    nextEffQi = Math.min(max.maxQi, nextEffQi + wound);
+    nextQi = Math.min(nextEffQi, nextQi);
+  }
+  if (nextJing >= nextEffJing && nextEffJing < max.maxJing) {
+    nextEffJing = Math.min(max.maxJing, nextEffJing + wound);
+    nextJing = Math.min(nextEffJing, nextJing);
   }
 
   return {
@@ -133,21 +108,17 @@ export function applyRegen(
     jing: nextJing,
     jingli: Math.min(max.maxJingli, current.jingli + Math.floor(perTickJingli * ticks)),
     neili: Math.min(max.maxNeili, current.neili + Math.floor(perTickNeili * ticks)),
-    food: Math.max(0, current.food - drain(r.foodPerMin)),
-    water: Math.max(0, current.water - drain(r.waterPerMin)),
     effQi: nextEffQi,
     effJing: nextEffJing,
   };
 }
 
-/** 当前状态（数据库持久化字段）。 */
+/** 当前状态（数据库持久化字段；DC-058：food/water 列仍留库但规则层不再使用）。 */
 export interface VitalsState {
   qi: number;
   jing: number;
   jingli: number;
   neili: number;
-  food: number;
-  water: number;
   effQi: number;
   effJing: number;
 }
@@ -158,12 +129,7 @@ export function clampEff(eff: number, max: number): number {
 }
 
 /** 将当前状态钳制到合法区间（0 ≤ 当前 ≤ 上限；eff ≤ max）。 */
-export function clampVitals(
-  state: VitalsState,
-  max: MaxVitals,
-  foodCap: number,
-  waterCap: number,
-): VitalsState {
+export function clampVitals(state: VitalsState, max: MaxVitals): VitalsState {
   const effQi = clampEff(state.effQi, max.maxQi);
   const effJing = clampEff(state.effJing, max.maxJing);
   // DC-048：当前气/精不超过有效上限；eff=0 视为未追踪伤势，回退先天上限。
@@ -174,8 +140,6 @@ export function clampVitals(
     jing: Math.max(0, Math.min(state.jing, jingCap)),
     jingli: Math.max(0, Math.min(state.jingli, max.maxJingli)),
     neili: Math.max(0, Math.min(state.neili, max.maxNeili)),
-    food: Math.max(0, Math.min(state.food, foodCap)),
-    water: Math.max(0, Math.min(state.water, waterCap)),
     effQi,
     effJing,
   };

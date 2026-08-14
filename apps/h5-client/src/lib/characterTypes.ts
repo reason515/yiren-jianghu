@@ -12,7 +12,7 @@ export interface CharAttrs {
   dex: CharAttrView;
 }
 
-export type VitalKey = "qi" | "jing" | "jingli" | "neili" | "food" | "water";
+export type VitalKey = "qi" | "jing" | "jingli" | "neili";
 export type SkillCategory =
   "force" | "dodge" | "parry" | "unarmed" | "sword" | "blade" | "knowledge";
 /** 可激发槎位（DC-041）；knowledge 只展示/门槛，不可激发。 */

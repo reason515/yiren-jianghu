@@ -25,8 +25,8 @@ const CHARACTER: CharacterView = {
   exp: 1200,
   effectivePotential: 88,
   silver: 25,
-  vitals: { qi: 92, jing: 84, jingli: 70, neili: 20, food: 230, water: 260 },
-  vitalsMax: { qi: 420, jing: 380, jingli: 300, neili: 200, food: 400, water: 350 },
+  vitals: { qi: 92, jing: 84, jingli: 70, neili: 20 },
+  vitalsMax: { qi: 420, jing: 380, jingli: 300, neili: 200 },
   attrs: {
     str: { cur: 25, base: 20 },
     int: { cur: 20, base: 20 },

@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "./params.js";
-import {
-  applyRegen,
-  clampEff,
-  clampVitals,
-  computeMaxVitals,
-  maxFoodCapacity,
-  maxWaterCapacity,
-  type RegenAttrs,
-} from "./vitals.js";
+import { applyRegen, clampEff, clampVitals, computeMaxVitals, type RegenAttrs } from "./vitals.js";
 
 /** 新手村毕业常规属性（先天 20）。 */
 const FRESH: Parameters<typeof computeMaxVitals>[1] = {
@@ -73,21 +65,8 @@ describe("computeMaxVitals（属性表驱动矩阵）", () => {
   });
 });
 
-describe("食水容量", () => {
-  it("随属性线性增长", () => {
-    expect(maxFoodCapacity(DEFAULT_PARAMS, 20)).toBe(200);
-    expect(maxFoodCapacity(DEFAULT_PARAMS, 30)).toBe(250);
-    expect(maxWaterCapacity(DEFAULT_PARAMS, 20)).toBe(200);
-    expect(maxWaterCapacity(DEFAULT_PARAMS, 25)).toBe(225);
-  });
-});
-
 describe("clampVitals / clampEff", () => {
   const max = computeMaxVitals(DEFAULT_PARAMS, FRESH);
-  const caps = {
-    foodCap: maxFoodCapacity(DEFAULT_PARAMS, 20),
-    waterCap: maxWaterCapacity(DEFAULT_PARAMS, 20),
-  };
 
   it("钳制越界值", () => {
     const clamped = clampVitals(
@@ -96,21 +75,15 @@ describe("clampVitals / clampEff", () => {
         jing: -5,
         jingli: 999,
         neili: -1,
-        food: 9999,
-        water: -3,
         effQi: 9999,
         effJing: -1,
       },
       max,
-      caps.foodCap,
-      caps.waterCap,
     );
     expect(clamped.qi).toBe(max.maxQi);
     expect(clamped.jing).toBe(0);
     expect(clamped.jingli).toBe(max.maxJingli);
     expect(clamped.neili).toBe(0);
-    expect(clamped.food).toBe(caps.foodCap);
-    expect(clamped.water).toBe(0);
     expect(clamped.effQi).toBe(max.maxQi);
     expect(clamped.effJing).toBe(0);
   });
@@ -129,21 +102,17 @@ describe("applyRegen（DC-051：xkx heal_up 绝对值）", () => {
     jing: 0,
     jingli: 0,
     neili: 0,
-    food: 300,
-    water: 300,
     effQi: 420,
     effJing: 420,
   };
 
-  it("按 con/内力上限绝对值 × 时间差恢复；食水按绝对值消耗", () => {
+  it("按 con/内力上限绝对值 × 时间差恢复", () => {
     // 每拍气=6+10=16、精=6+10=16、精力=10；10 分钟≈63.16 拍
     const next = applyRegen(HURT, MAX, 10, DEFAULT_PARAMS, FRESH_REGEN);
     expect(next).toMatchObject({ qi: 420, jing: 420, jingli: 100, neili: 0 });
-    expect(next.food).toBe(292);
-    expect(next.water).toBe(288);
   });
 
-  it("恢复不超 eff/上限；时间差超窗口按窗口封顶；食水不低于 0", () => {
+  it("恢复不超 eff/上限；时间差超窗口按窗口封顶", () => {
     const nearlyFull = applyRegen(
       { ...HURT, qi: 400, jing: 400, jingli: 90, neili: 95 },
       MAX,
@@ -154,26 +123,11 @@ describe("applyRegen（DC-051：xkx heal_up 绝对值）", () => {
     expect(nearlyFull.qi).toBe(420);
     expect(nearlyFull.jing).toBe(420);
     const offline = applyRegen(HURT, MAX, 180, DEFAULT_PARAMS, FRESH_REGEN);
-    // 30 分钟窗口：气仍封顶 420；食水按 30 分钟扣
+    // 30 分钟窗口：气仍封顶 420
     expect(offline.qi).toBe(420);
-    expect(offline.food).toBe(300 - Math.floor(0.8 * 30));
-    expect(offline.water).toBe(300 - Math.floor(1.2 * 30));
-    const drained = applyRegen(
-      { ...HURT, food: 5, water: 3 },
-      MAX,
-      10,
-      DEFAULT_PARAMS,
-      FRESH_REGEN,
-    );
-    expect(drained.food).toBe(0);
-    expect(drained.water).toBe(0);
   });
 
-  it("饥渴时不回气精，仍回精力；内功等级驱动内力回复", () => {
-    const hungry = applyRegen({ ...HURT, food: 0, water: 0 }, MAX, 10, DEFAULT_PARAMS, FRESH_REGEN);
-    expect(hungry.qi).toBe(0);
-    expect(hungry.jing).toBe(0);
-    expect(hungry.jingli).toBe(100);
+  it("内功等级驱动内力回复", () => {
     const withForce = applyRegen(HURT, MAX, 10, DEFAULT_PARAMS, {
       ...FRESH_REGEN,
       forceLevel: 20,

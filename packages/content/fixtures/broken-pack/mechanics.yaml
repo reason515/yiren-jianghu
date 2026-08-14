@@ -4,6 +4,7 @@
 # DC-050：命中夹逼、伤害浮动、弱打强软帽、performBusyTurns=2。
 # DC-051：自然恢复改 xkx heal_up 绝对值（与 pack 同口径；本包仅坏引用）。
 # DC-055：expGate 目标等级 ≤1 豁免（与 pack 同口径）。
+# DC-058：移除饱腹/饮水（与 pack 同口径）。
 # 改数字或公式只改本文件；控制流仍在 game-core。
 
 coeffs:
@@ -61,10 +62,6 @@ coeffs:
     jingliPerLevel: 2
     neiliToQiDiv: 4
     neiliToJingDiv: 12
-    foodBase: 100
-    foodPerCon: 5
-    waterBase: 100
-    waterPerDex: 5
   growth:
     learnJingCostBase: 150
     learnTuitionBase: 2
@@ -95,8 +92,6 @@ coeffs:
     neiliForceDiv: 2
     minVitalPerTick: 3
     woundCurePerTick: 1
-    foodPerMin: 0.8
-    waterPerMin: 1.2
     maxWindowMinutes: 30
   enable:
     basicLevelDivisor: 2
@@ -126,8 +121,6 @@ formulas:
   maxQi: "qiBase + con * qiPerCon + str * qiPerStr + forceLevel * forceQiPerLevel + floor(forceLevel * neiliPerLevel / neiliToQiDiv)"
   maxJing: "jingBase + int * jingPerInt + forceLevel * forceJingPerLevel + floor(forceLevel * neiliPerLevel / neiliToJingDiv)"
   maxJingli: "jingliBase + forceLevel * jingliPerLevel"
-  maxFood: "foodBase + con * foodPerCon"
-  maxWater: "waterBase + dex * waterPerDex"
   attackDamageBase: "max(1, atk + weaponLevel * weaponDmgPerLevel + forceLevel * forceDmgPerLevel - def * defenseReduce)"
   moveDamageApplied: "base * (100 + moveDamage) / 100 + forceLevel * moveForce / 100"
   parryDamage: "max(1, round(fullDamage * parryDamageFactor))"

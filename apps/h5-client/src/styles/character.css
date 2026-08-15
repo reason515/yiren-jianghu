@@ -526,11 +526,32 @@
   font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
-.char-combat-hint {
+.char-combat-hints {
+  display: grid;
+  gap: 4px;
   margin: 8px 2px 0;
+  padding: 0;
+  list-style: none;
+}
+.char-combat-hints li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: 12px;
   line-height: 1.65;
   color: var(--paper-faint);
+}
+.char-combat-hints li::before {
+  content: "•";
+  color: var(--jade);
+}
+.char-combat-hints b {
+  flex: 0 0 26px;
+  color: var(--paper-dim);
+  font-weight: 600;
+}
+.char-combat-hints span {
+  min-width: 0;
 }
 .char-inv-grid {
   display: grid;

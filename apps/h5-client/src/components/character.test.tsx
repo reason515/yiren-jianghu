@@ -156,8 +156,12 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("攻击34");
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("防御28");
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain(
-      "攻击＝当前膂力＋当前所用武学等级（兵器或拳脚）＋装备攻击；防御＝基础 8＋当前根骨＋衣甲防御。",
+      "攻击当前膂力＋当前所用武学等级（兵器或拳脚）＋装备攻击",
     );
+    expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain(
+      "防御基础 8＋当前根骨＋衣甲防御",
+    );
+    expect(host.querySelectorAll(".char-combat-hints li")).toHaveLength(2);
   });
 
   it("状态页：已学场外运功才在行止下显示对应按钮", () => {

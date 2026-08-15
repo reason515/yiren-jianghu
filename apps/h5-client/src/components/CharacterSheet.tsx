@@ -67,6 +67,18 @@ const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
 /** 首版仅兵器 + 衣甲两槽；衣履同属衣甲槽，尚无独立饰品槽（见内容包 kind）。 */
 const SLOT_LABEL: Record<"weapon" | "armor", string> = { weapon: "兵器", armor: "衣甲" };
 const GENDER_LABEL: Record<CharacterView["gender"], string> = { male: "男", female: "女" };
+const ITEM_STAT_LABEL: Record<keyof NonNullable<CharacterView["inventory"][number]["stats"]>, string> = {
+  attack: "攻击",
+  defense: "防御",
+  dodge: "闪避",
+  parry: "招架",
+};
+const ITEM_USE_LABEL: Record<NonNullable<CharacterView["inventory"][number]["usable"]>["effect"], string> = {
+  heal_qi: "恢复气血",
+  heal_jing: "恢复精神",
+  restore_neili: "恢复内力",
+  cure_qi: "疗伤",
+};
 
 function pctOf(value: number, max: number): number {
   if (max <= 0) return 0;
@@ -305,8 +317,7 @@ export function CharacterSheet({
       <div className="char-tab-panel" data-testid="char-tab-panel">
         {tab === "body" && (
           <>
-            <section className="char-section">
-              <h4 className="char-section-title">行止</h4>
+            <section className="char-section char-vitals-section">
               <div className="char-vitals" aria-label="当前行止">
                 {(Object.keys(VITAL_META) as VitalKey[]).map((key) => {
                   const cur = character.vitals[key];
@@ -364,21 +375,42 @@ export function CharacterSheet({
               </section>
             ) : null}
 
-            <section className="char-section">
-              <h4 className="char-section-title">四维</h4>
-              <div className="attr-grid">
-                {(Object.keys(ATTR_META) as Array<keyof CharacterView["attrs"]>).map((key) => {
-                  const meta = ATTR_META[key];
-                  const attr = character.attrs[key];
-                  return (
-                    <div className="char-attr-row" key={key} data-attr={key}>
-                      <span className="char-attr-label">{meta.label}</span>
-                      <span className="char-attr-value">
-                        当前 <b>{attr.cur}</b> · 先天 <b className="base">{attr.base}</b>
-                      </span>
-                    </div>
-                  );
-                })}
+            <section className="char-section char-attrs-section">
+              <table className="char-attr-table" aria-label="人物属性">
+                <thead>
+                  <tr>
+                    <th scope="col">属性</th>
+                    <th scope="col">当前</th>
+                    <th scope="col">先天</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(Object.keys(ATTR_META) as Array<keyof CharacterView["attrs"]>).map((key) => {
+                    const meta = ATTR_META[key];
+                    const attr = character.attrs[key];
+                    return (
+                      <tr key={key} data-attr={key}>
+                        <th scope="row">{meta.label}</th>
+                        <td>{attr.cur}</td>
+                        <td>{attr.base}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="char-section" data-testid="char-combat-stats">
+              <h4 className="char-section-title">临敌数值</h4>
+              <div className="char-combat-stats">
+                <div>
+                  <span>攻击</span>
+                  <b>{character.combat?.attack ?? 0}</b>
+                </div>
+                <div>
+                  <span>防御</span>
+                  <b>{character.combat?.defense ?? 0}</b>
+                </div>
               </div>
             </section>
           </>
@@ -463,7 +495,7 @@ export function CharacterSheet({
               {character.equipment.map((slot) => (
                 <div className="char-equip-row" key={slot.slot}>
                   <span className="char-equip-slot">{SLOT_LABEL[slot.slot]}</span>
-                  <span className="char-equip-item">{slot.item?.name ?? "空"}</span>
+                  <span className="char-equip-item">{slot.item ? `□${slot.item.name}` : "空"}</span>
                   {slot.item && onInventoryAction && (
                     <Chip
                       label={isPending(`item:unequip:${slot.item.id}`) ? "卸下中…" : "卸下"}
@@ -481,11 +513,12 @@ export function CharacterSheet({
               {character.inventory.length === 0 ? (
                 <p className="char-empty">行囊空空如也。</p>
               ) : (
-                character.inventory.map((item) => {
-                  const action = itemAction(item);
-                  const key = action ? `item:${action.action}:${item.id}` : "";
-                  const expanded = expandedItemId === item.id;
-                  return (
+                <div className="char-inv-grid">
+                  {character.inventory.map((item) => {
+                    const action = itemAction(item);
+                    const key = action ? `item:${action.action}:${item.id}` : "";
+                    const expanded = expandedItemId === item.id;
+                    return (
                     <div
                       className={`char-inv-row${expanded ? " open" : ""}`}
                       key={item.id}
@@ -505,19 +538,36 @@ export function CharacterSheet({
                         </span>
                         <span className="char-inv-qty">×{item.quantity}</span>
                       </button>
-                      {expanded && action && onInventoryAction && (
-                        <div className="char-row-actions">
-                          <Chip
-                            label={isPending(key) ? "行事中…" : action.label}
-                            variant="action"
-                            disabled={Boolean(pendingAction)}
-                            onClick={() => onInventoryAction(action.action, item.id)}
-                          />
+                      {expanded && (
+                        <div className="char-inv-detail">
+                          {item.description ? <p className="char-inv-desc">{item.description}</p> : null}
+                          {item.stats && Object.keys(item.stats).length > 0 ? (
+                            <p className="char-inv-stats">
+                              {(Object.entries(item.stats) as Array<[keyof typeof ITEM_STAT_LABEL, number | undefined]>)
+                                .filter(([, value]) => value != null && value !== 0)
+                                .map(([key, value]) => `${ITEM_STAT_LABEL[key]} ${value! > 0 ? "+" : ""}${value}`)
+                                .join(" · ")}
+                            </p>
+                          ) : null}
+                          {item.usable ? (
+                            <p className="char-inv-effect">{ITEM_USE_LABEL[item.usable.effect]} {item.usable.amount}</p>
+                          ) : null}
+                          {action && onInventoryAction ? (
+                            <div className="char-row-actions">
+                              <Chip
+                                label={isPending(key) ? "行事中…" : action.label}
+                                variant="action"
+                                disabled={Boolean(pendingAction)}
+                                onClick={() => onInventoryAction(action.action, item.id)}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       )}
                     </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </section>
           </>

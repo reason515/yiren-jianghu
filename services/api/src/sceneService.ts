@@ -57,6 +57,12 @@ export interface InvItemView {
   kind: string;
   quantity: number;
   equipped: boolean;
+  /** 内容包定义的物品说明，供行囊详情展示。 */
+  description: string;
+  /** 装备提供的可见数值；缺省表示没有数值加成。 */
+  stats?: { attack?: number; defense?: number; dodge?: number; parry?: number };
+  /** 可使用物品的效果摘要；实际结算仍以服务端为准。 */
+  usable?: { effect: "heal_qi" | "heal_jing" | "restore_neili" | "cure_qi"; amount: number };
 }
 
 export interface TalkView {
@@ -283,6 +289,9 @@ export function createSceneService(
         kind: def?.kind ?? "misc",
         quantity: row.quantity,
         equipped: row.slot != null,
+        description: def?.description ?? "",
+        ...(def?.stats ? { stats: def.stats } : {}),
+        ...(def?.usable ? { usable: def.usable } : {}),
       };
     });
   };
@@ -330,6 +339,9 @@ export function createSceneService(
           kind: item?.kind ?? "misc",
           quantity: row.quantity,
           equipped: row.slot != null,
+          description: item?.description ?? "",
+          ...(item?.stats ? { stats: item.stats } : {}),
+          ...(item?.usable ? { usable: item.usable } : {}),
           sell: prices.get(row.item_def_id)?.sell ?? 0,
         };
       }),

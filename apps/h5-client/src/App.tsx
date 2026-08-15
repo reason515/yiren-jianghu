@@ -1129,17 +1129,19 @@ export function App(): JSX.Element {
     const key = `item:${action}:${itemId}`;
     const name = characterView?.inventory.find((item) => item.id === itemId)?.name ?? "此物";
     setCharacterPending(key);
-    const request =
+    const request: Promise<{ ok: true; effect?: string }> =
       action === "equip"
         ? api.equipInventory(itemId)
         : action === "unequip"
           ? api.unequipInventory(itemId)
           : api.useInventory(itemId);
     void request
-      .then(async () => {
+      .then(async (result) => {
         await refreshCharacter();
         showToast(
-          `${name}${action === "equip" ? "已佩上" : action === "unequip" ? "已卸下" : "已使用"}。`,
+          action === "use"
+            ? `${name}已使用：${result.effect ?? "效果已生效"}`
+            : `${name}${action === "equip" ? "已佩上" : "已卸下"}。`,
         );
       })
       .catch(notify)

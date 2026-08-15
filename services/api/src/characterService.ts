@@ -1,6 +1,7 @@
 import {
   acquiredAttrs,
   attrLevelsFromSkills,
+  buildCharacterCombatant,
   computeMaxVitals,
   ENABLE_SLOTS,
   effectiveLevel,
@@ -72,6 +73,8 @@ export interface CharacterSummary {
     fieldKind?: "heal" | "cure" | "heal_jing" | null;
     cost?: { qi: number; jing: number; neili: number };
   }>;
+  /** 服务端以当前四维、武学和已佩挂物品计算的战斗展示数值。 */
+  combat: { attack: number; defense: number };
 }
 
 export const ATTR_MIN = 10;
@@ -242,6 +245,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
       const effective: CharacterSummary["effective"] = {};
       let moves: CharacterSummary["moves"] = [];
       let performs: CharacterSummary["performs"] = [];
+      let combat: CharacterSummary["combat"] = { attack: 0, defense: 0 };
       if (content) {
         const skillRows = await db.query<{ skill_id: string; level: number }>(
           "SELECT skill_id, level FROM character_skills WHERE character_id = $1",
@@ -305,6 +309,34 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
           jingli: maxVitals.maxJingli,
           neili: maxVitals.maxNeili,
         };
+        const equippedRows = await db.query<{ item_def_id: string }>(
+          "SELECT item_def_id FROM character_items WHERE character_id = $1 AND slot IS NOT NULL",
+          [row.id],
+        );
+        const equippedItemIds = equippedRows.rows.map((item) => item.item_def_id);
+        const hasWeapon = equippedItemIds.some(
+          (itemId) => content.items.find((item) => item.id === itemId)?.kind === "weapon",
+        );
+        const combatant = buildCharacterCombatant(
+          content,
+          {
+            id: row.id,
+            name: row.name,
+            attrs: {
+              str: attrs.str.base,
+              int: attrs.int.base,
+              con: attrs.con.base,
+              dex: attrs.dex.base,
+            },
+            exp: Number(row.exp),
+            equippedItemIds,
+          },
+          skillLevels,
+          "full",
+          skillEnable,
+          hasWeapon,
+        );
+        combat = { attack: combatant.stats.attack, defense: combatant.stats.defense };
         const [moveRows, performRows] = await Promise.all([
           db.query<{ move_id: string }>(
             "SELECT move_id FROM character_moves WHERE character_id = $1",
@@ -356,6 +388,7 @@ export function createCharacterService(db: Db, content?: ContentPack): Character
         effective,
         moves,
         performs,
+        combat,
         masterNpcId: row.master_npc_id,
         sectId: row.sect_id,
         generation: row.generation == null ? null : Number(row.generation),

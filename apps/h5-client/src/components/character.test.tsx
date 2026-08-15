@@ -35,6 +35,7 @@ const CHARACTER: CharacterView = {
   },
   skillEnable: { force: "xuanmen_force" },
   effective: { force: 18, sword: 4, unarmed: 2, dodge: 0, parry: 0, blade: 0 },
+  combat: { attack: 34, defense: 28 },
   moves: [{ id: "sword_pierce", name: "白虹贯日", skillId: "xuanmen_sword" }],
   performs: [
     {
@@ -94,7 +95,15 @@ const CHARACTER: CharacterView = {
   ],
   inventory: [
     { id: "cloth_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
-    { id: "cloth_armor", name: "旧皮甲", kind: "armor", quantity: 1, equipped: false },
+    {
+      id: "cloth_armor",
+      name: "旧皮甲",
+      kind: "armor",
+      quantity: 1,
+      equipped: false,
+      description: "旧皮缝制，尚能抵挡寻常拳脚。",
+      stats: { defense: 3 },
+    },
     { id: "dry_food", name: "干粮", kind: "food", quantity: 3, equipped: false },
     { id: "jinchuang_yao", name: "金创药", kind: "drug", quantity: 1, equipped: false },
   ],
@@ -127,14 +136,23 @@ describe("CharacterSheet（角色面板）", () => {
     expect(host.querySelector(".seg")).toBeNull();
   });
 
-  it("状态页：行止当前/上限细轨 + 四维当前/先天", () => {
+  it("状态页：资源直接展示当前/上限，四维以表格展示当前与先天", () => {
     const { host } = render(
       <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
     );
     expect(host.textContent).toContain("气血");
     expect(host.querySelector(".char-vital-cur")?.textContent).toBe("92");
     expect(host.querySelector(".char-vital-max")?.textContent).toBe("420");
-    expect(host.textContent).toContain("当前 25 · 先天 20");
+    expect(host.textContent).not.toContain("行止");
+    expect(host.textContent).not.toContain("四维");
+    expect(host.querySelector(".char-attr-table")).not.toBeNull();
+    expect(host.querySelector("[data-attr=str]")?.textContent).toContain("膂力2520");
+  });
+
+  it("状态页：展示由当前武学与佩挂计算的攻防", () => {
+    const { host } = render(<CharacterSheet open character={CHARACTER} onClose={() => undefined} />);
+    expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("攻击34");
+    expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("防御28");
   });
 
   it("状态页：已学场外运功才在行止下显示对应按钮", () => {
@@ -279,12 +297,14 @@ describe("CharacterSheet（角色面板）", () => {
     );
     clickTab(host, "行囊");
     expect(host.textContent).toContain("衣甲");
-    expect(host.textContent).toContain("粗布衣");
+    expect(host.textContent).toContain("□粗布衣");
     act(() =>
       host
         .querySelector<HTMLButtonElement>('[data-testid="inv-row-cloth_armor"] .char-inv-toggle')!
         .click(),
     );
+    expect(host.textContent).toContain("旧皮缝制");
+    expect(host.textContent).toContain("防御 +3");
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>(".chip")]
         .find((c) => c.textContent === "佩上")!

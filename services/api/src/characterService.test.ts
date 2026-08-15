@@ -203,6 +203,7 @@ const CONTENT = {
   moves: [],
   performs: [],
   npcs: [],
+  items: [],
 } as unknown as ContentPack;
 
 describe("validateAttrs", () => {

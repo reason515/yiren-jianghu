@@ -154,7 +154,11 @@
   margin: 0;
 }
 
-/* 行止：当前/上限 + 细轨 */
+/* 生存资源：当前/上限 + 细轨 */
+.char-vitals-section {
+  border-top: none;
+  padding-top: 2px;
+}
 .char-vitals {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -246,45 +250,60 @@
   background: var(--cinnabar);
 }
 
-/* 四维 attr-card */
-.char-attr-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--touch-min);
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--paper-faint);
-  border-radius: 0 6px 6px 0;
+/* 四维：独立表格，强调它与消耗型生存资源的不同。 */
+.char-attrs-section {
+  margin-top: 4px;
+  padding-top: 12px;
+}
+.char-attr-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
   background: var(--ink-lift);
+  font-variant-numeric: tabular-nums;
 }
-.attr-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.char-attr-table th,
+.char-attr-table td {
+  height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
 }
-.char-attr-row:nth-child(odd) {
-  background: var(--ink-soft);
+.char-attr-table thead th {
+  height: 30px;
+  background: rgba(95, 143, 120, 0.1);
+  color: var(--paper-faint);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1px;
 }
-.char-attr-label {
+.char-attr-table th:first-child,
+.char-attr-table td:first-child {
+  text-align: left;
+}
+.char-attr-table tbody th {
+  color: var(--paper);
   font-family: var(--font-display);
   font-size: 16px;
-  color: var(--paper);
-}
-.char-attr-value {
-  font-size: 13px;
-  color: var(--paper-dim);
-  letter-spacing: 0.5px;
-}
-.char-attr-value b {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-digit);
-  color: var(--paper);
-}
-.char-attr-value .base {
-  color: var(--paper-faint);
   font-weight: 400;
+}
+.char-attr-table tbody td {
+  color: var(--paper);
+  font-family: var(--font-digit);
+  font-size: 15px;
+  font-weight: 600;
+}
+.char-attr-table tbody td:last-child {
+  color: var(--paper-faint);
+  font-size: 14px;
+  font-weight: 400;
+}
+.char-attr-table tbody tr:last-child th,
+.char-attr-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* 武学：临敌摘要 + 折叠单行（DC-056） */
@@ -480,16 +499,47 @@
   font-size: 14px;
   flex: 1;
 }
+.char-combat-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.char-combat-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  min-height: var(--touch-min);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0 6px 6px 0;
+  border-left: 3px solid var(--jade);
+  background: var(--ink-lift);
+}
+.char-combat-stats span {
+  color: var(--paper-faint);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.char-combat-stats b {
+  color: var(--paper);
+  font-family: var(--font-digit);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.char-inv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
 .char-inv-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 6px;
-}
-.char-inv-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ink-soft);
 }
 .char-inv-toggle {
   display: flex;
@@ -538,6 +588,23 @@
   font-variant-numeric: tabular-nums;
   font-family: var(--font-digit);
 }
+.char-inv-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.char-inv-desc,
+.char-inv-stats,
+.char-inv-effect {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.char-inv-desc { color: var(--paper-dim); }
+.char-inv-stats { color: var(--jade-bright); }
+.char-inv-effect { color: var(--gold); }
 .char-empty {
   color: var(--paper-faint);
   font-size: 13px;

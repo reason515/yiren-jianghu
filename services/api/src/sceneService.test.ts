@@ -619,8 +619,8 @@ describe("sceneService.getInventory", () => {
     const { scene } = await boot();
     const inv = await scene.getInventory("acc_1");
     expect(inv).toEqual([
-      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
-      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true },
+      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true, description: "粗麻织就的短褐。" },
+      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true, description: "粗铁长剑。" },
     ]);
     expect(await scene.getInventory("acc_x")).toBeNull();
   });
@@ -679,8 +679,8 @@ describe("app 集成（scene/inventory 路由）", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(inv.json()).toEqual([
-      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true },
-      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true },
+      { id: "ci_1", name: "粗布衣", kind: "armor", quantity: 1, equipped: true, description: "粗麻织就的短褐。" },
+      { id: "ci_2", name: "铁剑", kind: "weapon", quantity: 1, equipped: true, description: "粗铁长剑。" },
     ]);
 
     const map = await app.inject({

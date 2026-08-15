@@ -94,6 +94,9 @@ export interface InvItemView {
   kind: ItemKind;
   quantity: number;
   equipped: boolean;
+  description?: string;
+  stats?: { attack?: number; defense?: number; dodge?: number; parry?: number };
+  usable?: { effect: "heal_qi" | "heal_jing" | "restore_neili" | "cure_qi"; amount: number };
 }
 
 export interface CharacterProfile {
@@ -120,6 +123,8 @@ export interface CharacterProfile {
   moves?: MoveRowView[];
   /** 已学绝招（DC-041）。 */
   performs?: PerformRowView[];
+  /** 服务端按当前武学、四维与装备实时计算的临敌数值。 */
+  combat?: { attack: number; defense: number };
 }
 
 export interface CharacterView extends CharacterProfile {
@@ -172,7 +177,16 @@ function asItemKind(value: string): ItemKind {
 export function toCharacterView(
   profile: CharacterProfile,
   skills: ApiSkill[],
-  inventory: Array<{ id: string; name: string; kind: string; quantity: number; equipped: boolean }>,
+  inventory: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    quantity: number;
+    equipped: boolean;
+    description?: string;
+    stats?: { attack?: number; defense?: number; dodge?: number; parry?: number };
+    usable?: { effect: "heal_qi" | "heal_jing" | "restore_neili" | "cure_qi"; amount: number };
+  }>,
 ): CharacterView {
   const items = inventory.map((item) => ({ ...item, kind: asItemKind(item.kind) }));
   const slot = (kind: "weapon" | "armor"): EquipSlotView => {

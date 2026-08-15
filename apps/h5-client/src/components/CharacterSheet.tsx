@@ -67,13 +67,19 @@ const VITAL_META: Record<VitalKey, { label: string; tone: string }> = {
 /** 首版仅兵器 + 衣甲两槽；衣履同属衣甲槽，尚无独立饰品槽（见内容包 kind）。 */
 const SLOT_LABEL: Record<"weapon" | "armor", string> = { weapon: "兵器", armor: "衣甲" };
 const GENDER_LABEL: Record<CharacterView["gender"], string> = { male: "男", female: "女" };
-const ITEM_STAT_LABEL: Record<keyof NonNullable<CharacterView["inventory"][number]["stats"]>, string> = {
+const ITEM_STAT_LABEL: Record<
+  keyof NonNullable<CharacterView["inventory"][number]["stats"]>,
+  string
+> = {
   attack: "攻击",
   defense: "防御",
   dodge: "闪避",
   parry: "招架",
 };
-const ITEM_USE_LABEL: Record<NonNullable<CharacterView["inventory"][number]["usable"]>["effect"], string> = {
+const ITEM_USE_LABEL: Record<
+  NonNullable<CharacterView["inventory"][number]["usable"]>["effect"],
+  string
+> = {
   heal_qi: "恢复气血",
   heal_jing: "恢复精神",
   restore_neili: "恢复内力",
@@ -413,7 +419,8 @@ export function CharacterSheet({
                 </div>
               </div>
               <p className="char-combat-hint">
-                攻击＝当前膂力＋当前所用武学等级（兵器或拳脚）＋装备攻击；防御＝基础 8＋当前根骨＋衣甲防御。
+                攻击＝当前膂力＋当前所用武学等级（兵器或拳脚）＋装备攻击；防御＝基础
+                8＋当前根骨＋衣甲防御。
               </p>
             </section>
           </>
@@ -522,52 +529,63 @@ export function CharacterSheet({
                     const key = action ? `item:${action.action}:${item.id}` : "";
                     const expanded = expandedItemId === item.id;
                     return (
-                    <div
-                      className={`char-inv-row${expanded ? " open" : ""}`}
-                      key={item.id}
-                      data-testid={`inv-row-${item.id}`}
-                    >
-                      <button
-                        type="button"
-                        className="char-inv-toggle"
-                        aria-expanded={expanded}
-                        onClick={() => toggleItem(item.id)}
+                      <div
+                        className={`char-inv-row${expanded ? " open" : ""}`}
+                        key={item.id}
+                        data-testid={`inv-row-${item.id}`}
                       >
-                        <span
-                          className={`char-inv-name item-${item.kind}${item.equipped ? " eq" : ""}`}
+                        <button
+                          type="button"
+                          className="char-inv-toggle"
+                          aria-expanded={expanded}
+                          onClick={() => toggleItem(item.id)}
                         >
-                          {item.equipped ? "□" : ""}
-                          {item.name}
-                        </span>
-                        <span className="char-inv-qty">×{item.quantity}</span>
-                      </button>
-                      {expanded && (
-                        <div className="char-inv-detail">
-                          {item.description ? <p className="char-inv-desc">{item.description}</p> : null}
-                          {item.stats && Object.keys(item.stats).length > 0 ? (
-                            <p className="char-inv-stats">
-                              {(Object.entries(item.stats) as Array<[keyof typeof ITEM_STAT_LABEL, number | undefined]>)
-                                .filter(([, value]) => value != null && value !== 0)
-                                .map(([key, value]) => `${ITEM_STAT_LABEL[key]} ${value! > 0 ? "+" : ""}${value}`)
-                                .join(" · ")}
-                            </p>
-                          ) : null}
-                          {item.usable ? (
-                            <p className="char-inv-effect">{ITEM_USE_LABEL[item.usable.effect]} {item.usable.amount}</p>
-                          ) : null}
-                          {action && onInventoryAction ? (
-                            <div className="char-row-actions">
-                              <Chip
-                                label={isPending(key) ? "行事中…" : action.label}
-                                variant="action"
-                                disabled={Boolean(pendingAction)}
-                                onClick={() => onInventoryAction(action.action, item.id)}
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
+                          <span
+                            className={`char-inv-name item-${item.kind}${item.equipped ? " eq" : ""}`}
+                          >
+                            {item.equipped ? "□" : ""}
+                            {item.name}
+                          </span>
+                          <span className="char-inv-qty">×{item.quantity}</span>
+                        </button>
+                        {expanded && (
+                          <div className="char-inv-detail">
+                            {item.description ? (
+                              <p className="char-inv-desc">{item.description}</p>
+                            ) : null}
+                            {item.stats && Object.keys(item.stats).length > 0 ? (
+                              <p className="char-inv-stats">
+                                {(
+                                  Object.entries(item.stats) as Array<
+                                    [keyof typeof ITEM_STAT_LABEL, number | undefined]
+                                  >
+                                )
+                                  .filter(([, value]) => value != null && value !== 0)
+                                  .map(
+                                    ([key, value]) =>
+                                      `${ITEM_STAT_LABEL[key]} ${value! > 0 ? "+" : ""}${value}`,
+                                  )
+                                  .join(" · ")}
+                              </p>
+                            ) : null}
+                            {item.usable ? (
+                              <p className="char-inv-effect">
+                                {ITEM_USE_LABEL[item.usable.effect]} {item.usable.amount}
+                              </p>
+                            ) : null}
+                            {action && onInventoryAction ? (
+                              <div className="char-row-actions">
+                                <Chip
+                                  label={isPending(key) ? "行事中…" : action.label}
+                                  variant="action"
+                                  disabled={Boolean(pendingAction)}
+                                  onClick={() => onInventoryAction(action.action, item.id)}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

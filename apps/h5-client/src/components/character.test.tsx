@@ -150,7 +150,9 @@ describe("CharacterSheet（角色面板）", () => {
   });
 
   it("状态页：展示由当前武学与佩挂计算的攻防", () => {
-    const { host } = render(<CharacterSheet open character={CHARACTER} onClose={() => undefined} />);
+    const { host } = render(
+      <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
+    );
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("攻击34");
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain("防御28");
     expect(host.querySelector("[data-testid=char-combat-stats]")?.textContent).toContain(

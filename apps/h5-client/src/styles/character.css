@@ -608,9 +608,15 @@
   font-size: 12px;
   line-height: 1.55;
 }
-.char-inv-desc { color: var(--paper-dim); }
-.char-inv-stats { color: var(--jade-bright); }
-.char-inv-effect { color: var(--gold); }
+.char-inv-desc {
+  color: var(--paper-dim);
+}
+.char-inv-stats {
+  color: var(--jade-bright);
+}
+.char-inv-effect {
+  color: var(--gold);
+}
 .char-empty {
   color: var(--paper-faint);
   font-size: 13px;

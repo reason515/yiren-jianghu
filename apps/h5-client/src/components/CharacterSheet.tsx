@@ -412,6 +412,9 @@ export function CharacterSheet({
                   <b>{character.combat?.defense ?? 0}</b>
                 </div>
               </div>
+              <p className="char-combat-hint">
+                攻击＝当前膂力＋当前所用武学等级（兵器或拳脚）＋装备攻击；防御＝基础 8＋当前根骨＋衣甲防御。
+              </p>
             </section>
           </>
         )}

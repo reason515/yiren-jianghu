@@ -57,7 +57,7 @@ export function GrindBanner({
             <span className="gain-sep"> · </span>
             <span className="gain-pot">潜能 {Math.floor(gains.potential)}</span>
             <span className="gain-sep"> · </span>
-            <span className="gain-silver">银 {Math.floor(gains.silver)}</span>
+            <span className="gain-silver">银两 {Math.floor(gains.silver)}</span>
           </span>
         </div>
         <div className="grind-banner-actions">

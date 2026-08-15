@@ -893,7 +893,7 @@ export async function createApp(opts: AppOptions = {}): Promise<FastifyInstance>
           return envelope(reply, 404, "no_character", "尚未立名闯江湖");
         const msg = err instanceof Error ? err.message : "";
         if (/invalid input syntax/i.test(msg)) {
-          return envelope(reply, 500, "afk_settle_failed", "行止结算受阻，稍后再试");
+          return envelope(reply, 500, "afk_settle_failed", "挂机结算受阻，稍后再试");
         }
         throw err;
       }

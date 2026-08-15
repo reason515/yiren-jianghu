@@ -19,7 +19,7 @@ describe("挂机数据适配", () => {
     ).toEqual([{ id: "basic_sword", name: "基础剑法", level: 8 }]);
   });
 
-  it("运行中只展示面向玩家的行止与预计时间，不暴露内部 phase", () => {
+  it("运行中只展示面向玩家的挂机状态与预计时间，不暴露内部 phase", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-07T00:00:00.000Z"));
     const view = toAfkStatusView({
@@ -55,7 +55,7 @@ describe("挂机数据适配", () => {
       phase: "work",
       startedAt: "2026-08-07T00:00:00.000Z",
       scheduledEndAt: "2026-08-07T01:00:00.000Z",
-      stopReason: "气息中断，行止暂歇",
+      stopReason: "气息中断，挂机暂歇",
       gains: { exp: 10, potential: 5, silver: 2 },
       progress: 0.3,
       elapsedMs: 1_000_000,
@@ -66,7 +66,7 @@ describe("挂机数据适配", () => {
     expect(view).toMatchObject({
       active: true,
       paused: true,
-      message: "气息中断，行止暂歇",
+      message: "气息中断，挂机暂歇",
       progress: 0.3,
       gains: { exp: 10, potential: 5, silver: 2 },
     });

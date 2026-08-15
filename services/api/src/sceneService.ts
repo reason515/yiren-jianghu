@@ -449,7 +449,7 @@ export function createSceneService(
         [character.id],
       );
       if (busy.rows[0]) {
-        throw new SceneError("afk_busy", "行止未歇，不便擅离");
+        throw new SceneError("afk_busy", "挂机未歇，不便擅离");
       }
       const room = roomFor(character.room_path);
       const exit = room.exits.find((candidate) => candidate.dir === dir);

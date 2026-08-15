@@ -183,7 +183,7 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
     active: status.status === "running" || paused,
     paused,
     message: paused
-      ? (status.stopReason ?? "气息中断，行止暂歇")
+      ? (status.stopReason ?? "气息中断，挂机暂歇")
       : `${presenceLabel}${kindLabel}${phaseHint}${suffix}`,
     ...(status.stopReason ? { reason: status.stopReason } : {}),
     presence: status.presence,

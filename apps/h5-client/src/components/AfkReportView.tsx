@@ -10,14 +10,14 @@ export interface AfkReportViewProps {
 }
 
 const STATUS_TEXT: Record<AfkReportData["status"], string> = {
-  completed: "行止已竟",
-  failed: "行止中断",
-  cancelled: "行止中止",
+  completed: "挂机已完成",
+  failed: "挂机已中断",
+  cancelled: "挂机已停止",
 };
 
 export function AfkReportView({ open, report, onClose }: AfkReportViewProps): JSX.Element | null {
   return (
-    <Sheet open={open && !!report} title="行止回响" onClose={onClose}>
+    <Sheet open={open && !!report} title="挂机结算" onClose={onClose}>
       {report && (
         <div className="afk-report" data-testid="afk-report">
           <p className="afk-report-status">{STATUS_TEXT[report.status]}</p>

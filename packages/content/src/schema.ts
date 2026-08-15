@@ -56,7 +56,7 @@ export const paramsSchema = z.object({
     dazuoAttemptsPerHour: z.number().int().min(1).max(60).default(12),
     tunaAttemptsPerHour: z.number().int().min(1).max(60).default(12),
     /** 在线生计短轮回秒数（DC-043/054）。 */
-    onlineTickSec: z.number().int().min(15).max(600).default(15),
+    onlineTickSec: z.number().int().min(10).max(600).default(10),
     /** 在线行侠战斗 tick 秒数（DC-054）。 */
     questOnlineTickSec: z.number().int().min(15).max(600).default(30),
     /** 在线心跳超时秒数；超时 pause（断线）。 */

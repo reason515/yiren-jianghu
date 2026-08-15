@@ -44,7 +44,7 @@ export function ExitPad({
   roomName,
   onGo,
   locked = false,
-  lockedHint = "行止未歇，不便擅离",
+  lockedHint = "挂机未歇，不便擅离",
 }: ExitPadProps): JSX.Element {
   const byDir = new Map(exits.map((e) => [e.dir, e]));
   const vertical = VERTICAL.filter((d) => byDir.has(d));

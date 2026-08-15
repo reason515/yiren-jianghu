@@ -43,10 +43,10 @@ coeffs:
     practiceAttemptsPerHour: 12
     dazuoAttemptsPerHour: 12
     tunaAttemptsPerHour: 12
-    onlineTickSec: 15
+    onlineTickSec: 10
     questOnlineTickSec: 30
     onlineHeartbeatTimeoutSec: 45
-    onlineRewardMult: 1.8
+    onlineRewardMult: 1.25
     exerciseQiBase: 10
     respirateJingBase: 10
     cultivateForceDiv: 10

@@ -60,7 +60,7 @@ export function AfkSheet({
   onOpenTactic,
   onClose,
 }: AfkSheetProps): JSX.Element | null {
-  const [presence, setPresence] = useState<AfkPresence>("offline");
+  const [presence, setPresence] = useState<AfkPresence>("online");
   const [mode, setMode] = useState<"practice" | "dazuo" | "tuna" | "quest" | "grind">("grind");
   const [skillId, setSkillId] = useState(skills[0]?.id ?? "");
   const [questId, setQuestId] = useState(quests[0]?.id ?? "");
@@ -133,23 +133,8 @@ export function AfkSheet({
     }
   };
 
-  const lead =
-    presence === "online"
-      ? "人在阵前，步步有回响；须守着，断线即暂歇。"
-      : mode === "practice"
-        ? "勤练不辍，招式自会熟极而化。"
-        : mode === "dazuo"
-          ? "沉心运气，涓滴真息，终可聚成内力。"
-          : mode === "tuna"
-            ? "吐故纳新，神意归一，精力便有长进。"
-            : mode === "quest"
-              ? "既已应下差事，便按定下的路数行走江湖——事成与否，归来皆有交代。"
-              : "不需动武，只换些碎银与历练。挂多久结多久，中途停下亦立刻清算。";
-
   return (
-    <Sheet open={open} title="行止" onClose={onClose}>
-      <p className="afk-lead">{lead}</p>
-
+    <Sheet open={open} title="挂机" onClose={onClose}>
       {active ? (
         <div className="afk-running">
           <p className="afk-status">{statusMessage}</p>
@@ -171,7 +156,7 @@ export function AfkSheet({
           <div className="afk-running-actions">
             {paused && onResume ? (
               <button type="button" className="btn primary" disabled={pending} onClick={onResume}>
-                继续行止
+                继续挂机
               </button>
             ) : null}
             <button type="button" className="btn danger" disabled={pending} onClick={onStop}>
@@ -186,26 +171,26 @@ export function AfkSheet({
             <div className="scene-tabs" role="tablist" aria-label="在线或离线">
               <button
                 type="button"
-                className={presence === "offline" ? "on" : ""}
-                disabled={pending}
-                onClick={() => setPresence("offline")}
-              >
-                离线
-              </button>
-              <button
-                type="button"
                 className={presence === "online" ? "on" : ""}
                 disabled={pending}
                 onClick={() => setPresence("online")}
               >
                 在线
               </button>
+              <button
+                type="button"
+                className={presence === "offline" ? "on" : ""}
+                disabled={pending}
+                onClick={() => setPresence("offline")}
+              >
+                离线
+              </button>
             </div>
           </div>
 
           <div className="field">
-            <span className="field-label">行止</span>
-            <div className="scene-tabs" role="tablist" aria-label="行止法门">
+            <span className="field-label">项目</span>
+            <div className="scene-tabs" role="tablist" aria-label="挂机项目">
               <button
                 type="button"
                 className={mode === "grind" ? "on" : ""}
@@ -354,23 +339,33 @@ export function AfkSheet({
               ) : (
                 <p className="afk-empty">眼下没有可做的杂役——历练已够，或簿中暂无安排。</p>
               )}
-              {grindJobId ? (
-                <p className="afk-hint">
-                  {grindJobs.find((job) => job.id === grindJobId)?.description}
-                  {(() => {
+              {grindJobId
+                ? (() => {
                     const job = grindJobs.find((entry) => entry.id === grindJobId);
                     if (!job) return null;
+                    if (presence === "online") {
+                      return (
+                        <div className="afk-grind-rule">
+                          <span className="afk-rule-key">跑完一趟即可领奖</span>
+                          <span>会从青石村内自动寻路；每趟结算一次。</span>
+                        </div>
+                      );
+                    }
                     const g = job.hourlyGain;
-                    const mult = presence === "online" ? "（在线更高）" : "";
-                    return ` · 每时约历练 ${g.exp}、潜能 ${g.potential}、银 ${g.silver}${mult}`;
-                  })()}
-                </p>
-              ) : null}
+                    return (
+                      <p className="afk-hint">
+                        {job.description} · 每时约 <span className="gain-exp">历练 {g.exp}</span>、
+                        <span className="gain-pot">潜能 {g.potential}</span>、
+                        <span className="gain-silver">银两 {g.silver}</span>
+                      </p>
+                    );
+                  })()
+                : null}
             </div>
           )}
 
           <div className="field">
-            <span className="field-label">时长</span>
+            <span className="field-label">{presence === "online" ? "持续时长" : "时长"}</span>
             <div className="chips" role="group" aria-label="时长">
               {durations.map((minutes) => (
                 <button
@@ -392,7 +387,7 @@ export function AfkSheet({
             onClick={start}
           >
             {pending
-              ? "安排行止中…"
+              ? "安排挂机中…"
               : mode === "practice"
                 ? "开始练功"
                 : mode === "dazuo"

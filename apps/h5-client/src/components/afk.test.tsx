@@ -66,7 +66,7 @@ describe("GrindBanner（挂机状态条）", () => {
       <GrindBanner
         active
         paused
-        message="气息中断，行止暂歇"
+        message="气息中断，挂机暂歇"
         onResume={() => (resumed += 1)}
         onStop={() => undefined}
       />,
@@ -102,6 +102,11 @@ describe("AfkSheet（挂机启动）", () => {
         onStop={() => (stopped += 1)}
         onClose={() => undefined}
       />,
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
+        .find((b) => b.textContent === "离线")!
+        .click(),
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
@@ -145,6 +150,11 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
+        .find((b) => b.textContent === "离线")!
+        .click(),
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
@@ -185,6 +195,11 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
+        .find((b) => b.textContent === "离线")!
+        .click(),
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
@@ -207,6 +222,11 @@ describe("AfkSheet（挂机启动）", () => {
         onStop={() => undefined}
         onClose={() => undefined}
       />,
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
+        .find((b) => b.textContent === "离线")!
+        .click(),
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
@@ -234,16 +254,17 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     expect(host.textContent).toContain("村中杂役");
+    expect(host.textContent).toContain("跑完一趟即可领奖");
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "grind",
-      presence: "offline",
+      presence: "online",
       durationMinutes: 15,
       config: { jobId: "village_chore" },
     });
   });
 
-  it("在线方式隐藏修炼，时长偏短", () => {
+  it("默认在线且在线方式隐藏修炼，时长偏短", () => {
     const { host } = render(
       <AfkSheet
         open
@@ -257,11 +278,6 @@ describe("AfkSheet（挂机启动）", () => {
         onStop={() => undefined}
         onClose={() => undefined}
       />,
-    );
-    act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>("button")]
-        .find((b) => b.textContent === "在线")!
-        .click(),
     );
     expect([...host.querySelectorAll("button")].some((b) => b.textContent === "练功")).toBe(false);
     expect(host.textContent).toContain("一刻");
@@ -283,7 +299,7 @@ describe("AfkReportView（战报）", () => {
     const { host } = render(<AfkReportView open report={REPORT} onClose={() => undefined} />);
     expect(host.textContent).toContain("衣摆沾了露水");
     expect(host.textContent).toContain("历练 +120");
-    expect(host.textContent).toContain("行止已竟");
+    expect(host.textContent).toContain("挂机已完成");
     expect(host.textContent).toContain("历时 1 时辰");
     expect(host.querySelector(".gain-exp")).toBeTruthy();
     expect(host.querySelector(".gain-pot")).toBeTruthy();
@@ -306,6 +322,6 @@ describe("AfkReportView（战报）", () => {
     const failed = { ...REPORT, status: "failed" as const, reason: "目标房间不可达" };
     const { host } = render(<AfkReportView open report={failed} onClose={() => undefined} />);
     expect(host.textContent).toContain("目标房间不可达");
-    expect(host.textContent).toContain("行止中断");
+    expect(host.textContent).toContain("挂机已中断");
   });
 });

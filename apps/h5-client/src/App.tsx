@@ -406,12 +406,12 @@ export function App(): JSX.Element {
     [api, refreshScene, refreshCharacter],
   );
 
-  // 在线挂机心跳 + 离线进度刷新（约 10s）
+  // 在线挂机心跳 + 离线进度刷新（约 5s），匹配在线生计的短循环。
   useEffect(() => {
     if (!afkStatus.active || afkStatus.paused) return;
     const timer = window.setInterval(() => {
       void refreshAfk();
-    }, 10_000);
+    }, 5_000);
     return () => window.clearInterval(timer);
   }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
@@ -949,7 +949,7 @@ export function App(): JSX.Element {
             ? config.kind === "quest"
               ? "按定下路数，提剑出门。"
               : "挽袖上工，脚步已动。"
-            : "行止已定，时光自会替你记账。";
+            : "挂机开始，时光自会替你记账。";
         showToast(line);
         addJournal(line);
       })
@@ -966,7 +966,7 @@ export function App(): JSX.Element {
           active: false,
           paused: false,
           message: "",
-          reason: report.reason ?? "行止已收",
+          reason: report.reason ?? "挂机已收",
           progress: 0,
           gains: { exp: 0, potential: 0, silver: 0 },
           journalLines: [],
@@ -975,7 +975,7 @@ export function App(): JSX.Element {
         setAfkReport(report);
         setAfkReportOpen(true);
         setPanel("none");
-        addJournal(report.reason ?? "行止已收。");
+        addJournal(report.reason ?? "挂机已收。");
         void refreshCharacter();
       })
       .catch(notify)
@@ -988,8 +988,8 @@ export function App(): JSX.Element {
       .resumeAfk()
       .then((job) => {
         setAfkStatus(toAfkStatusView(job));
-        showToast("气息再续，行止继续。");
-        addJournal("气息再续，行止继续。");
+        showToast("气息再续，挂机继续。");
+        addJournal("气息再续，挂机继续。");
       })
       .catch(notify)
       .finally(() => setAfkPending(false));

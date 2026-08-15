@@ -715,7 +715,7 @@ describe("afkService.resume（心跳恢复）", () => {
       last_tick_at: T0,
       last_heartbeat_at: T0,
       journal_seq: 0,
-      stop_reason: "气息中断，行止暂歇",
+      stop_reason: "气息中断，挂机暂歇",
       report: null,
       updated_at: T0,
     });

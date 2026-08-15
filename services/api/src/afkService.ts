@@ -199,7 +199,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           input.kind === "dazuo" ||
           input.kind === "tuna")
       ) {
-        throw new AfkError("invalid_kind", "修炼暂只支持离线行止");
+        throw new AfkError("invalid_kind", "修炼暂只支持离线挂机");
       }
       if (input.kind === "study") {
         throw new AfkError("invalid_kind", "参悟已并入练功，请改选练功法门");
@@ -330,7 +330,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           [job.id],
         );
         const current = locked.rows[0];
-        if (!current) throw new AfkError("not_running", "行止未能起势");
+        if (!current) throw new AfkError("not_running", "挂机尚未开始");
         let journalLines: string[] = [];
         let after = current;
         if (presence === "online") {
@@ -468,7 +468,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
       const row = await activeJobRow(ch.id);
       if (!row) throw new AfkError("not_running", "眼下并无挂机中的行程");
-      if (row.status !== "paused") throw new AfkError("not_paused", "行止并未中断");
+      if (row.status !== "paused") throw new AfkError("not_paused", "挂机并未中断");
 
       const now = Date.now();
       const iso = new Date(now).toISOString();

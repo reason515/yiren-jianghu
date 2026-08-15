@@ -362,7 +362,8 @@
 }
 .char-skill-toggle {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  /* 资料列固定：境界和等级不再随文字长度彼此挤动。 */
+  grid-template-columns: minmax(0, 1fr) 6em 2ch;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -379,6 +380,8 @@
   opacity: 0.88;
 }
 .char-skill-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 15px;
   color: var(--paper);
 }
@@ -386,6 +389,7 @@
   color: var(--item-equipped);
 }
 .char-skill-mastery {
+  text-align: right;
   font-style: normal;
   font-size: 12px;
   letter-spacing: 0.5px;
@@ -410,6 +414,7 @@
   color: var(--mastery-6);
 }
 .char-skill-level {
+  text-align: right;
   font-family: var(--font-digit);
   font-style: normal;
   font-weight: 600;

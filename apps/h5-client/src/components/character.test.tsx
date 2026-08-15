@@ -278,6 +278,23 @@ describe("CharacterSheet（角色面板）", () => {
     expect(enables).toEqual(["force:none", "sword:xuanmen_sword"]);
   });
 
+  it("武学页：基本功行保留名称、境界、等级三列", () => {
+    const { host } = render(
+      <CharacterSheet open character={CHARACTER} onClose={() => undefined} />,
+    );
+    clickTab(host, "武学");
+    clickSkillsSubTab(host, "基本功");
+
+    const row = host.querySelector('[data-testid="skill-row-basic_unarmed"]')!;
+    const columns = row.querySelectorAll(
+      ":scope > .char-skill-toggle > span, :scope > .char-skill-toggle > em, :scope > .char-skill-toggle > b",
+    );
+    expect(columns).toHaveLength(3);
+    expect(columns[0]?.textContent).toBe("基本拳脚");
+    expect(columns[1]?.textContent).toBe("不堪一击");
+    expect(columns[2]?.textContent).toBe("4");
+  });
+
   it("武学页：全未学时临敌给出空态说明", () => {
     const empty: CharacterView = {
       ...CHARACTER,

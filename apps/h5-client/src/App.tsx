@@ -207,6 +207,7 @@ export function App(): JSX.Element {
     progress: 0,
     gains: { exp: 0, potential: 0, silver: 0 },
     journalLines: [],
+    openEnded: false,
     lockExits: false,
   });
   const [afkSkills, setAfkSkills] = useState<AfkSkillOption[]>([]);
@@ -355,27 +356,32 @@ export function App(): JSX.Element {
   }, [api]);
 
   const afkRoomRef = useRef<string | undefined>(undefined);
+  const afkRefreshInFlightRef = useRef(false);
+  const afkCharacterRefreshAtRef = useRef(0);
 
   const refreshAfk = useCallback(
-    async (pendingReportIds: string[] = []): Promise<void> => {
+    async (pendingReportIds: string[] = [], full = false): Promise<void> => {
+      if (afkRefreshInFlightRef.current) return;
+      afkRefreshInFlightRef.current = true;
       try {
-        const [status, reports, skills, templates, quests, grindJobs] = await Promise.all([
-          api.getAfkStatus(),
-          api.getAfkReports(),
-          api.getSkills(),
-          api.getTemplates(),
-          api.getQuests(),
-          api.getAfkGrindJobs(),
-        ]);
+        const status = await api.getAfkStatus();
         const view = toAfkStatusView(status);
         const prevRoom = afkRoomRef.current;
         afkRoomRef.current = view.roomId;
         setAfkStatus(view);
-        if (
-          view.active &&
-          view.presence === "online" &&
-          (view.journalLines.length > 0 || (view.roomId && view.roomId !== prevRoom))
-        ) {
+        // 自动行侠只替玩家走路与交接；抵达敌前即打开既有手动战局。
+        if (view.questCombatTargetId) {
+          const current = await api.getCombatStatus();
+          if ("active" in current) {
+            const started = await api.startCombat(view.questCombatTargetId);
+            setCombat(toCombatState(started));
+            setCombatOpen(true);
+          } else {
+            setCombat(toCombatState(current));
+            setCombatOpen(true);
+          }
+        }
+        if (view.active && view.presence === "online" && view.roomId && view.roomId !== prevRoom) {
           void refreshScene().catch(() => undefined);
         }
         for (const line of view.journalLines) addJournal(line);
@@ -383,9 +389,21 @@ export function App(): JSX.Element {
           setAfkLatestLine(view.journalLines[view.journalLines.length - 1] ?? "");
           setAfkPulseToken((n) => n + 1);
         }
-        if (view.journalLines.length > 0) {
+        if (
+          view.journalLines.length > 0 &&
+          Date.now() - afkCharacterRefreshAtRef.current >= 15_000
+        ) {
+          afkCharacterRefreshAtRef.current = Date.now();
           void refreshCharacter().catch(() => undefined);
         }
+        if (!full) return;
+        const [reports, skills, templates, quests, grindJobs] = await Promise.all([
+          api.getAfkReports(),
+          api.getSkills(),
+          api.getTemplates(),
+          api.getQuests(),
+          api.getAfkGrindJobs(),
+        ]);
         setAfkSkills(toAfkSkillOptions(skills));
         const templateRows = templates as ApiTacticTemplate[];
         setAfkTemplates(templateRows.map((template) => ({ id: template.id, name: template.name })));
@@ -401,17 +419,19 @@ export function App(): JSX.Element {
         }
       } catch (e) {
         notify(e);
+      } finally {
+        afkRefreshInFlightRef.current = false;
       }
     },
     [api, refreshScene, refreshCharacter],
   );
 
-  // 在线挂机心跳 + 离线进度刷新（约 5s），匹配在线生计的短循环。
+  // 在线自动行侠以 3 秒为一拍；2.5 秒轮询既保活也让每一步尽快映入场景。
   useEffect(() => {
     if (!afkStatus.active || afkStatus.paused) return;
     const timer = window.setInterval(() => {
       void refreshAfk();
-    }, 5_000);
+    }, 2_500);
     return () => window.clearInterval(timer);
   }, [afkStatus.active, afkStatus.paused, refreshAfk]);
 
@@ -440,7 +460,10 @@ export function App(): JSX.Element {
         refreshScene(),
         refreshCombat(),
         refreshQuests(),
-        refreshAfk(res.pendingAfkReports.map((report) => report.jobId)),
+        refreshAfk(
+          res.pendingAfkReports.map((report) => report.jobId),
+          true,
+        ),
         refreshVitals(),
       ]);
       // 断线期间完成的论剑，重连后直接翻开战报回响。
@@ -570,7 +593,7 @@ export function App(): JSX.Element {
         setVitalsMax((res.character as { vitalsMax: Record<VitalKey, number> }).vitalsMax);
         setSilver((res.character as { silver: number }).silver);
       }
-      await Promise.all([refreshScene(), refreshQuests(), refreshAfk()]);
+      await Promise.all([refreshScene(), refreshQuests(), refreshAfk([], true)]);
       // 数据就绪后再进起程过场：过渡期间场景已在后台加载，起身推门即无缝进入
       setDeparture(true);
     })().catch(notify);
@@ -663,7 +686,7 @@ export function App(): JSX.Element {
 
   const openAfk = (): void => {
     setPanel("afk");
-    void refreshAfk();
+    void refreshAfk([], true);
   };
 
   const loadTactics = useCallback(async (): Promise<void> => {
@@ -947,7 +970,7 @@ export function App(): JSX.Element {
         const line =
           config.presence === "online"
             ? config.kind === "quest"
-              ? "按定下路数，提剑出门。"
+              ? "循着熟路出门；遇敌仍待你亲自应战。"
               : "挽袖上工，脚步已动。"
             : "挂机开始，时光自会替你记账。";
         showToast(line);
@@ -970,6 +993,7 @@ export function App(): JSX.Element {
           progress: 0,
           gains: { exp: 0, potential: 0, silver: 0 },
           journalLines: [],
+          openEnded: false,
           lockExits: false,
         });
         setAfkReport(report);
@@ -1180,19 +1204,6 @@ export function App(): JSX.Element {
       .catch(notify);
   };
 
-  const onQuestReport = (questId: string): void => {
-    void api
-      .reportQuest(questId)
-      .then((result) => {
-        const rewards = (result as { rewards: QuestRewardView }).rewards;
-        const text = `交差已毕：历练 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
-        showToast(text);
-        addJournal(text);
-        return refreshQuests();
-      })
-      .catch(notify);
-  };
-
   const startCombat = async (targetId: string): Promise<void> => {
     try {
       setCombat(toCombatState(await api.startCombat(targetId)));
@@ -1244,6 +1255,14 @@ export function App(): JSX.Element {
                 text: index === 0 ? `${result.npc.name}：${line}` : line,
               })),
             );
+            if (result.questReport) {
+              const rewards = result.questReport.rewards;
+              const text = `交差已毕：历练 ${rewards.exp} · 潜能 ${rewards.potential} · 银两 ${rewards.silver}`;
+              showToast(text);
+              addJournal(text);
+              void refreshQuests();
+              void refreshCharacter();
+            }
           }
           if (result.kind === "trade") {
             setTrade(result);
@@ -1342,7 +1361,7 @@ export function App(): JSX.Element {
       if (combatBusyRef.current || combatPacingRef.current) return;
       if ((combat.busyTurns ?? 0) > 0) return;
       combatActionRef.current({ action: "attack" });
-    }, 4200);
+    }, 2500);
     return () => window.clearInterval(handle);
   }, [combat?.inCombat, combat?.busyTurns]);
 
@@ -1384,6 +1403,7 @@ export function App(): JSX.Element {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      openEnded: false,
       lockExits: false,
     });
     setAfkSkills([]);
@@ -1510,6 +1530,7 @@ export function App(): JSX.Element {
             message={afkStatus.message}
             reason={afkStatus.reason}
             progress={afkStatus.progress}
+            openEnded={afkStatus.openEnded}
             gains={afkStatus.gains}
             paused={afkStatus.paused}
             latestLine={afkLatestLine}
@@ -1599,6 +1620,7 @@ export function App(): JSX.Element {
           paused={afkStatus.paused}
           statusMessage={afkStatus.message}
           progress={afkStatus.progress}
+          openEnded={afkStatus.openEnded}
           gains={afkStatus.gains}
           pending={afkPending}
           onStart={onAfkStart}
@@ -1800,12 +1822,7 @@ export function App(): JSX.Element {
 
       {questData && questOpen && (
         <Sheet open title="手头之事" onClose={() => setQuestOpen(false)}>
-          <QuestPanel
-            data={questData}
-            onGoTo={onQuestGoTo}
-            onAccept={onQuestAccept}
-            onReport={onQuestReport}
-          />
+          <QuestPanel data={questData} onGoTo={onQuestGoTo} onAccept={onQuestAccept} />
         </Sheet>
       )}
 

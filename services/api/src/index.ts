@@ -3,6 +3,8 @@
  * 无 DATABASE_URL（纯骨架/单测导入）时保持 stub 行为。
  */
 import pg from "pg";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createClient, type RedisClientType } from "redis";
 import { loadContentDir } from "@yjh/content";
 import { createApp, type AppDeps } from "./app.js";
@@ -11,9 +13,11 @@ import { createPgDb } from "./db.js";
 export { createApp } from "./app.js";
 export { createAppMeta } from "./meta.js";
 
-const port = Number(process.env.API_PORT ?? 3000);
+const port = Number(process.env.API_PORT ?? 4000);
 const DATABASE_URL = process.env.DATABASE_URL;
-const CONTENT_DIR = process.env.CONTENT_DIR ?? "/app/packages/content/fixtures/pack";
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const CONTENT_DIR =
+  process.env.CONTENT_DIR ?? path.resolve(moduleDir, "../../../packages/content/fixtures/pack");
 
 let deps: AppDeps = {};
 let pool: pg.Pool | undefined;

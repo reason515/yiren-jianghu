@@ -16,8 +16,11 @@ export interface AfkQuestOption {
   id: string;
   name: string;
   targetName: string;
+  /** 每次完整办妥并交差时的固定奖励，由任务内容包定义。 */
+  roundGain: AfkGains;
 }
 
+/** 保留给论剑模板选择器；自动行侠不再使用。 */
 export interface AfkTemplateOption {
   id: string;
   name: string;
@@ -57,15 +60,13 @@ export type AfkStartConfig =
     }
   | {
       kind: "quest";
-      presence: AfkPresence;
-      templateId: string;
-      durationMinutes: number;
+      presence: "online";
       config: { questId: string };
     }
   | {
       kind: "grind";
       presence: AfkPresence;
-      durationMinutes: number;
+      durationMinutes?: number;
       config: { jobId: string };
     };
 
@@ -82,7 +83,7 @@ export interface AfkJobData {
   status: string;
   phase: string;
   startedAt: string;
-  scheduledEndAt: string;
+  scheduledEndAt: string | null;
   stopReason?: string;
   gains: AfkGains;
   progress: number;
@@ -93,6 +94,8 @@ export interface AfkJobData {
   roomId?: string;
   grindPhase?: string;
   rounds?: number;
+  /** 在线自动行侠抵达目标后，由客户端拉起可手动操作的战局。 */
+  questCombatTargetId?: string;
 }
 
 export type AfkStatusResponse = AfkJobData | { active: false };
@@ -109,8 +112,11 @@ export interface AfkStatusView {
   roomId?: string;
   grindPhase?: string;
   rounds?: number;
+  /** 在线生计/自动行侠无固定结束时间，直到玩家停止或离开游戏。 */
+  openEnded: boolean;
   /** 在线挂机 running（含生计跑图）时锁出口。 */
   lockExits: boolean;
+  questCombatTargetId?: string;
 }
 
 export interface AfkReportData {
@@ -129,10 +135,16 @@ export function toAfkSkillOptions(skills: SkillRowView[]): AfkSkillOption[] {
 
 export function toAfkQuestOptions(quests: QuestView[]): AfkQuestOption[] {
   return quests.flatMap((quest) => {
-    if (quest.state !== "accepted") return [];
-    const current = quest.phases.find((phase) => !phase.done);
-    if (!current || current.type !== "kill") return [];
-    return [{ id: quest.id, name: quest.name, targetName: current.targetName }];
+    if (quest.state !== "available" || !quest.autoUnlocked) return [];
+    const first = quest.phases[0];
+    return [
+      {
+        id: quest.id,
+        name: quest.name,
+        targetName: first?.targetName ?? "差事",
+        roundGain: quest.rewards,
+      },
+    ];
   });
 }
 
@@ -145,11 +157,12 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      openEnded: false,
       lockExits: false,
     };
   }
 
-  const end = Date.parse(status.scheduledEndAt);
+  const end = status.scheduledEndAt ? Date.parse(status.scheduledEndAt) : NaN;
   const shichen = Number.isFinite(end)
     ? Math.max(0, Math.round(((end - Date.now()) / 7_200_000) * 10) / 10)
     : null;
@@ -177,6 +190,12 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
     else if (status.phase === "harvest") phaseHint = ` · 已入账 ${rounds} 轮`;
     else if (grindPhase === "circuit")
       phaseHint = rounds > 0 ? ` · 第 ${rounds + 1} 圈` : " · 巡回中";
+  } else if (status.kind === "quest" && status.presence === "online" && !paused) {
+    if (status.phase === "battle") phaseHint = " · 敌踪已现，待你应战";
+    else if (status.phase === "accept") phaseHint = " · 前往接令";
+    else if (status.phase === "route") phaseHint = " · 赶路中";
+    else if (status.phase === "task") phaseHint = " · 办差中";
+    if (rounds > 0) phaseHint += ` · 已办妥 ${rounds} 趟`;
   }
   const lockExits = status.presence === "online" && status.status === "running";
   return {
@@ -192,7 +211,9 @@ export function toAfkStatusView(status: AfkStatusResponse): AfkStatusView {
     journalLines: status.journalLines ?? [],
     ...(status.roomId ? { roomId: status.roomId } : {}),
     ...(grindPhase ? { grindPhase } : {}),
+    ...(status.questCombatTargetId ? { questCombatTargetId: status.questCombatTargetId } : {}),
     rounds,
+    openEnded: status.presence === "online" && !status.scheduledEndAt,
     lockExits,
   };
 }

@@ -7,10 +7,9 @@ export interface QuestPanelProps {
   data: QuestPanelData;
   onGoTo: (roomId: string) => void;
   onAccept: (questId: string) => void;
-  onReport: (questId: string) => void;
 }
 
-export function QuestPanel({ data, onGoTo, onAccept, onReport }: QuestPanelProps): JSX.Element {
+export function QuestPanel({ data, onGoTo, onAccept }: QuestPanelProps): JSX.Element {
   return (
     <div className="quest-panel" data-testid="quest-panel">
       {data.story.length > 0 && (
@@ -49,13 +48,7 @@ export function QuestPanel({ data, onGoTo, onAccept, onReport }: QuestPanelProps
           <p className="quest-empty">眼下并无差事。</p>
         ) : (
           data.quests.map((q) => (
-            <QuestCard
-              key={q.id}
-              quest={q}
-              onGoTo={onGoTo}
-              onAccept={onAccept}
-              onReport={onReport}
-            />
+            <QuestCard key={q.id} quest={q} onGoTo={onGoTo} onAccept={onAccept} />
           ))
         )}
       </section>
@@ -67,12 +60,10 @@ function QuestCard({
   quest,
   onGoTo,
   onAccept,
-  onReport,
 }: {
   quest: QuestView;
   onGoTo: (roomId: string) => void;
   onAccept: (questId: string) => void;
-  onReport: (questId: string) => void;
 }): JSX.Element {
   const pendingGoto = quest.phases.find(
     (phase) => phase.type === "goto" && !phase.done && phase.targetRoomId,
@@ -105,7 +96,7 @@ function QuestCard({
           <Chip label="前往" variant="action" onClick={() => onGoTo(pendingGoto.targetRoomId!)} />
         )}
         {quest.state === "accepted" && allDone && (
-          <Chip label="交差" variant="action" onClick={() => onReport(quest.id)} />
+          <span className="quest-done-tag">请向交差人复命</span>
         )}
         {quest.state === "completed" && <span className="quest-done-tag">已了结</span>}
       </div>

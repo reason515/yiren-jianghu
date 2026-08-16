@@ -6,5 +6,6 @@
   "briefing": "近来库房总有些动静，米袋上尽是齿印。村长悬了赏：去客栈库房清理那些灰鼠——麻利些，别让它们再糟蹋口粮。",
   "phases": [{ "type": "kill", "targetId": "village_rat", "count": 1 }],
   "rewards": { "exp": 50, "potential": 10, "silver": 10 },
-  "repeatable": true
+  "repeatable": true,
+  "automation": { "acceptNpcId": "village_chief", "reportNpcId": "village_chief" }
 }

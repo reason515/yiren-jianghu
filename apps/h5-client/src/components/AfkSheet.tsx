@@ -17,12 +17,14 @@ export interface AfkSheetProps {
   open: boolean;
   skills: AfkSkillOption[];
   quests: AfkQuestOption[];
-  templates: AfkTemplateOption[];
+  /** @deprecated 自动行侠不再绑定战术；保留兼容调用方。 */
+  templates?: AfkTemplateOption[];
   grindJobs: AfkGrindOption[];
   active: boolean;
   paused?: boolean;
   statusMessage: string;
   progress?: number;
+  openEnded?: boolean;
   gains?: { exp: number; potential: number; silver: number };
   pending?: boolean;
   onStart: (config: AfkStartConfig) => void;
@@ -32,7 +34,6 @@ export interface AfkSheetProps {
   onClose: () => void;
 }
 
-const ONLINE_DURATIONS = [15, 30, 60];
 const OFFLINE_DURATIONS = [15, 60, 120, 240, 480];
 
 function durationLabel(minutes: number): string {
@@ -46,37 +47,32 @@ export function AfkSheet({
   open,
   skills,
   quests,
-  templates,
+  templates: _templates,
   grindJobs,
   active,
   paused = false,
   statusMessage,
   progress = 0,
+  openEnded = false,
   gains = { exp: 0, potential: 0, silver: 0 },
   pending = false,
   onStart,
   onStop,
   onResume,
-  onOpenTactic,
+  onOpenTactic: _onOpenTactic,
   onClose,
 }: AfkSheetProps): JSX.Element | null {
   const [presence, setPresence] = useState<AfkPresence>("online");
   const [mode, setMode] = useState<"practice" | "dazuo" | "tuna" | "quest" | "grind">("grind");
   const [skillId, setSkillId] = useState(skills[0]?.id ?? "");
   const [questId, setQuestId] = useState(quests[0]?.id ?? "");
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [grindJobId, setGrindJobId] = useState(grindJobs[0]?.id ?? "");
-  const durations = presence === "online" ? ONLINE_DURATIONS : OFFLINE_DURATIONS;
-  const [duration, setDuration] = useState(durations[0]!);
+  const [duration, setDuration] = useState(OFFLINE_DURATIONS[0]!);
 
   useEffect(() => {
     if (presence === "online" && (mode === "practice" || mode === "dazuo" || mode === "tuna"))
       setMode("grind");
   }, [presence, mode]);
-
-  useEffect(() => {
-    if (!durations.includes(duration)) setDuration(durations[0]!);
-  }, [presence, duration, durations]);
 
   useEffect(() => {
     if (!skills.some((skill) => skill.id === skillId)) setSkillId(skills[0]?.id ?? "");
@@ -87,12 +83,6 @@ export function AfkSheet({
   }, [questId, quests]);
 
   useEffect(() => {
-    if (!templates.some((template) => template.id === templateId)) {
-      setTemplateId(templates[0]?.id ?? "");
-    }
-  }, [templateId, templates]);
-
-  useEffect(() => {
     if (!grindJobs.some((job) => job.id === grindJobId)) setGrindJobId(grindJobs[0]?.id ?? "");
   }, [grindJobId, grindJobs]);
 
@@ -100,7 +90,7 @@ export function AfkSheet({
     mode === "practice"
       ? Boolean(skillId)
       : mode === "quest"
-        ? Boolean(questId && templateId)
+        ? Boolean(questId)
         : Boolean(grindJobId);
 
   const start = (): void => {
@@ -115,36 +105,36 @@ export function AfkSheet({
       onStart({ kind: "dazuo", presence: "offline", durationMinutes: duration, config: {} });
     } else if (mode === "tuna") {
       onStart({ kind: "tuna", presence: "offline", durationMinutes: duration, config: {} });
-    } else if (mode === "quest" && questId && templateId) {
+    } else if (mode === "quest" && questId) {
       onStart({
         kind: "quest",
-        presence,
-        templateId,
-        durationMinutes: duration,
+        presence: "online",
         config: { questId },
       });
     } else if (mode === "grind" && grindJobId) {
       onStart({
         kind: "grind",
         presence,
-        durationMinutes: duration,
+        ...(presence === "offline" ? { durationMinutes: duration } : {}),
         config: { jobId: grindJobId },
       });
     }
   };
 
   return (
-    <Sheet open={open} title="挂机" onClose={onClose}>
+    <Sheet open={open} title="挂机" onClose={onClose} stableHeight>
       {active ? (
         <div className="afk-running">
           <p className="afk-status">{statusMessage}</p>
-          <div className="afk-progress" aria-label="挂机进度">
-            <div className="afk-progress-track">
-              <div
-                className="afk-progress-fill"
-                style={{ width: `${Math.round(Math.min(1, Math.max(0, progress)) * 100)}%` }}
-              />
-            </div>
+          <div className="afk-progress" aria-label="挂机收益">
+            {!openEnded ? (
+              <div className="afk-progress-track" aria-label="挂机进度">
+                <div
+                  className="afk-progress-fill"
+                  style={{ width: `${Math.round(Math.min(1, Math.max(0, progress)) * 100)}%` }}
+                />
+              </div>
+            ) : null}
             <p className="afk-progress-gains">
               已获 · <span className="gain-exp">历练 {Math.floor(gains.exp)}</span>
               <span className="gain-sep"> · </span>
@@ -152,6 +142,7 @@ export function AfkSheet({
               <span className="gain-sep"> · </span>
               <span className="gain-silver">银两 {Math.floor(gains.silver)}</span>
             </p>
+            {openEnded ? <p className="afk-active-note">离开游戏后，本次行程会自动停止。</p> : null}
           </div>
           <div className="afk-running-actions">
             {paused && onResume ? (
@@ -286,38 +277,29 @@ export function AfkSheet({
                   <p className="afk-empty">手头没有可了结的差事，先去应下一桩悬赏。</p>
                 )}
               </div>
-              <div className="field">
-                <span className="field-label">行侠路数</span>
-                {templates.length > 0 ? (
-                  <div className="chips" role="group" aria-label="行侠路数">
-                    {templates.map((template) => (
-                      <button
-                        key={template.id}
-                        type="button"
-                        className={`tactic-chip${templateId === template.id ? " on" : ""}`}
-                        disabled={pending}
-                        onClick={() => setTemplateId(template.id)}
-                      >
-                        {template.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="afk-template-empty">
-                    <p className="afk-empty">尚无战术谱，须先备下一套战术。</p>
-                    {onOpenTactic ? (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={pending}
-                        onClick={onOpenTactic}
-                      >
-                        备一套战术
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-              </div>
+              {questId
+                ? (() => {
+                    const quest = quests.find((entry) => entry.id === questId);
+                    if (!quest) return null;
+                    const gain = quest.roundGain;
+                    return (
+                      <div className="afk-grind-rule" aria-label="单趟奖励">
+                        <span className="afk-rule-key">办妥一趟即可领奖</span>
+                        <span>寻路、接令与交差会自动完成；遇敌仍须由你亲自应战。</span>
+                        <span className="afk-round-gains">
+                          单趟奖励 · <span className="gain-exp">历练 {gain.exp}</span>
+                          <span className="gain-sep"> · </span>
+                          <span className="gain-pot">潜能 {gain.potential}</span>
+                          <span className="gain-sep"> · </span>
+                          <span className="gain-silver">银两 {gain.silver}</span>
+                        </span>
+                      </div>
+                    );
+                  })()
+                : null}
+              <p className="afk-hint">
+                此差事已由你亲自办妥过一次。启程后会自行寻路、接令与交差；遇敌时仍由你在战局中把握回气与绝招。
+              </p>
             </>
           ) : (
             <div className="field">
@@ -348,6 +330,15 @@ export function AfkSheet({
                         <div className="afk-grind-rule">
                           <span className="afk-rule-key">跑完一趟即可领奖</span>
                           <span>会从青石村内自动寻路；每趟结算一次。</span>
+                          {job.roundGain ? (
+                            <span className="afk-round-gains" aria-label="单趟奖励">
+                              单趟奖励 · <span className="gain-exp">历练 {job.roundGain.exp}</span>
+                              <span className="gain-sep"> · </span>
+                              <span className="gain-pot">潜能 {job.roundGain.potential}</span>
+                              <span className="gain-sep"> · </span>
+                              <span className="gain-silver">银两 {job.roundGain.silver}</span>
+                            </span>
+                          ) : null}
                         </div>
                       );
                     }
@@ -364,22 +355,24 @@ export function AfkSheet({
             </div>
           )}
 
-          <div className="field">
-            <span className="field-label">{presence === "online" ? "持续时长" : "时长"}</span>
-            <div className="chips" role="group" aria-label="时长">
-              {durations.map((minutes) => (
-                <button
-                  key={minutes}
-                  type="button"
-                  className={`tactic-chip${duration === minutes ? " on" : ""}`}
-                  disabled={pending}
-                  onClick={() => setDuration(minutes)}
-                >
-                  {durationLabel(minutes)}
-                </button>
-              ))}
+          {presence === "offline" ? (
+            <div className="field">
+              <span className="field-label">时长</span>
+              <div className="chips" role="group" aria-label="时长">
+                {OFFLINE_DURATIONS.map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    className={`tactic-chip${duration === minutes ? " on" : ""}`}
+                    disabled={pending}
+                    onClick={() => setDuration(minutes)}
+                  >
+                    {durationLabel(minutes)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
           <button
             type="button"
             className="btn primary"

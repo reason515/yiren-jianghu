@@ -57,12 +57,12 @@ export const paramsSchema = z.object({
     tunaAttemptsPerHour: z.number().int().min(1).max(60).default(12),
     /** 在线生计短轮回秒数（DC-043/054）。 */
     onlineTickSec: z.number().int().min(10).max(600).default(10),
-    /** 在线行侠战斗 tick 秒数（DC-054）。 */
-    questOnlineTickSec: z.number().int().min(15).max(600).default(30),
+    /** 在线行侠自动流程的动作节拍（导航/交谈/开战检查）。 */
+    questOnlineTickSec: z.number().int().min(2).max(600).default(3),
     /** 在线心跳超时秒数；超时 pause（断线）。 */
     onlineHeartbeatTimeoutSec: z.number().int().min(20).max(300).default(45),
-    /** 在线相对离线收益倍率。 */
-    onlineRewardMult: z.number().min(1).max(5).default(1.8),
+    /** 在线收益倍率。在线生计 roundGain 应直接填写玩家实际到账数值，默认 1。 */
+    onlineRewardMult: z.number().min(1).max(5).default(1),
     exerciseQiBase: z.number().int().positive().default(10),
     respirateJingBase: z.number().int().positive().default(10),
     cultivateForceDiv: z.number().int().positive().default(10),
@@ -435,6 +435,16 @@ export const questSchema = z.object({
     items: z.array(z.object({ itemId: id, count: z.number().int().positive() })).default([]),
   }),
   repeatable: z.boolean().default(false),
+  /**
+   * 自动行侠的任务交接点。任务相位本身仍是唯一的执行步骤；这里仅补足
+   * 「去哪里接单 / 去哪里交差」这两个不属于 phase 的地点信息。
+   */
+  automation: z
+    .object({
+      acceptNpcId: id.optional(),
+      reportNpcId: id.optional(),
+    })
+    .default({}),
 });
 
 // ---------- 主线节点 ----------
@@ -482,7 +492,7 @@ export const grindJobSchema = z.object({
   workRooms: z.array(id).default([]),
   /** 自动导航白名单（不含主动怪房）。 */
   navWhitelist: z.array(id).default([]),
-  /** 合圈基础奖励（再乘 onlineRewardMult）。 */
+  /** 在线合圈的实际奖励（默认不再叠加倍率）。 */
   roundGain: z
     .object({
       exp: z.number().nonnegative(),

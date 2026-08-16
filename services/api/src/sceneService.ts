@@ -69,6 +69,11 @@ export interface TalkView {
   kind: "talk";
   npc: { id: string; name: string };
   dialogue: string[];
+  questReport?: {
+    questId: string;
+    questName: string;
+    rewards: { exp: number; potential: number; silver: number };
+  };
 }
 
 export interface TradeView {
@@ -198,7 +203,7 @@ const toNumber = (value: number | string): number => Number(value);
 export function createSceneService(
   db: Db,
   content: ContentIndex,
-  quests?: Pick<QuestsService, "recordProgress">,
+  quests?: Pick<QuestsService, "recordProgress"> & Partial<Pick<QuestsService, "reportQuestAtNpc">>,
 ): SceneService {
   const activeCharacter = async (
     database: Db,
@@ -491,7 +496,21 @@ export function createSceneService(
         if (!character) throw new SceneError("no_character", "尚未立名闯江湖");
         const npc = npcInRoom(roomFor(character.room_path), input.targetId);
         await quests?.recordProgress(accountId, "talk", npc.id);
-        return { kind: "talk", npc: { id: npc.id, name: npc.name }, dialogue: npc.dialogue };
+        const report = await quests?.reportQuestAtNpc?.(accountId, npc.id);
+        return {
+          kind: "talk",
+          npc: { id: npc.id, name: npc.name },
+          dialogue: npc.dialogue,
+          ...(report
+            ? {
+                questReport: {
+                  questId: report.questId,
+                  questName: report.questName,
+                  rewards: report.rewards,
+                },
+              }
+            : {}),
+        };
       }
 
       // V2.12/V2.16 观察：NPC 外形+武功+衣着 / 物品外观入见闻（只读，不改状态）。

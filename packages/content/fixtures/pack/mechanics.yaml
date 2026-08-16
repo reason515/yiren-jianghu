@@ -44,9 +44,10 @@ coeffs:
     dazuoAttemptsPerHour: 12
     tunaAttemptsPerHour: 12
     onlineTickSec: 10
-    questOnlineTickSec: 30
+    questOnlineTickSec: 3
     onlineHeartbeatTimeoutSec: 45
-    onlineRewardMult: 1.25
+    # 在线生计的 roundGain 即玩家每趟实际到账数值，不再叠加隐藏倍率。
+    onlineRewardMult: 1
     exerciseQiBase: 10
     respirateJingBase: 10
     cultivateForceDiv: 10

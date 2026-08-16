@@ -42,7 +42,7 @@ export interface AfkJobView {
   status: string;
   phase: string;
   startedAt: string;
-  scheduledEndAt: string;
+  scheduledEndAt: string | null;
   stopReason?: string;
   gains: AfkGainsView;
   progress: number;
@@ -56,6 +56,8 @@ export interface AfkJobView {
   grindPhase?: string;
   /** DC-045：已合圈轮数。 */
   rounds?: number;
+  /** 自动行侠到达战斗目标；客户端据此开启原生手动战局。 */
+  questCombatTargetId?: string;
 }
 
 export interface AfkReportView {
@@ -110,6 +112,12 @@ function gainsView(g: Partial<Record<(typeof GAIN_KEYS)[number], number>>): AfkG
   return out;
 }
 
+function roundGainView(g: Partial<Record<(typeof GAIN_KEYS)[number], number>>): AfkGainsView {
+  const out: AfkGainsView = { exp: 0, potential: 0, silver: 0 };
+  for (const k of GAIN_KEYS) out[k] = Math.round((g[k] ?? 0) * 100) / 100;
+  return out;
+}
+
 function parseConfig(value: unknown): Record<string, unknown> {
   return (typeof value === "string" ? JSON.parse(value) : value) as Record<string, unknown>;
 }
@@ -155,6 +163,13 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         ? config.phase
         : undefined;
     const rounds = typeof config.rounds === "number" ? config.rounds : undefined;
+    const questCombatTargetId =
+      row.kind === "quest" &&
+      row.phase === "battle" &&
+      config.combatStarted !== true &&
+      typeof config.combatTargetId === "string"
+        ? config.combatTargetId
+        : undefined;
     return {
       id: row.id,
       kind: row.kind as AfkJobKind,
@@ -162,7 +177,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       status: row.status,
       phase: row.phase,
       startedAt: row.started_at,
-      scheduledEndAt: row.scheduled_end_at ?? row.started_at,
+      scheduledEndAt: row.scheduled_end_at,
       stopReason: row.stop_reason ?? undefined,
       gains: gainsView(zeroGains(config.gains as ReturnType<typeof zeroGains>)),
       progress: prog.progress,
@@ -173,6 +188,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       ...(extra?.roomId ? { roomId: extra.roomId } : {}),
       ...(grindPhase ? { grindPhase } : {}),
       ...(rounds !== undefined ? { rounds } : {}),
+      ...(questCombatTargetId ? { questCombatTargetId } : {}),
     };
   };
 
@@ -204,11 +220,16 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
       if (input.kind === "study") {
         throw new AfkError("invalid_kind", "参悟已并入练功，请改选练功法门");
       }
+      if (input.kind === "quest" && presence !== "online") {
+        throw new AfkError("invalid_kind", "自动行侠须留在江湖中亲自应战");
+      }
 
+      const openEndedGrind =
+        (input.kind === "grind" || input.kind === "quest") && presence === "online";
       const minutes = input.durationMinutes ?? (presence === "online" ? 30 : maxMinutes);
       const maxOnline = 60;
       const maxAllowed = presence === "online" ? maxOnline : maxMinutes;
-      if (!Number.isInteger(minutes) || minutes < 1 || minutes > maxAllowed) {
+      if (!openEndedGrind && (!Number.isInteger(minutes) || minutes < 1 || minutes > maxAllowed)) {
         throw new AfkError("invalid_duration", `挂机时长须在 1–${maxAllowed} 分钟之间`);
       }
 
@@ -243,29 +264,23 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           typeof row.config === "string"
             ? (JSON.parse(row.config) as Record<string, unknown>)
             : row.config;
-      } else if (input.kind === "quest") {
-        throw new AfkError("template_required", "行侠挂机须先备下一套战术");
       }
 
       if (input.kind === "quest") {
         const questId = typeof config.questId === "string" ? config.questId : "";
         const quest = questsById.get(questId);
-        if (!quest) throw new AfkError("invalid_config", "行侠挂机须择一桩已接差事");
+        if (!quest) throw new AfkError("invalid_config", "自动行侠须择一桩熟悉的差事");
         const records = await db.query<{
           status: "accepted" | "completed" | "reported";
           progress: { phase: number; counts: Record<string, number> };
+          auto_unlocked_at: string | null;
         }>(
-          "SELECT status, progress FROM character_quests WHERE character_id = $1 AND quest_id = $2",
+          "SELECT status, progress, auto_unlocked_at FROM character_quests WHERE character_id = $1 AND quest_id = $2",
           [ch.id, questId],
         );
         const record = records.rows[0];
-        const phase = record ? quest.phases[record.progress.phase] : undefined;
-        if (!record || record.status !== "accepted" || !phase || phase.type !== "kill") {
-          throw new AfkError("quest_unavailable", "这桩差事眼下不宜行侠");
-        }
-        const target = content.npcs.find((npc) => npc.id === phase.targetId);
-        if (!target || target.kind !== "battle") {
-          throw new AfkError("quest_unavailable", "所寻目标不宜以行侠之法应对");
+        if (!record?.auto_unlocked_at) {
+          throw new AfkError("quest_locked", "须亲自办妥并交差一次，方可自动行侠");
         }
       }
 
@@ -280,9 +295,16 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         now,
         params: content.params,
       });
-      job.scheduledEndAt = now + minutes * 60_000;
+      job.scheduledEndAt = openEndedGrind ? now : now + minutes * 60_000;
       const startedIso = new Date(job.startedAt).toISOString();
-      const endIso = new Date(job.scheduledEndAt).toISOString();
+      const endIso = openEndedGrind ? null : new Date(job.scheduledEndAt).toISOString();
+      const onlineTickSec =
+        input.kind === "quest"
+          ? (content.params.afk.questOnlineTickSec ?? 30)
+          : (content.params.afk.onlineTickSec ?? 15);
+      const firstTickIso = openEndedGrind
+        ? new Date(now - onlineTickSec * 1000).toISOString()
+        : startedIso;
 
       let startConfig: Record<string, unknown> = {
         ...config,
@@ -305,13 +327,16 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           };
         }
       }
+      if (input.kind === "quest" && presence === "online") {
+        startConfig = { ...startConfig, phase: "accept", routeIndex: 0, combatTargetId: null };
+      }
 
       const view = await withTx(db, async (tx) => {
         await tx.query(
           `INSERT INTO afk_jobs (
           id, character_id, kind, presence, status, phase, template_id, template_snapshot, config,
           day, hours_today, started_at, scheduled_end_at, last_tick_at, last_heartbeat_at, journal_seq
-        ) VALUES ($1,$2,$3,$4,'running','init',$5,$6,$7,$8,0,$9,$10,$9,$9,0)`,
+        ) VALUES ($1,$2,$3,$4,'running','init',$5,$6,$7,$8,0,$9,$10,$11,$9,0)`,
           [
             job.id,
             ch.id,
@@ -323,6 +348,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
             job.day,
             startedIso,
             endIso,
+            firstTickIso,
           ],
         );
         const locked = await tx.query<AfkJobDbRow>(
@@ -375,6 +401,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
         config: view.config,
         ...(view.roomId ? { roomId: view.roomId } : {}),
         ...(view.grindPhase ? { grindPhase: view.grindPhase, rounds: view.rounds ?? 0 } : {}),
+        ...(view.questCombatTargetId ? { questCombatTargetId: view.questCombatTargetId } : {}),
       };
     },
 
@@ -429,13 +456,6 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
 
         let journalLines: string[] = [];
         if (current.status === "running") {
-          if (current.presence === "online") {
-            await tx.query("UPDATE afk_jobs SET last_heartbeat_at = $1 WHERE id = $2", [
-              new Date(now).toISOString(),
-              current.id,
-            ]);
-            current = { ...current, last_heartbeat_at: new Date(now).toISOString() };
-          }
           const settled = await settleJobNow(tx, current, content, now, "status");
           journalLines = settled.journalLines;
           const refreshed = await tx.query<AfkJobDbRow>(
@@ -443,6 +463,14 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
             [current.id],
           );
           current = refreshed.rows[0] ?? settled.job;
+          if (current.status === "running" && current.presence === "online") {
+            const heartbeatAt = new Date(now).toISOString();
+            await tx.query("UPDATE afk_jobs SET last_heartbeat_at = $1 WHERE id = $2", [
+              heartbeatAt,
+              current.id,
+            ]);
+            current = { ...current, last_heartbeat_at: heartbeatAt };
+          }
           if (journalLines.length > 0 && current.status === "running") {
             await tx.query("UPDATE afk_jobs SET journal_seq = journal_seq + $1 WHERE id = $2", [
               journalLines.length,
@@ -516,6 +544,7 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
     async grindJobs(accountId) {
       const ch = await activeCharacter(accountId);
       if (!ch) throw new AfkError("no_character", "尚未立名闯江湖");
+      const onlineMult = content.params.afk.onlineRewardMult ?? 1.8;
       return (content.grindJobs ?? [])
         .filter((job) => job.maxExp === 0 || ch.exp < job.maxExp)
         .map((job) => ({
@@ -526,7 +555,15 @@ export function createAfkService(db: Db, content: ContentPack): AfkService {
           hourlyGain: gainsView(job.hourlyGain),
           jingPerHour: job.jingPerHour,
           ...(job.hubRoomId ? { hubRoomId: job.hubRoomId } : {}),
-          ...(job.roundGain ? { roundGain: gainsView(job.roundGain) } : {}),
+          ...(job.roundGain
+            ? {
+                roundGain: roundGainView({
+                  exp: job.roundGain.exp * onlineMult,
+                  potential: job.roundGain.potential * onlineMult,
+                  silver: job.roundGain.silver * onlineMult,
+                }),
+              }
+            : {}),
           ...(job.jingPerRound ? { jingPerRound: job.jingPerRound } : {}),
         }));
     },

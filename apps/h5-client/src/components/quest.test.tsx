@@ -55,12 +55,7 @@ const DATA: QuestPanelData = {
 describe("QuestPanel（任务与主线）", () => {
   it("主线节点链渲染：完成标记与当前节点", () => {
     const { host } = render(
-      <QuestPanel
-        data={DATA}
-        onGoTo={() => undefined}
-        onAccept={() => undefined}
-        onReport={() => undefined}
-      />,
+      <QuestPanel data={DATA} onGoTo={() => undefined} onAccept={() => undefined} />,
     );
     expect(host.textContent).toContain("初入江湖");
     const chain = host.querySelectorAll(".story-node");
@@ -71,12 +66,7 @@ describe("QuestPanel（任务与主线）", () => {
 
   it("任务卡片：简报/相位进度/奖励/动作", () => {
     const { host } = render(
-      <QuestPanel
-        data={DATA}
-        onGoTo={() => undefined}
-        onAccept={() => undefined}
-        onReport={() => undefined}
-      />,
+      <QuestPanel data={DATA} onGoTo={() => undefined} onAccept={() => undefined} />,
     );
     expect(host.textContent).toContain("村外的野狗成了祸患");
     expect(host.textContent).toContain("击杀 野狗（0/1）");
@@ -86,14 +76,8 @@ describe("QuestPanel（任务与主线）", () => {
   it("可前往 / 接受 / 交差 回调", () => {
     const gotos: string[] = [];
     const accepts: string[] = [];
-    const reports: string[] = [];
     const { host } = render(
-      <QuestPanel
-        data={DATA}
-        onGoTo={(r) => gotos.push(r)}
-        onAccept={(q) => accepts.push(q)}
-        onReport={(q) => reports.push(q)}
-      />,
+      <QuestPanel data={DATA} onGoTo={(r) => gotos.push(r)} onAccept={(q) => accepts.push(q)} />,
     );
     const chips = [...host.querySelectorAll<HTMLButtonElement>(".quest-card .chip")];
     act(() => chips.find((c) => c.textContent === "前往")!.click());
@@ -102,7 +86,7 @@ describe("QuestPanel（任务与主线）", () => {
     expect(accepts).toEqual(["q_bounty_bandit"]);
   });
 
-  it("全部相位完成 → 交差", () => {
+  it("全部相位完成 → 提示到交差人处复命", () => {
     const done: QuestPanelData = {
       story: [],
       rumors: [],
@@ -126,20 +110,10 @@ describe("QuestPanel（任务与主线）", () => {
         },
       ],
     };
-    let report = "";
     const { host } = render(
-      <QuestPanel
-        data={done}
-        onGoTo={() => undefined}
-        onAccept={() => undefined}
-        onReport={(q) => (report = q)}
-      />,
+      <QuestPanel data={done} onGoTo={() => undefined} onAccept={() => undefined} />,
     );
-    act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".quest-card .chip")]
-        .find((c) => c.textContent === "交差")!
-        .click(),
-    );
-    expect(report).toBe("q_newbie_trail");
+    expect(host.textContent).toContain("请向交差人复命");
+    expect([...host.querySelectorAll<HTMLButtonElement>(".quest-card .chip")]).toHaveLength(0);
   });
 });

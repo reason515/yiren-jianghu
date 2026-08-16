@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "dev": "pnpm build && node --env-file-if-exists=../../.env dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:docs": "vitest run src/protocol.contract.test.ts",

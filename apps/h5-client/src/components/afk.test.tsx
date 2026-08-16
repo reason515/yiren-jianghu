@@ -25,7 +25,14 @@ const SKILLS = [
   { id: "dodge", name: "纵跃术", level: 4 },
 ];
 
-const QUESTS = [{ id: "q_hunt", name: "缉拿匪首", targetName: "劫道匪徒" }];
+const QUESTS = [
+  {
+    id: "q_hunt",
+    name: "缉拿匪首",
+    targetName: "劫道匪徒",
+    roundGain: { exp: 30, potential: 8, silver: 5 },
+  },
+];
 
 const TEMPLATES = [{ id: "tpl_1", name: "稳扎稳打" }];
 
@@ -37,6 +44,7 @@ const GRINDS = [
     maxExp: 2000,
     hourlyGain: { exp: 36, potential: 18, silver: 8 },
     jingPerHour: 12,
+    roundGain: { exp: 3, potential: 1, silver: 4 },
   },
 ];
 
@@ -75,6 +83,21 @@ describe("GrindBanner（挂机状态条）", () => {
     expect(resumed).toBe(1);
   });
 
+  it("无时限在线生计只显示动作和累计收益，不显示进度条", () => {
+    const { host } = render(
+      <GrindBanner
+        active
+        openEnded
+        message="在线生计途中 · 巡回中"
+        gains={{ exp: 12, potential: 6, silver: 3 }}
+        onStop={() => undefined}
+      />,
+    );
+    expect(host.querySelector(".grind-progress-track")).toBeNull();
+    expect(host.querySelector(".grind-banner")?.classList.contains("open-ended")).toBe(true);
+    expect(host.textContent).toContain("历练 12");
+  });
+
   it("停止原因显示 + 「知道了」关闭", () => {
     const { host } = render(<GrindBanner active={false} message="" reason="挂机时长已达上限" />);
     expect(host.querySelector("[data-testid=grind-reason]")?.textContent).toContain(
@@ -86,6 +109,24 @@ describe("GrindBanner（挂机状态条）", () => {
 });
 
 describe("AfkSheet（挂机启动）", () => {
+  it("Tab 切换使用稳定高度的窗口容器", () => {
+    const { host } = render(
+      <AfkSheet
+        open
+        skills={SKILLS}
+        quests={QUESTS}
+        templates={TEMPLATES}
+        grindJobs={GRINDS}
+        active={false}
+        statusMessage=""
+        onStart={() => undefined}
+        onStop={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(host.querySelector(".sheet")?.classList.contains("sheet-stable")).toBe(true);
+  });
+
   it("选武功/时长后提交练功意图", () => {
     let config: unknown = null;
     let stopped = 0;
@@ -132,7 +173,7 @@ describe("AfkSheet（挂机启动）", () => {
     });
   });
 
-  it("行侠：选差事/战术/时长后只提交行侠意图（含模板 id）", () => {
+  it("行侠：只提交已解锁差事的在线自动行侠意图", () => {
     let config: unknown = null;
     const { host } = render(
       <AfkSheet
@@ -150,11 +191,6 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
-        .find((b) => b.textContent === "离线")!
-        .click(),
-    );
-    act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
@@ -163,22 +199,42 @@ describe("AfkSheet（挂机启动）", () => {
         .find((b) => b.textContent?.includes("缉拿匪首"))!
         .click(),
     );
-    act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>(".tactic-chip")]
-        .find((b) => b.textContent === "1 时辰")!
-        .click(),
-    );
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "quest",
-      presence: "offline",
-      templateId: "tpl_1",
-      durationMinutes: 120,
+      presence: "online",
       config: { questId: "q_hunt" },
     });
   });
 
-  it("行侠：无差事或无战术时提示且不可安排", () => {
+  it("行侠：展示所选差事的单趟奖励", () => {
+    const { host } = render(
+      <AfkSheet
+        open
+        skills={SKILLS}
+        quests={QUESTS}
+        templates={TEMPLATES}
+        grindJobs={GRINDS}
+        active={false}
+        statusMessage=""
+        onStart={() => undefined}
+        onStop={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    act(() =>
+      [...host.querySelectorAll<HTMLButtonElement>("button")]
+        .find((button) => button.textContent === "行侠")!
+        .click(),
+    );
+    const reward = host.querySelector("[aria-label=单趟奖励]")?.textContent ?? "";
+    expect(reward).toContain("办妥一趟即可领奖");
+    expect(reward).toContain("历练 30");
+    expect(reward).toContain("潜能 8");
+    expect(reward).toContain("银两 5");
+  });
+
+  it("行侠：无已解锁差事时提示且不可安排", () => {
     const { host } = render(
       <AfkSheet
         open
@@ -195,16 +251,11 @@ describe("AfkSheet（挂机启动）", () => {
     );
     act(() =>
       [...host.querySelectorAll<HTMLButtonElement>("button")]
-        .find((b) => b.textContent === "离线")!
-        .click(),
-    );
-    act(() =>
-      [...host.querySelectorAll<HTMLButtonElement>("button")]
         .find((b) => b.textContent === "行侠")!
         .click(),
     );
     expect(host.textContent).toContain("先去应下一桩悬赏");
-    expect(host.textContent).toContain("须先备下一套战术");
+    expect(host.textContent).toContain("亲自办妥过一次");
     expect(host.querySelector<HTMLButtonElement>(".btn.primary")?.disabled).toBe(true);
   });
 
@@ -255,16 +306,16 @@ describe("AfkSheet（挂机启动）", () => {
     );
     expect(host.textContent).toContain("村中杂役");
     expect(host.textContent).toContain("跑完一趟即可领奖");
+    expect(host.textContent).toContain("单趟奖励");
     act(() => host.querySelector<HTMLButtonElement>(".btn.primary")!.click());
     expect(config).toEqual({
       kind: "grind",
       presence: "online",
-      durationMinutes: 15,
       config: { jobId: "village_chore" },
     });
   });
 
-  it("默认在线且在线方式隐藏修炼，时长偏短", () => {
+  it("默认在线且在线方式隐藏修炼，也不展示时长", () => {
     const { host } = render(
       <AfkSheet
         open
@@ -280,7 +331,27 @@ describe("AfkSheet（挂机启动）", () => {
       />,
     );
     expect([...host.querySelectorAll("button")].some((b) => b.textContent === "练功")).toBe(false);
-    expect(host.textContent).toContain("一刻");
+    expect(host.textContent).not.toContain("时长");
+  });
+
+  it("无时限在线生计不展示进度条，提示离开游戏后自动停止", () => {
+    const { host } = render(
+      <AfkSheet
+        open
+        skills={SKILLS}
+        quests={QUESTS}
+        templates={TEMPLATES}
+        grindJobs={GRINDS}
+        active
+        openEnded
+        statusMessage="在线生计途中 · 巡回中"
+        onStart={() => undefined}
+        onStop={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(host.querySelector(".afk-progress-track")).toBeNull();
+    expect(host.textContent).toContain("离开游戏后，本次行程会自动停止");
   });
 });
 

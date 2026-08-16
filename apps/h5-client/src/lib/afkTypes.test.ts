@@ -80,6 +80,7 @@ describe("挂机数据适配", () => {
       progress: 0,
       gains: { exp: 0, potential: 0, silver: 0 },
       journalLines: [],
+      openEnded: false,
       lockExits: false,
     });
   });
@@ -115,7 +116,28 @@ describe("挂机数据适配", () => {
     vi.useRealTimers();
   });
 
-  it("行侠选项只含已接且当前为击杀相位的差事", () => {
+  it("无结束时间的在线生计不显示倒计时", () => {
+    const view = toAfkStatusView({
+      id: "job_open",
+      kind: "grind",
+      presence: "online",
+      status: "running",
+      phase: "circuit",
+      grindPhase: "circuit",
+      startedAt: "2026-08-07T00:00:00.000Z",
+      scheduledEndAt: null,
+      gains: { exp: 0, potential: 0, silver: 0 },
+      progress: 0,
+      elapsedMs: 0,
+      totalMs: 0,
+      journalLines: [],
+      config: { jobId: "village_chore" },
+    });
+    expect(view.openEnded).toBe(true);
+    expect(view.message).not.toContain("约余");
+  });
+
+  it("行侠选项只含已手动交差解锁、当前可重接的差事", () => {
     const options = toAfkQuestOptions([
       {
         id: "q_hunt",
@@ -123,8 +145,9 @@ describe("挂机数据适配", () => {
         kind: "bounty",
         briefing: "",
         rewards: { exp: 0, potential: 0, silver: 0 },
-        state: "accepted",
-        phases: [{ type: "kill", targetName: "劫道匪徒", done: false }],
+        state: "available",
+        autoUnlocked: true,
+        phases: [{ type: "talk", targetName: "沈捕头", done: false }],
       },
       {
         id: "q_talk",
@@ -132,7 +155,8 @@ describe("挂机数据适配", () => {
         kind: "main",
         briefing: "",
         rewards: { exp: 0, potential: 0, silver: 0 },
-        state: "accepted",
+        state: "available",
+        autoUnlocked: false,
         phases: [{ type: "talk", targetName: "村长", done: false }],
       },
       {
@@ -142,9 +166,17 @@ describe("挂机数据适配", () => {
         briefing: "",
         rewards: { exp: 0, potential: 0, silver: 0 },
         state: "completed",
+        autoUnlocked: true,
         phases: [{ type: "kill", targetName: "野狗", done: true }],
       },
     ]);
-    expect(options).toEqual([{ id: "q_hunt", name: "缉拿匪首", targetName: "劫道匪徒" }]);
+    expect(options).toEqual([
+      {
+        id: "q_hunt",
+        name: "缉拿匪首",
+        targetName: "沈捕头",
+        roundGain: { exp: 0, potential: 0, silver: 0 },
+      },
+    ]);
   });
 });

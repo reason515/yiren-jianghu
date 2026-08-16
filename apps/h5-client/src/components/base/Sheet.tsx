@@ -8,6 +8,8 @@ export interface SheetProps {
   children: ReactNode;
   /** 全屏铺满视口（战斗等独占流程）。 */
   full?: boolean;
+  /** 保持内容区高度，适合 Tab 切换内容量差异大的面板。 */
+  stableHeight?: boolean;
 }
 
 export function Sheet({
@@ -16,6 +18,7 @@ export function Sheet({
   onClose,
   children,
   full = false,
+  stableHeight = false,
 }: SheetProps): JSX.Element | null {
   if (!open) return null;
   return (
@@ -26,7 +29,7 @@ export function Sheet({
       onClick={onClose}
     >
       <div
-        className={`sheet${full ? " sheet-full" : ""}`}
+        className={`sheet${full ? " sheet-full" : ""}${stableHeight ? " sheet-stable" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

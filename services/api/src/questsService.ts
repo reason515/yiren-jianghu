@@ -40,12 +40,15 @@ export interface QuestView {
     items: Array<{ itemId: string; count: number }>;
   };
   repeatable: boolean;
+  /** 至少曾手动完成并交差一次，才可在挂机中循环此任务。 */
+  autoUnlocked: boolean;
 }
 
 type QuestRecord = {
   quest_id: string;
   status: "accepted" | "completed" | "reported";
   progress: { phase: number; counts: Record<string, number> };
+  auto_unlocked_at?: string | null;
 };
 
 export interface QuestStoryNodeView {
@@ -72,6 +75,15 @@ export interface QuestsService {
     rewards: QuestView["rewards"];
     character: { exp: number; potential: number; silver: number };
   }>;
+  reportQuestAtNpc(
+    accountId: string,
+    npcId: string,
+  ): Promise<{
+    questId: string;
+    questName: string;
+    rewards: QuestView["rewards"];
+    character: { exp: number; potential: number; silver: number };
+  } | null>;
   /**
    * 进度钩子：供战斗/挂机等域在击杀/交谈/抵达等时机推进任务（本域实现并单测，暂不开放路由）。
    * 返回被推进的任务与是否完成；无匹配返回 null。
@@ -103,6 +115,8 @@ function allPhasesDone(quest: Quest, progress: QuestRecord["progress"]): boolean
 
 export function createQuestsService(db: Db, content: ContentPack): QuestsService {
   const questsById = new Map(content.quests.map((q) => [q.id, q]));
+  const withTransaction = async <T>(work: (tx: Db) => Promise<T>): Promise<T> =>
+    db.transaction ? db.transaction(work) : work(db);
 
   const activeCharacter = async (accountId: string): Promise<CharacterRow | null> => {
     const rows = await db.query<CharacterRow>(
@@ -114,7 +128,7 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
 
   const recordsOf = async (characterId: string): Promise<Map<string, QuestRecord>> => {
     const rows = await db.query<QuestRecord>(
-      "SELECT quest_id, status, progress FROM character_quests WHERE character_id = $1",
+      "SELECT quest_id, status, progress, auto_unlocked_at FROM character_quests WHERE character_id = $1",
       [characterId],
     );
     return new Map(rows.rows.map((r) => [r.quest_id, r]));
@@ -173,6 +187,7 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
       })),
       rewards: quest.rewards,
       repeatable: quest.repeatable,
+      autoUnlocked: Boolean(record?.auto_unlocked_at),
     };
   };
 
@@ -259,17 +274,60 @@ export function createQuestsService(db: Db, content: ContentPack): QuestsService
       }
 
       const rewards = quest.rewards;
-      await db.query(
-        "UPDATE characters SET exp = exp + $1, potential = potential + $2, silver = silver + $3 WHERE id = $4",
-        [rewards.exp, rewards.potential, rewards.silver, ch.id],
-      );
-      await db.query(
-        "UPDATE character_quests SET status = 'reported', reported_at = now() WHERE character_id = $1 AND quest_id = $2",
-        [ch.id, questId],
-      );
+      // 奖励与交差状态必须原子写入：任何一步失败都不能让玩家重试时重复领奖。
+      await withTransaction(async (tx) => {
+        await tx.query(
+          "UPDATE characters SET exp = exp + $1, potential = potential + $2, silver = silver + $3 WHERE id = $4",
+          [rewards.exp, rewards.potential, rewards.silver, ch.id],
+        );
+        await tx.query(
+          "UPDATE character_quests SET status = 'reported', reported_at = now(), auto_unlocked_at = COALESCE(auto_unlocked_at, now()) WHERE character_id = $1 AND quest_id = $2",
+          [ch.id, questId],
+        );
+      });
 
       const after = await activeCharacter(accountId);
       return {
+        rewards,
+        character: {
+          exp: after?.exp ?? ch.exp,
+          potential: after?.potential ?? ch.potential,
+          silver: after?.silver ?? ch.silver,
+        },
+      };
+    },
+
+    async reportQuestAtNpc(accountId, npcId) {
+      const ch = await activeCharacter(accountId);
+      if (!ch) throw new QuestsError("no_character", "尚未立名闯江湖");
+      const records = await recordsOf(ch.id);
+      const quest = content.quests.find((entry) => {
+        const record = records.get(entry.id);
+        return (
+          entry.automation.reportNpcId === npcId &&
+          Boolean(record) &&
+          record?.status !== "reported" &&
+          allPhasesDone(entry, record!.progress)
+        );
+      });
+      if (!quest) return null;
+      const record = records.get(quest.id);
+      if (!record) return null;
+      const rewards = quest.rewards;
+      await withTransaction(async (tx) => {
+        await tx.query(
+          "UPDATE characters SET exp = exp + $1, potential = potential + $2, silver = silver + $3 WHERE id = $4",
+          [rewards.exp, rewards.potential, rewards.silver, ch.id],
+        );
+        await tx.query(
+          "UPDATE character_quests SET status = 'reported', reported_at = now(), auto_unlocked_at = COALESCE(auto_unlocked_at, now()) WHERE character_id = $1 AND quest_id = $2",
+          [ch.id, quest.id],
+        );
+      });
+      const after = await activeCharacter(accountId);
+      return {
+        questId: quest.id,
+        questName: quest.name,
         rewards,
         character: {
           exp: after?.exp ?? ch.exp,

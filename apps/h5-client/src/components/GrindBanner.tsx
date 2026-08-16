@@ -8,6 +8,8 @@ export interface GrindBannerProps {
   message: string;
   reason?: string | null;
   progress?: number;
+  /** 无时限在线生计只展示收益，不展示任务进度。 */
+  openEnded?: boolean;
   gains?: { exp: number; potential: number; silver: number };
   paused?: boolean;
   latestLine?: string;
@@ -21,6 +23,7 @@ export function GrindBanner({
   message,
   reason,
   progress = 0,
+  openEnded = false,
   gains = { exp: 0, potential: 0, silver: 0 },
   paused = false,
   latestLine,
@@ -43,15 +46,17 @@ export function GrindBanner({
     const actionLine = latestLine?.trim() ? latestLine : message;
     return (
       <div
-        className={`grind-banner active${paused ? " paused" : ""}${pulse ? " pulse" : ""}`}
+        className={`grind-banner active${openEnded ? " open-ended" : ""}${paused ? " paused" : ""}${pulse ? " pulse" : ""}`}
         data-testid="grind-banner"
       >
         <div className="grind-banner-main">
           <span className="grind-message">{actionLine}</span>
           {latestLine?.trim() ? <span className="grind-sub">{message}</span> : null}
-          <div className="grind-progress-track" aria-hidden>
-            <div className="grind-progress-fill" style={{ width: `${pct}%` }} />
-          </div>
+          {!openEnded ? (
+            <div className="grind-progress-track" aria-hidden>
+              <div className="grind-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+          ) : null}
           <span className="grind-gains">
             <span className="gain-exp">历练 {Math.floor(gains.exp)}</span>
             <span className="gain-sep"> · </span>

@@ -48,6 +48,11 @@ export interface SceneTalkResult {
   kind: "talk";
   npc: { id: string; name: string };
   dialogue: string[];
+  questReport?: {
+    questId: string;
+    questName: string;
+    rewards: { exp: number; potential: number; silver: number };
+  };
 }
 
 export interface SceneTradeResult {

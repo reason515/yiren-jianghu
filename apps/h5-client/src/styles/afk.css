@@ -116,6 +116,14 @@
   font-size: 13px;
   font-weight: 600;
 }
+.afk-round-gains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-digit), var(--font-body);
+}
 .afk-progress {
   display: flex;
   flex-direction: column;
@@ -145,6 +153,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
+}
+.afk-active-note {
+  color: var(--paper-faint);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
 }
 .gain-exp {
   color: var(--stat-exp);
@@ -180,6 +194,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.grind-banner.active.open-ended {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.grind-banner.open-ended .grind-gains {
+  color: var(--paper);
+  line-height: 1.5;
 }
 .grind-banner.active.pulse .grind-progress-fill {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--jade) 40%, transparent);

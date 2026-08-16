@@ -27,6 +27,7 @@ export interface QuestView {
   phases: QuestPhaseView[];
   rewards: QuestRewardView;
   state: "available" | "accepted" | "completed";
+  autoUnlocked?: boolean;
 }
 
 export interface StoryNodeView {
@@ -58,6 +59,7 @@ interface ApiQuest {
   status: "locked" | "available" | "ongoing" | "reportable" | "completed";
   phases: ApiQuestPhase[];
   rewards: QuestRewardView;
+  autoUnlocked?: boolean;
 }
 
 export interface QuestOverviewResponse {
@@ -105,6 +107,7 @@ export function toQuestPanelData(response: QuestOverviewResponse): QuestPanelDat
           })),
           rewards: quest.rewards,
           state,
+          autoUnlocked: Boolean(quest.autoUnlocked),
         },
       ];
     }),

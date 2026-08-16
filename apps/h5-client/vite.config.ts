@@ -10,10 +10,10 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
-    port: 5173,
+    port: 5200,
     proxy: {
-      "/api": { target: "http://127.0.0.1:3000", rewrite: (p) => p.replace(/^\/api/, "") },
-      "/ws": { target: "http://127.0.0.1:3000", ws: true },
+      "/api": { target: "http://127.0.0.1:4000", rewrite: (p) => p.replace(/^\/api/, "") },
+      "/ws": { target: "http://127.0.0.1:4000", ws: true },
     },
   },
 });

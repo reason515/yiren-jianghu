@@ -17,7 +17,7 @@
     "village_creek",
     "village_herb_slope"
   ],
-  "roundGain": { "exp": 1, "potential": 1, "silver": 1 },
+  "roundGain": { "exp": 3, "potential": 1, "silver": 4 },
   "jingPerRound": 1,
   "moveLines": [
     "你挑起扁担，脚步沉稳，往下一处走去。",

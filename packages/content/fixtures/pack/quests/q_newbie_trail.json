@@ -10,5 +10,6 @@
     { "type": "kill", "targetId": "wild_dog", "count": 1 }
   ],
   "rewards": { "exp": 30, "potential": 8, "silver": 5 },
-  "repeatable": true
+  "repeatable": true,
+  "automation": { "acceptNpcId": "village_chief", "reportNpcId": "village_chief" }
 }

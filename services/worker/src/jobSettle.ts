@@ -3,6 +3,7 @@ import {
   advanceOnlineGrind,
   afkAttemptsPerHour,
   buildGraph,
+  findPath,
   buildReport,
   cancelJob,
   circuitStepsTotal,
@@ -246,21 +247,25 @@ async function finishTerminalJob(
   return "completed";
 }
 
-async function pauseForHeartbeat(
+async function stopForHeartbeat(
   client: SqlClient,
   job: JobRow,
   now: number,
 ): Promise<SettleJobResult> {
-  const reason = "气息中断，行止暂歇";
-  const iso = new Date(now).toISOString();
-  await client.query(
-    "UPDATE afk_jobs SET status = 'paused', stop_reason = $1, last_tick_at = $2, updated_at = now() WHERE id = $3",
-    [reason, iso, job.id],
-  );
+  const reason = "已离开江湖，本次挂机自动停止";
+  const config = parse<Record<string, unknown>>(job.config);
+  const currentGains = gains(config.gains as ReturnType<typeof gains>);
+  await finishTerminalJob(client, job, now, {
+    status: "cancelled",
+    phase: "cancelled",
+    reason,
+    config,
+    gains: currentGains,
+  });
   return {
-    job: { ...job, status: "paused", stop_reason: reason, last_tick_at: iso },
+    job: { ...job, status: "cancelled", stop_reason: reason },
     journalLines: [],
-    result: "paused",
+    result: "completed",
   };
 }
 
@@ -466,6 +471,215 @@ async function settleQuestBattleOnce(
     [JSON.stringify(nextConfig), new Date(now).toISOString(), job.id],
   );
   return "settled";
+}
+
+/** 自动行侠的非战斗步骤。战斗仍复用 PVE 会话，由玩家在战局中选择回气与绝招。 */
+async function settleQuestRouteOnce(
+  client: SqlClient,
+  job: JobRow,
+  content: ContentPack,
+  now: number,
+  journalLines: string[],
+): Promise<"settled" | "completed"> {
+  const config = parse<Record<string, unknown>>(job.config);
+  const questId = typeof config.questId === "string" ? config.questId : "";
+  const quest = content.quests.find((entry) => entry.id === questId);
+  if (!quest) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "这桩熟悉的差事已不在江湖簿中",
+      config,
+      gains: gains(config.gains as ReturnType<typeof gains>),
+    });
+  }
+  const characterRows = await client.query<{
+    id: string;
+    room_path: string;
+    qi: number;
+    jing: number;
+    eff_qi: number;
+    eff_jing: number;
+  }>("SELECT id, room_path, qi, jing, eff_qi, eff_jing FROM characters WHERE id = $1", [
+    job.character_id,
+  ]);
+  const character = characterRows.rows[0];
+  if (!character) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "行侠之人已不在此地",
+      config,
+      gains: gains(config.gains as ReturnType<typeof gains>),
+    });
+  }
+  const roomOfTarget = (targetId: string): string | undefined =>
+    content.rooms.find(
+      (room) =>
+        room.id === targetId || room.npcIds.includes(targetId) || room.itemIds.includes(targetId),
+    )?.id;
+  const graph = buildGraph(
+    content.rooms.map((room) => ({
+      id: room.id,
+      exits: Object.fromEntries(room.exits.map((exit) => [exit.dir, exit.roomId])),
+    })),
+  );
+  const moveOne = async (targetRoomId: string, line: string): Promise<boolean> => {
+    if (character.room_path === targetRoomId) return true;
+    const path = findPath(graph, character.room_path, targetRoomId);
+    if (!path.ok || path.path.length === 0) {
+      await finishTerminalJob(client, job, now, {
+        status: "failed",
+        phase: "failed",
+        reason: "前路不通，自动行侠只得停下",
+        config,
+        gains: gains(config.gains as ReturnType<typeof gains>),
+      });
+      return false;
+    }
+    const step = path.path[0]!;
+    await client.query("UPDATE characters SET room_path = $1 WHERE id = $2", [
+      step.to,
+      character.id,
+    ]);
+    journalLines.push(line);
+    await client.query(
+      "UPDATE afk_jobs SET phase = $1, last_tick_at = $2, config = $3, updated_at = now() WHERE id = $4",
+      ["route", new Date(now).toISOString(), JSON.stringify(appendJournal(config, [line])), job.id],
+    );
+    return false;
+  };
+  const persist = async (
+    phase: string,
+    next: Record<string, unknown>,
+    lines: string[] = [],
+  ): Promise<"settled"> => {
+    await client.query(
+      "UPDATE afk_jobs SET phase = $1, config = $2, last_tick_at = $3, updated_at = now() WHERE id = $4",
+      [phase, JSON.stringify(appendJournal(next, lines)), new Date(now).toISOString(), job.id],
+    );
+    return "settled";
+  };
+
+  // 战局开启后不再替玩家推进；战局结束后下一拍恢复任务流程，并在低气血时先歇脚。
+  if (job.phase === "battle") {
+    const started = config.combatStarted === true;
+    const sessions = await client.query<{ status: string }>(
+      "SELECT status FROM combat_sessions WHERE character_id = $1 AND kind = 'pve' AND status = 'ongoing' LIMIT 1",
+      [character.id],
+    );
+    if (!started && sessions.rows[0]) return persist("battle", { ...config, combatStarted: true });
+    if (!started) return "settled";
+    if (sessions.rows[0]) return "settled";
+    return persist("task", { ...config, combatStarted: false, combatTargetId: null });
+  }
+
+  // 气或精低于伤势上限 35% 时，先走至最近的可歇脚房间；到店后恢复至当前伤势上限。
+  if (character.qi < character.eff_qi * 0.35 || character.jing < character.eff_jing * 0.35) {
+    const inns = content.rooms.filter((room) => room.canSleep).map((room) => room.id);
+    const reachable = inns
+      .map((id) => ({ id, path: findPath(graph, character.room_path, id) }))
+      .filter((entry) => entry.path.ok)
+      .sort((a, b) => (a.path.ok ? a.path.path.length : 0) - (b.path.ok ? b.path.path.length : 0));
+    const inn = reachable[0]?.id;
+    if (inn && character.room_path !== inn) {
+      await moveOne(inn, "伤势未复，先往客栈歇脚。");
+      return "settled";
+    }
+    if (inn) {
+      await client.query("UPDATE characters SET qi = eff_qi, jing = eff_jing WHERE id = $1", [
+        character.id,
+      ]);
+      const line = "在客栈歇过一阵，气血已复，继续赶路。";
+      journalLines.push(line);
+      return persist("task", config, [line]);
+    }
+  }
+
+  const records = await client.query<{
+    status: "accepted" | "completed" | "reported";
+    progress: unknown;
+  }>("SELECT status, progress FROM character_quests WHERE character_id = $1 AND quest_id = $2", [
+    character.id,
+    quest.id,
+  ]);
+  const record = records.rows[0];
+  if (!record || record.status === "reported") {
+    const acceptNpcId = quest.automation.acceptNpcId;
+    const acceptRoom = acceptNpcId ? roomOfTarget(acceptNpcId) : undefined;
+    if (acceptRoom && !(await moveOne(acceptRoom, "循着旧路，前去接下差事。"))) return "settled";
+    await client.query(
+      "INSERT INTO character_quests (character_id, quest_id, status, progress, accepted_at, completed_at, reported_at) VALUES ($1,$2,'accepted',$3,now(),NULL,NULL) ON CONFLICT (character_id, quest_id) DO UPDATE SET status = 'accepted', progress = EXCLUDED.progress, accepted_at = now(), completed_at = NULL, reported_at = NULL",
+      [character.id, quest.id, JSON.stringify({ phase: 0, counts: {} })],
+    );
+    const line = `接下「${quest.name}」，循例办事。`;
+    journalLines.push(line);
+    return persist("task", config, [line]);
+  }
+  const progress = parse<QuestProgress>(record.progress);
+  if (record.status === "completed" || progress.phase >= quest.phases.length) {
+    const reportNpcId = quest.automation.reportNpcId;
+    const reportRoom = reportNpcId ? roomOfTarget(reportNpcId) : undefined;
+    if (reportRoom && !(await moveOne(reportRoom, "事已办妥，返程交差。"))) return "settled";
+    const prior = gains(config.gains as ReturnType<typeof gains>);
+    const total = gains({
+      exp: prior.exp + quest.rewards.exp,
+      potential: prior.potential + quest.rewards.potential,
+      silver: prior.silver + quest.rewards.silver,
+    });
+    await client.query(
+      "UPDATE characters SET exp = exp + $1, potential = potential + $2, silver = silver + $3 WHERE id = $4",
+      [quest.rewards.exp, quest.rewards.potential, quest.rewards.silver, character.id],
+    );
+    await client.query(
+      "UPDATE character_quests SET status = 'reported', reported_at = now() WHERE character_id = $1 AND quest_id = $2",
+      [character.id, quest.id],
+    );
+    const rounds = (typeof config.rounds === "number" ? config.rounds : 0) + 1;
+    const line = `交差已毕：${quest.name}第 ${rounds} 趟的酬谢已入囊。`;
+    journalLines.push(line);
+    return persist("accept", { ...config, gains: total, rounds, combatTargetId: null }, [line]);
+  }
+  const phase = quest.phases[progress.phase];
+  if (!phase) return "settled";
+  const targetRoom = roomOfTarget(phase.targetId);
+  if (!targetRoom) {
+    return finishTerminalJob(client, job, now, {
+      status: "failed",
+      phase: "failed",
+      reason: "差事目标无处可寻",
+      config,
+      gains: gains(config.gains as ReturnType<typeof gains>),
+    });
+  }
+  if (!(await moveOne(targetRoom, `循着线索赶往${targetRoom}。`))) return "settled";
+  if (phase.type === "kill") {
+    const line = "敌踪已现，待你亲自应战。";
+    journalLines.push(line);
+    return persist("battle", { ...config, combatTargetId: phase.targetId, combatStarted: false }, [
+      line,
+    ]);
+  }
+  // talk/goto/collect/deliver 均以任务相位为准推进；后续任务类型只需在这里补其受控场景动作。
+  const counts = {
+    ...progress.counts,
+    [phase.targetId]: (progress.counts[phase.targetId] ?? 0) + 1,
+  };
+  const required = "count" in phase ? phase.count : 1;
+  const enough = (counts[phase.targetId] ?? 0) >= required;
+  const nextProgress = { phase: enough ? progress.phase + 1 : progress.phase, counts };
+  await client.query(
+    "UPDATE character_quests SET progress = $1, status = $2, completed_at = CASE WHEN $2 = 'completed' THEN now() ELSE completed_at END WHERE character_id = $3 AND quest_id = $4",
+    [
+      JSON.stringify(nextProgress),
+      nextProgress.phase >= quest.phases.length ? "completed" : "accepted",
+      character.id,
+      quest.id,
+    ],
+  );
+  const line = `按差事所托办妥一件：${phase.type === "talk" ? "问讯" : "赶路"}。`;
+  journalLines.push(line);
+  return persist("task", config, [line]);
 }
 
 function grindCircuitDefOf(def: {
@@ -1158,7 +1372,7 @@ async function settleOnlineLoop(
         true,
       );
     } else if (current.kind === "quest") {
-      step = await settleQuestBattleOnce(client, current, content, tickNow, mult, journalLines);
+      step = await settleQuestRouteOnce(client, current, content, tickNow, journalLines);
     } else {
       break;
     }
@@ -1252,7 +1466,7 @@ export async function settleJobNow(
 
   if (presence === "online") {
     if (heartbeatStale(job, content, now)) {
-      return pauseForHeartbeat(client, job, now);
+      return stopForHeartbeat(client, job, now);
     }
     if (mode === "worker") {
       return { job, journalLines: [], result: "skipped" };

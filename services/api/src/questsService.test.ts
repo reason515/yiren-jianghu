@@ -69,6 +69,7 @@ interface QuestState {
   quest_id: string;
   status: string;
   progress: { phase: number; counts: Record<string, number> };
+  auto_unlocked_at?: string;
 }
 
 function mockDb() {
@@ -120,7 +121,9 @@ function mockDb() {
             })) as unknown as T[],
         };
       }
-      if (text.includes("SELECT quest_id, status, progress FROM character_quests")) {
+      if (
+        text.includes("SELECT quest_id, status, progress, auto_unlocked_at FROM character_quests")
+      ) {
         return {
           rows: state.quests
             .filter((q) => q.character_id === params[0])
@@ -128,6 +131,7 @@ function mockDb() {
               quest_id: q.quest_id,
               status: q.status,
               progress: q.progress,
+              auto_unlocked_at: q.auto_unlocked_at,
             })) as unknown as T[],
         };
       }
@@ -144,7 +148,10 @@ function mockDb() {
         const q = state.quests.find(
           (x) => x.character_id === params[0] && x.quest_id === params[1],
         );
-        if (q) q.status = "reported";
+        if (q) {
+          q.status = "reported";
+          q.auto_unlocked_at ??= "2026-08-16T00:00:00.000Z";
+        }
         return { rows: [] as unknown as T[] };
       }
       if (text.includes("SET status = 'accepted'")) {
@@ -389,6 +396,9 @@ describe("questsService.reportQuest", () => {
     expect(res.rewards).toEqual({ exp: 30, potential: 8, silver: 5 });
     expect(res.character).toEqual({ exp: 80, potential: 18, silver: 25 });
     expect(state.quests[0]?.status).toBe("reported");
+    expect(
+      (await quests.getQuests("acc_1"))?.find((quest) => quest.id === "q_hunt")?.autoUnlocked,
+    ).toBe(true);
   });
 
   it("未收录任务 → quest_not_found", async () => {

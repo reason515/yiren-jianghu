@@ -43,6 +43,7 @@ const PACK = {
       maxExp: 2000,
       hourlyGain: { exp: 36, potential: 18, silver: 8 },
       jingPerHour: 12,
+      roundGain: { exp: 1, potential: 1, silver: 1 },
     },
   ],
 } as unknown as ContentPack;
@@ -75,7 +76,7 @@ interface JobState {
   day: string;
   hours_today: number;
   started_at: string;
-  scheduled_end_at: string;
+  scheduled_end_at: string | null;
   last_tick_at: string | null;
   last_heartbeat_at: string | null;
   journal_seq: number;
@@ -170,7 +171,9 @@ function mockDb() {
         return {
           rows:
             params[1] === "q_hunt"
-              ? ([{ status: "accepted", progress: { phase: 0, counts: {} } }] as unknown as T[])
+              ? ([
+                  { status: "reported", progress: { phase: 0, counts: {} }, auto_unlocked_at: T0 },
+                ] as unknown as T[])
               : ([] as T[]),
         };
       }
@@ -369,7 +372,7 @@ function mockDb() {
           day: String(params[7]),
           hours_today: 0,
           started_at: String(params[8]),
-          scheduled_end_at: String(params[9]),
+          scheduled_end_at: params[9] ? String(params[9]) : null,
           last_tick_at: String(params[8]),
           last_heartbeat_at: String(params[8]),
           journal_seq: 0,
@@ -411,32 +414,16 @@ describe("afkService.start", () => {
     expect(view.scheduledEndAt).not.toBe(view.startedAt);
   });
 
-  it("行侠挂机：必填模板并固化快照；缺模板 → template_required", async () => {
+  it("自动行侠：须已手动交差解锁，在线启动且不绑定战术模板", async () => {
     const { afk, state } = boot();
-    state.templates.push({
-      id: "tpl_1",
-      character_id: "char_1",
-      config: JSON.stringify({ version: 1, rules: [], defaultAction: { type: "attack" } }),
-    });
-    await expect(afk.start("acc_1", { kind: "quest", durationMinutes: 30 })).rejects.toMatchObject({
-      code: "template_required",
-    });
-
-    state.jobs = [];
-
     const view = await afk.start("acc_1", {
       kind: "quest",
-      templateId: "tpl_1",
-      durationMinutes: 30,
+      presence: "online",
       config: { questId: "q_hunt" },
     });
     expect(view.kind).toBe("quest");
-    expect(state.jobs[0]?.template_id).toBe("tpl_1");
-    expect(JSON.parse(state.jobs[0]!.template_snapshot)).toEqual({
-      version: 1,
-      rules: [],
-      defaultAction: { type: "attack" },
-    });
+    expect(view.scheduledEndAt).toBeNull();
+    expect(state.jobs[0]?.template_id).toBeNull();
   });
 
   it("生计挂机：择杂役即可；历练超限拒绝", async () => {
@@ -463,7 +450,20 @@ describe("afkService.start", () => {
     expect(jobs).toEqual([]);
   });
 
-  it("非法参数：kind/时长/武功/模板归属", async () => {
+  it("在线生计不设结束时间，单趟奖励直接返回玩家实际收益", async () => {
+    const { afk, state } = boot();
+    const view = await afk.start("acc_1", {
+      kind: "grind",
+      presence: "online",
+      config: { jobId: "village_chore" },
+    });
+    expect(view.scheduledEndAt).toBeNull();
+    expect(state.jobs[0]?.scheduled_end_at).toBeNull();
+    const jobs = await afk.grindJobs("acc_1");
+    expect(jobs[0]?.roundGain).toEqual({ exp: 1, potential: 1, silver: 1 });
+  });
+
+  it("非法参数：kind/时长/武功/自动行侠在线限制", async () => {
     const { afk, state } = boot();
     await expect(afk.start("acc_1", { kind: "fishing" as never })).rejects.toMatchObject({
       code: "invalid_kind",
@@ -490,13 +490,8 @@ describe("afkService.start", () => {
       }),
     ).rejects.toMatchObject({ code: "invalid_config" });
     await expect(
-      afk.start("acc_1", { kind: "quest", templateId: "tpl_x", durationMinutes: 30 }),
-    ).rejects.toMatchObject({ code: "not_found" });
-
-    state.templates.push({ id: "tpl_2", character_id: "char_other", config: "{}" });
-    await expect(
-      afk.start("acc_1", { kind: "quest", templateId: "tpl_2", durationMinutes: 30 }),
-    ).rejects.toMatchObject({ code: "not_found" });
+      afk.start("acc_1", { kind: "quest", config: { questId: "q_hunt" } }),
+    ).rejects.toMatchObject({ code: "invalid_kind" });
     await expect(
       afk.start("acc_x", { kind: "practice", config: { skillId: "basic_sword" } }),
     ).rejects.toMatchObject({ code: "no_character" });
@@ -586,6 +581,37 @@ describe("afkService.status / reports", () => {
     });
     const view = await afk.status("acc_1");
     expect(view).toMatchObject({ id: "job_1", kind: "quest", status: "running" });
+  });
+
+  it("在线生计心跳超时后自动停止，而不是被状态查询续心跳", async () => {
+    const { afk, state } = boot();
+    state.jobs.push({
+      id: "job_stale",
+      character_id: "char_1",
+      kind: "grind",
+      presence: "online",
+      status: "running",
+      phase: "circuit",
+      template_id: null,
+      template_snapshot: "{}",
+      config: JSON.stringify({
+        jobId: "village_chore",
+        gains: { exp: 2, potential: 1, silver: 1 },
+      }),
+      day: "2026-08-07",
+      hours_today: 0,
+      started_at: T0,
+      scheduled_end_at: null,
+      last_tick_at: T0,
+      last_heartbeat_at: T0,
+      journal_seq: 0,
+      stop_reason: null,
+      report: null,
+      updated_at: T0,
+    });
+    const view = await afk.status("acc_1");
+    expect(view).toMatchObject({ status: "cancelled", stopReason: "已离开江湖，本次挂机自动停止" });
+    expect(state.jobs[0]?.status).toBe("cancelled");
   });
 
   it("reports：返回终态作业战报，含叙事回退", async () => {

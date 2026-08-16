@@ -87,6 +87,9 @@ textarea {
   border-radius: 0;
   border: none;
 }
+.sheet.sheet-stable {
+  height: min(82vh, 560px);
+}
 .sheet-top {
   display: flex;
   align-items: center;

@@ -16,5 +16,6 @@
     "silver": 25,
     "items": [{ "itemId": "die_da_san", "count": 1 }]
   },
-  "repeatable": true
+  "repeatable": true,
+  "automation": { "acceptNpcId": "ferry_man", "reportNpcId": "lake_hermit" }
 }

@@ -10,5 +10,6 @@
     { "type": "kill", "targetId": "wild_wolf", "count": 1 }
   ],
   "rewards": { "exp": 50, "potential": 12, "silver": 10 },
-  "repeatable": true
+  "repeatable": true,
+  "automation": { "acceptNpcId": "sect_master", "reportNpcId": "sect_master" }
 }

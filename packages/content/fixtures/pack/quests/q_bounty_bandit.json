@@ -11,5 +11,6 @@
     { "type": "talk", "targetId": "shen_buotou" }
   ],
   "rewards": { "exp": 60, "potential": 15, "silver": 20 },
-  "repeatable": true
+  "repeatable": true,
+  "automation": { "acceptNpcId": "shen_buotou", "reportNpcId": "shen_buotou" }
 }

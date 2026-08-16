@@ -464,7 +464,7 @@ describe("afkService.start", () => {
   });
 
   it("非法参数：kind/时长/武功/自动行侠在线限制", async () => {
-    const { afk, state } = boot();
+    const { afk } = boot();
     await expect(afk.start("acc_1", { kind: "fishing" as never })).rejects.toMatchObject({
       code: "invalid_kind",
     });

@@ -408,19 +408,7 @@ describe("F3 全链路旅程", () => {
     expect((reports.json() as unknown[]).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("7. 行侠挂机：已接悬赏 + 战术快照 → Worker 自动战斗/交差/战报", async () => {
-    const template = await app.inject({
-      method: "POST",
-      url: "/templates",
-      headers: auth(tokenA),
-      payload: {
-        name: "行侠常式",
-        config: { version: 1, rules: [], defaultAction: { type: "attack" } },
-      },
-    });
-    expect(template.statusCode).toBe(200);
-    const templateId = (template.json() as { id: string }).id;
-
+  it("7. 行侠挂机：在线自动接令/寻路，抵敌前转入手动战局", async () => {
     // 步骤 5 后在村外小径；行侠启动要求当前相位为击杀，先回村口再走完整相位
     for (const dir of ["west", "west"]) {
       const move = await app.inject({
@@ -457,47 +445,24 @@ describe("F3 全链路旅程", () => {
       expect(move.statusCode).toBe(200);
     }
 
-    // SQL 造数：回精/回气机制待 rest 域落地，保证挂机战术仅验证作业结算而不因上次战斗资源耗尽失败。
-    await pool.query("UPDATE characters SET qi = 500, jing = 500, neili = 500 WHERE id = $1", [
-      characterA,
-    ]);
-    const before = await pool.query<{ exp: number; potential: number; silver: number }>(
-      "SELECT exp, potential, silver FROM characters WHERE id = $1",
-      [characterA],
-    );
-
     const start = await app.inject({
       method: "POST",
       url: "/afk/start",
       headers: auth(tokenA),
       payload: {
         kind: "quest",
-        templateId,
-        durationMinutes: 30,
+        presence: "online",
         config: { questId: "q_newbie_trail" },
       },
     });
     expect(start.statusCode).toBe(200);
-    await settleDueJobs({ pool, content: pack, now: Date.now() + 60_000 });
-
-    const status = await app.inject({ method: "GET", url: "/afk/status", headers: auth(tokenA) });
-    expect((status.json() as { active: boolean }).active).toBe(false);
-    const reports = await app.inject({ method: "GET", url: "/afk/reports", headers: auth(tokenA) });
-    const report = (
-      reports.json() as Array<{ kind: string; status: string; gains: { exp: number } }>
-    )[0]!;
-    expect(report).toMatchObject({ kind: "quest", status: "completed" });
-    expect(report.gains.exp).toBeGreaterThan(30);
-    const after = await pool.query<{ exp: number; potential: number; silver: number }>(
-      "SELECT exp, potential, silver FROM characters WHERE id = $1",
-      [characterA],
-    );
-    expect(Number(after.rows[0]!.exp)).toBeGreaterThan(Number(before.rows[0]!.exp));
-    const quest = await pool.query<{ status: string }>(
-      "SELECT status FROM character_quests WHERE character_id = $1 AND quest_id = $2",
-      [characterA, "q_newbie_trail"],
-    );
-    expect(quest.rows[0]?.status).toBe("reported");
+    expect(start.json()).toMatchObject({
+      kind: "quest",
+      presence: "online",
+      status: "running",
+      phase: "battle",
+      questCombatTargetId: "wild_dog",
+    });
   });
 
   it("8. 地图：GET /map 返回当前区域舆图、天下图且当前房间被标记", async () => {

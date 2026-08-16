@@ -35,7 +35,7 @@ import { LeaderboardView } from "./components/LeaderboardView.js";
 import { ReconnectingOverlay } from "./components/ReconnectingOverlay.js";
 import { GuideTip } from "./components/GuideTip.js";
 import { TacticEditor } from "./components/TacticEditor.js";
-import { toQuestPanelData, type QuestPanelData, type QuestRewardView } from "./lib/questTypes.js";
+import { toQuestPanelData, type QuestPanelData } from "./lib/questTypes.js";
 import {
   ENABLE_SLOT_LABEL,
   toCharacterView,
